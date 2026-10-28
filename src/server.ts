@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { createTokenProvider, noopLogger, type Logger } from './auth.ts';
 import type { Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
+import { registerGetCustomer } from './tools/get-customer.ts';
 import { registerGetInvoice } from './tools/get-invoice.ts';
+import { registerListCustomers } from './tools/list-customers.ts';
 
 // Read at runtime: a JSON import would sit outside rootDir and break the dist layout.
 export const { version } = z
@@ -24,6 +26,9 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
     logger,
   });
   const client = createInioClient({ apiUrl: config.apiUrl, tokens, fetch, logger });
-  registerGetInvoice(server, { client, revealPii: config.revealPii, logger });
+  const deps = { client, revealPii: config.revealPii, logger };
+  registerGetInvoice(server, deps);
+  registerListCustomers(server, deps);
+  registerGetCustomer(server, deps);
   return server;
 }

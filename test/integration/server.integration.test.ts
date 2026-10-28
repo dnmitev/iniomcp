@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { redact } from '../../src/redact.ts';
+import { present } from '../../src/tools/result.ts';
 import { invoice, startFakeInioApi, type FakeInioApi } from './fake-inio-api.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -102,7 +102,7 @@ async function closedPort(): Promise<number> {
   return address.port;
 }
 
-const EXPECTED = JSON.stringify(redact(invoice));
+const EXPECTED = present(invoice, false);
 
 describe('built server over stdio with real Keycloak and fake Inio API', () => {
   it('returns the redacted invoice by id', async () => {

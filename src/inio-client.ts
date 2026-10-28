@@ -15,7 +15,12 @@ export class InioApiError extends Error {
   }
 }
 
-export type InioClient = { get(path: string): Promise<unknown> };
+export type GetOptions = {
+  query?: Record<string, string | number | boolean | undefined>;
+  headers?: Record<string, string>;
+};
+
+export type InioClient = { get(path: string, options?: GetOptions): Promise<unknown> };
 
 type Options = {
   apiUrl: string;
@@ -51,14 +56,19 @@ export function createInioClient({
     return err;
   }
 
-  async function send(path: string): Promise<Response> {
+  /** Sends one GET; `path` (never the query) is what gets logged. */
+  async function send(
+    path: string,
+    url: string,
+    extraHeaders: Record<string, string>,
+  ): Promise<Response> {
     const token = await tokens.getToken();
     const started = performance.now();
     let res: Response;
     try {
-      res = await fetch(apiUrl + path, {
+      res = await fetch(url, {
         method: 'GET',
-        headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+        headers: { ...extraHeaders, authorization: `Bearer ${token}`, accept: 'application/json' },
       });
     } catch {
       // The cause may carry host/network details; keep it out of messages and logs.
@@ -73,12 +83,22 @@ export function createInioClient({
   }
 
   return {
-    async get(path: string): Promise<unknown> {
-      let res = await send(path);
+    async get(path: string, { query = {}, headers = {} }: GetOptions = {}): Promise<unknown> {
+      const qs = new URLSearchParams(
+        Object.entries(query).flatMap(([k, v]) => (v === undefined ? [] : [[k, String(v)]])),
+      ).toString();
+      const url = apiUrl + path + (qs ? `?${qs}` : '');
+      // Our auth and accept headers win over caller headers in any letter case.
+      const extraHeaders = Object.fromEntries(
+        Object.entries(headers).filter(
+          ([k]) => !['authorization', 'accept'].includes(k.toLowerCase()),
+        ),
+      );
+      let res = await send(path, url, extraHeaders);
       if (res.status === 401) {
         await res.body?.cancel();
         tokens.invalidate();
-        res = await send(path);
+        res = await send(path, url, extraHeaders);
       }
       const body: unknown = await res.json().catch(() => undefined);
       if (res.ok) {

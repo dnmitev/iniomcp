@@ -32,6 +32,8 @@ const CONFIG: Config = {
 };
 
 const INVOICE = { id: ID, number: 'INV-1', total: 10, IBAN: 'BG80BNBG96611020345678' };
+const CUSTOMER = { id: ID, customerNo: 'C-1', customerName: 'Acme', SSN: '19800101-1234' };
+const TOOLS = ['get_customer', 'get_invoice', 'list_customers'];
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -51,6 +53,14 @@ function fakeFetch() {
     if (url === AUTH_URL) return Promise.resolve(json({ access_token: TOKEN, expires_in: 300 }));
     if (url === `${API_URL}/invoices/${ID}`) {
       return Promise.resolve(json({ success: true, status: 200, result: INVOICE }));
+    }
+    if (url === `${API_URL}/customers?limit=25&offset=0`) {
+      const page = { data: [CUSTOMER], total: 1, limit: 25, offset: 0 };
+      return Promise.resolve(json({ success: true, status: 200, result: page }));
+    }
+    if (url === `${API_URL}/customers/${ID}`) {
+      const result = { externalCustomer: CUSTOMER, serviceLine: null, effectivePause: null };
+      return Promise.resolve(json({ success: true, status: 200, result }));
     }
     return Promise.reject(new Error(`unexpected fetch ${url}`));
   });
@@ -88,10 +98,106 @@ describe('createServer', () => {
     expect(client.getServerVersion()).toMatchObject({ name: 'inio-mcp', version: PKG.version });
   });
 
-  it('lists exactly the get_invoice tool', async () => {
+  it('lists exactly the get_customer, get_invoice and list_customers tools', async () => {
     const { client } = await connect();
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name)).toEqual(['get_invoice']);
+    expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+  });
+
+  it('advertises each tool with its title, description and input descriptions', async () => {
+    const { client } = await connect();
+    const { tools } = await client.listTools();
+    const meta = Object.fromEntries(
+      tools.map((t) => [
+        t.name,
+        {
+          title: t.title,
+          description: t.description,
+          inputs: Object.fromEntries(
+            Object.entries(t.inputSchema.properties ?? {}).map(([k, v]) => [
+              k,
+              z.object({ description: z.string().optional() }).parse(v).description,
+            ]),
+          ),
+        },
+      ]),
+    );
+    expect(meta).toStrictEqual({
+      get_invoice: {
+        title: 'Get invoice',
+        description:
+          'Fetch one invoice by UUID (id) or invoice number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: { id: 'Invoice UUID', number: 'Business invoice number, e.g. INV-1001' },
+      },
+      get_customer: {
+        title: 'Get customer',
+        description:
+          'Fetch one customer with its service line and any active pause, by UUID (id) or customer number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: { id: 'Customer UUID', number: 'Business customer number, e.g. C-1001' },
+      },
+      list_customers: {
+        title: 'List customers',
+        description:
+          'List customer summaries, filtered by customerNo, directDebit or serviceLineId, with sort and limit/offset paging. Use get_customer for full details. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          customerNo: 'Exact customer number, e.g. C-1001',
+          directDebit: 'Only customers with (true) or without direct debit',
+          serviceLineId: 'Service line UUID',
+          sort: 'Sort field (customerName, customerNo, createdAt or updatedAt)',
+          order: 'Sort order; requires sort, default asc',
+          limit: 'Page size, 1-100',
+          offset: 'Number of items to skip',
+        },
+      },
+    });
+  });
+
+  it('wires list_customers to GET /customers with default paging and redaction', async () => {
+    const { client, fetch } = await connect();
+    const result = await client.callTool({ name: 'list_customers', arguments: {} });
+    expect(result.isError).not.toBe(true);
+    expect(result.content).toEqual([
+      {
+        type: 'text',
+        text: JSON.stringify({
+          items: [{ id: ID, customerNo: 'C-1', customerName: 'Acme' }],
+          total: 1,
+          limit: 25,
+          offset: 0,
+        }),
+      },
+    ]);
+    expect(urlOf(fetch.mock.calls[1]?.[0] ?? '')).toBe(`${API_URL}/customers?limit=25&offset=0`);
+  });
+
+  it('wires get_customer to GET /customers/<id> with redaction from config', async () => {
+    const { client } = await connect();
+    const result = await client.callTool({ name: 'get_customer', arguments: { id: ID } });
+    expect(result.isError).not.toBe(true);
+    expect(result.content).toEqual([
+      { type: 'text', text: JSON.stringify({ customer: { ...CUSTOMER, SSN: '[redacted]' } }) },
+    ]);
+  });
+
+  it('passes revealPii from config to get_customer', async () => {
+    const { client } = await connect({ ...CONFIG, revealPii: true });
+    const result = await client.callTool({ name: 'get_customer', arguments: { id: ID } });
+    expect(result.content).toEqual([
+      { type: 'text', text: JSON.stringify({ customer: CUSTOMER }) },
+    ]);
+  });
+
+  it('logs list_customers and get_customer calls through the injected logger', async () => {
+    const { client, logger } = await connect();
+    await client.callTool({ name: 'list_customers', arguments: {} });
+    await client.callTool({ name: 'get_customer', arguments: { id: ID } });
+    const tools = logger.info.mock.calls
+      .filter(([, msg]) => msg === 'tool call')
+      .map(([obj]) => obj);
+    expect(tools).toEqual([
+      expect.objectContaining({ tool: 'list_customers', outcome: 'ok' }),
+      expect.objectContaining({ tool: 'get_customer', outcome: 'ok' }),
+    ]);
   });
 
   it('wires config, token provider, client and tool so get_invoice returns the redacted invoice', async () => {
@@ -165,7 +271,7 @@ const SPAWN_TIMEOUT = 15_000;
 
 describe('stdio entry point (spawned process)', () => {
   it(
-    'serves get_invoice over stdio and logs a JSON startup line to stderr',
+    'serves the read tools over stdio and logs a JSON startup line to stderr',
     async () => {
       const transport = new StdioClientTransport({
         command: process.execPath,
@@ -192,7 +298,7 @@ describe('stdio entry point (spawned process)', () => {
 
       expect(client.getServerVersion()).toMatchObject({ name: 'inio-mcp', version: PKG.version });
       const { tools } = await client.listTools();
-      expect(tools.map((t) => t.name)).toEqual(['get_invoice']);
+      expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
 
       await vi.waitFor(() => expect(stderr).toContain('server started'), { timeout: 5_000 });
       await client.close();
