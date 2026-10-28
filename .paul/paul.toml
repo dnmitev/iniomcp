@@ -15,20 +15,18 @@ status = "in_progress"
 phases = 5
 
 [phase]
-number = 2
-name = "Read tools"
-status = "in_progress"
-plans_completed = 2
+number = 3
+name = "Packaging and release"
+status = "not_started"
+plans_completed = 0
 
 [loop]
-position = "APPLY"
-plan = "02-03"
-plan_path = "phases/02-read-tools/02-03-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 5
+total_plans = 6
 total_phases = 5
-last_activity = "2026-10-28T22:30:00Z"
+last_activity = "2026-10-29T01:00:00Z"
