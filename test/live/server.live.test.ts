@@ -46,6 +46,34 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     return { isError: result.isError === true, count: content.length, text: content[0]?.text };
   }
 
+  async function callTool(name: string, args: Record<string, unknown>) {
+    const result = await client.callTool({ name, arguments: args });
+    const content = z.array(z.object({ type: z.string(), text: z.string() })).parse(result.content);
+    return { isError: result.isError === true, count: content.length, text: content[0]?.text };
+  }
+
+  /** Lists two customers; returns booleans and ids only so failures never print customer data. */
+  async function listTwoCustomers() {
+    const { isError, text } = await callTool('list_customers', { limit: 2 });
+    expect(isError).toBe(false);
+    const page = z
+      .object({
+        items: z.array(z.record(z.string(), z.unknown())),
+        total: z.number(),
+        limit: z.number(),
+        offset: z.number(),
+      })
+      .parse(JSON.parse(text ?? ''));
+    return page;
+  }
+
+  /** True when every PII-looking key in the customer carries "[redacted]"; never returns values. */
+  function piiRedacted(customer: Record<string, unknown>): boolean {
+    return Object.entries(customer)
+      .filter(([k]) => /^(ssn|iban|zipcode|addressline\d*)$|email/i.test(k))
+      .every(([, v]) => v === '[redacted]');
+  }
+
   beforeAll(async () => {
     const env: Record<string, string> = { PATH: process.env.PATH ?? '' };
     for (const [k, v] of Object.entries(process.env)) {
@@ -83,5 +111,56 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     const { isError, count, text } = await call({ number: `no-such-invoice-${Date.now()}` });
     expect({ isError, count }).toEqual({ isError: true, count: 1 });
     expect(text?.startsWith('NOT_FOUND: ')).toBe(true);
+  }, 30_000);
+
+  const SUMMARY_KEYS = [
+    'id',
+    'customerNo',
+    'customerName',
+    'customerType',
+    'serviceLineName',
+    'directDebit',
+    'orgNr',
+    'createdAt',
+  ];
+
+  it('lists customers as summaries only', async () => {
+    const page = await listTwoCustomers();
+    expect(page.limit).toBe(2);
+    expect(page.items.length <= 2).toBe(true);
+    expect(page.items.length > 0).toBe(true);
+    const extraKeys = page.items
+      .flatMap((i) => Object.keys(i))
+      .filter((k) => !SUMMARY_KEYS.includes(k));
+    expect(extraKeys).toEqual([]);
+  }, 30_000);
+
+  it('gets the first listed customer by id, compact and redacted', async () => {
+    const [first] = (await listTwoCustomers()).items;
+    const id = z.string().parse(first?.id);
+    const { isError, count, text } = await callTool('get_customer', { id });
+    expect({ isError, count }).toEqual({ isError: false, count: 1 });
+    const body = z
+      .object({ customer: z.record(z.string(), z.unknown()) })
+      .parse(JSON.parse(text ?? ''));
+    expect(body.customer.id === id).toBe(true);
+    expect(Object.keys(body)).not.toContain('externalCustomer');
+    expect(text?.includes(':null')).toBe(false);
+    expect(text?.includes('@')).toBe(false);
+    expect(piiRedacted(body.customer)).toBe(true);
+  }, 30_000);
+
+  it('gets the first listed customer by number', async () => {
+    const [first] = (await listTwoCustomers()).items;
+    const id = z.string().parse(first?.id);
+    const number = z.string().parse(first?.customerNo);
+    const { isError, count, text } = await callTool('get_customer', { number });
+    expect({ isError, count }).toEqual({ isError: false, count: 1 });
+    const body = z
+      .object({ customer: z.record(z.string(), z.unknown()) })
+      .parse(JSON.parse(text ?? ''));
+    expect(body.customer.id === id).toBe(true);
+    expect(text?.includes('@')).toBe(false);
+    expect(piiRedacted(body.customer)).toBe(true);
   }, 30_000);
 });
