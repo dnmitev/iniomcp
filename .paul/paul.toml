@@ -1,0 +1,34 @@
+name = "inio-mcp"
+version = "0.0.0"
+status = "active"
+path = "."
+tags = []
+
+[paul]
+version = "1.4"
+source = "https://chrisai.cv/skool"
+
+[milestone]
+name = "v0.1 Initial Release"
+version = "0.1.0"
+status = "not_started"
+phases = 5
+
+[phase]
+number = 1
+name = "Foundation and walking skeleton"
+status = "planning"
+plans_completed = 0
+
+[loop]
+position = "APPLY"
+plan = "01-01"
+plan_path = "phases/01-foundation/01-01-PLAN.md"
+
+[satellite]
+groom = true
+
+[stats]
+total_plans = 0
+total_phases = 5
+last_activity = "2026-10-28T09:00:00Z"

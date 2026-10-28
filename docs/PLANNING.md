@@ -2,7 +2,7 @@
 
 > Public Model Context Protocol (MCP) server that lets Inio clients connect AI assistants to their own Inio data through the official Inio REST API, authenticated with their OAuth2 client credentials.
 
-**Stack:** TypeScript (Node 24), `@modelcontextprotocol/sdk`, Yarn 4, Jest 29, StrykerJS. No database. Distributed via npm (`@inio/mcp`) and a GHCR Docker image. CI on GitHub Actions.
+**Stack:** TypeScript 7 (Node 24, ESM), `@modelcontextprotocol/sdk`, npm, Vitest, StrykerJS, oxlint. No database. Distributed via npm (`@inio/mcp`) and a GHCR Docker image. CI on GitHub Actions.
 **License:** Apache-2.0
 
 ---
@@ -18,19 +18,19 @@ Inio clients increasingly work inside AI assistants. Getting Inio data into thos
 
 ## Tech Stack
 
-| Layer | Choice | Rationale |
-|-------|--------|-----------|
-| Language / runtime | TypeScript (NodeNext), Node 24 | Most mature MCP SDK; `npx` gives zero-install for clients |
-| MCP | `@modelcontextprotocol/sdk`: stdio (default) and Streamable HTTP | stdio for local assistants; HTTP for self-hosted shared instances |
-| API types | `openapi-typescript` generated from [`openapi/inio.json`](../openapi/inio.json), `openapi-fetch` client | Types only, tiny runtime |
-| Validation | `zod`, strict schemas (no unknown keys) | The API gateway rejects unknown query parameters |
-| Auth | OAuth2 `client_credentials` token fetch + in-memory cache, refreshed before expiry | A few dozen lines; no OIDC library needed |
-| Unit tests | Jest 29 + ts-jest | StrykerJS has a first-class Jest runner |
-| Integration tests | Jest + Testcontainers: Keycloak (realm with one confidential client) and a mock API generated from the OpenAPI spec | Real token flow and HTTP without live environments |
-| Live smoke tests | Jest suite against an Inio test environment, run only before release | Test environments are not available around the clock |
-| Mutation testing | StrykerJS, incremental on PRs, full nightly | Test-quality gate |
-| Lint / format | ESLint + typescript-eslint, Prettier, husky + lint-staged | |
-| Build | `tsup` (single ESM bundle with bin shebang) | |
+| Layer              | Choice                                                                                                                | Rationale                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Language / runtime | TypeScript (NodeNext), Node 24                                                                                        | Most mature MCP SDK; `npx` gives zero-install for clients                        |
+| MCP                | `@modelcontextprotocol/sdk`: stdio (default) and Streamable HTTP                                                      | stdio for local assistants; HTTP for self-hosted shared instances                |
+| API types          | `openapi-typescript` generated from [`openapi/inio.json`](../openapi/inio.json), `openapi-fetch` client               | Types only, tiny runtime                                                         |
+| Validation         | `zod`, strict schemas (no unknown keys)                                                                               | The API gateway rejects unknown query parameters                                 |
+| Auth               | OAuth2 `client_credentials` token fetch + in-memory cache, refreshed before expiry                                    | A few dozen lines; no OIDC library needed                                        |
+| Unit tests         | Vitest                                                                                                                | ESM/TS native; first-class Stryker runner                                        |
+| Integration tests  | Vitest + Testcontainers: Keycloak (realm with one confidential client) and a mock API generated from the OpenAPI spec | Real token flow and HTTP without live environments                               |
+| Live smoke tests   | Vitest suite against an Inio test environment, run only before release                                                | Test environments are not available around the clock                             |
+| Mutation testing   | StrykerJS, incremental on PRs, full nightly                                                                           | Test-quality gate                                                                |
+| Lint / format      | oxlint (type-aware, TS 7 native) + Prettier                                                                           | ESLint's TypeScript parser does not support TS 7                                 |
+| Build              | `tsc` (TypeScript 7) emits `dist/`; Node 24 runs `src/*.ts` directly in development                                   | No bundler; Node cannot strip types inside node_modules, so the package ships JS |
 
 ---
 
@@ -38,13 +38,13 @@ Inio clients increasingly work inside AI assistants. Getting Inio data into thos
 
 No database. Entities come from the Inio REST API.
 
-| Entity | Key fields | Relationships |
-|--------|-----------|---------------|
-| Customer | id, customerNo, customerName, customerType, address, emails, SSN, orgNr | has many Invoices and CustomerPauses |
-| CustomerPause | id, customerId, scope, status, startAt, endAt, reason | belongs to Customer |
-| Invoice | id, invoiceNo, customerId, customerNo, currency, amounts, stage/status, dueDate, IBAN | belongs to Customer; has Payments, credit invoices, retry attempts |
-| Payment | amount, paidDate, invoice reference | belongs to Invoice |
-| CreditInvoice | invoiceNo, creditInvoiceNo, amount | matched to an Invoice, or unmatched |
+| Entity        | Key fields                                                                            | Relationships                                                      |
+| ------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Customer      | id, customerNo, customerName, customerType, address, emails, SSN, orgNr               | has many Invoices and CustomerPauses                               |
+| CustomerPause | id, customerId, scope, status, startAt, endAt, reason                                 | belongs to Customer                                                |
+| Invoice       | id, invoiceNo, customerId, customerNo, currency, amounts, stage/status, dueDate, IBAN | belongs to Customer; has Payments, credit invoices, retry attempts |
+| Payment       | amount, paidDate, invoice reference                                                   | belongs to Invoice                                                 |
+| CreditInvoice | invoiceNo, creditInvoiceNo, amount                                                    | matched to an Invoice, or unmatched                                |
 
 - **Response envelope:** `{ correlationId, success, status, result }`; lists return `result: { data, limit, offset, total }`. Tools unwrap `result` and return compact data plus pagination info.
 - **Errors:** `{ code, message, correlationId, i18nKey, fieldErrors, status }`, mapped to MCP tool errors that keep `code`, `message` and `correlationId`.
@@ -56,46 +56,47 @@ No database. Entities come from the Inio REST API.
 ## API Surface (MCP tools)
 
 ### Auth
+
 - **MCP to Inio:** OAuth2 `client_credentials` against the client's Inio API realm. The token carries the client's tenant; tenant isolation is enforced by Inio. The gateway validates every token by introspection, so revoked credentials fail immediately.
 - The public API has no role-based permissions: any valid client token can call every endpoint. `INIO_ALLOW_WRITES` is therefore the write guard.
 - **Assistant to MCP:** stdio needs no auth (local process). HTTP mode: see Security.
 
 ### Configuration
 
-| Env var | Required | Default | Purpose |
-|---------|----------|---------|---------|
-| `INIO_CLIENT_ID` | yes | | API client id |
-| `INIO_CLIENT_SECRET` | yes | | API client secret |
-| `INIO_AUTH_URL` | yes | | Token endpoint; a realm issuer URL gets `/protocol/openid-connect/token` appended |
-| `INIO_URL` | yes | | API gateway base URL incl. `/v1`; must be `https` except localhost |
-| `INIO_ALLOW_WRITES` | no | `false` | Registers write tools |
-| `INIO_REVEAL_PII` | no | `false` | Disables PII redaction |
-| `MCP_TRANSPORT` | no | `stdio` | `stdio` or `http` |
-| `PORT` / `HOST` | no | `3000` / `127.0.0.1` | HTTP mode bind |
+| Env var              | Required | Default              | Purpose                                                                           |
+| -------------------- | -------- | -------------------- | --------------------------------------------------------------------------------- |
+| `INIO_CLIENT_ID`     | yes      |                      | API client id                                                                     |
+| `INIO_CLIENT_SECRET` | yes      |                      | API client secret                                                                 |
+| `INIO_AUTH_URL`      | yes      |                      | Token endpoint; a realm issuer URL gets `/protocol/openid-connect/token` appended |
+| `INIO_URL`           | yes      |                      | API gateway base URL incl. `/v1`; must be `https` except localhost                |
+| `INIO_ALLOW_WRITES`  | no       | `false`              | Registers write tools                                                             |
+| `INIO_REVEAL_PII`    | no       | `false`              | Disables PII redaction                                                            |
+| `MCP_TRANSPORT`      | no       | `stdio`              | `stdio` or `http`                                                                 |
+| `PORT` / `HOST`      | no       | `3000` / `127.0.0.1` | HTTP mode bind                                                                    |
 
 ### Tools
 
 Hand-curated rather than one tool per endpoint. The spec offers most operations both by id and by number; each tool accepts `id` **or** `number`.
 
-| Tool | Endpoints | Gate | Annotation |
-|------|-----------|------|------------|
-| `list_customers` | GET /customers | read | readOnlyHint |
-| `get_customer` | GET /customers/{id}, /customers/by-number/{customerNo} | read | readOnlyHint |
-| `list_customer_pauses` | GET /customers/{id}/pauses | read | readOnlyHint |
-| `get_customer_pause` | GET /customers/{id}/pauses/{pauseId} | read | readOnlyHint |
-| `list_invoices` | GET /invoices | read | readOnlyHint |
-| `get_invoice` (`withInherited?`) | GET /invoices/{id}, by-number, /{id}/with-inherited | read | readOnlyHint |
-| `get_invoice_retry_attempts` | GET /invoices/{id}/retry-attempts, by-number | read | readOnlyHint |
-| `create_customers` | POST /customers | write | destructiveHint |
-| `update_customer` | PATCH /customers/{id}, by-number | write | destructiveHint |
-| `create_customer_pause` / `update_customer_pause` / `cancel_customer_pause` | POST/PATCH pauses, POST …/cancel | write | destructiveHint |
-| `create_invoices` | POST /invoices | write | destructiveHint |
-| `create_credit_invoice` | POST /invoices/{id}/credit-invoice, by-number, /invoices/credit-invoice | write | destructiveHint |
-| `match_credit_invoice` | POST …/match-credit-invoice | write | destructiveHint |
-| `update_invoice_due_date` | POST …/update-due-date | write | destructiveHint |
-| `update_invoice_stop_until_dates` | POST …/update-stop-until-dates | write | destructiveHint |
-| `reset_invoice_stage` | POST /invoices/{id}/reset-stage | write | destructiveHint |
-| `create_payment` / `reverse_payment` | POST /payments, /payments/reverse-payment | write | destructiveHint |
+| Tool                                                                        | Endpoints                                                               | Gate  | Annotation      |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----- | --------------- |
+| `list_customers`                                                            | GET /customers                                                          | read  | readOnlyHint    |
+| `get_customer`                                                              | GET /customers/{id}, /customers/by-number/{customerNo}                  | read  | readOnlyHint    |
+| `list_customer_pauses`                                                      | GET /customers/{id}/pauses                                              | read  | readOnlyHint    |
+| `get_customer_pause`                                                        | GET /customers/{id}/pauses/{pauseId}                                    | read  | readOnlyHint    |
+| `list_invoices`                                                             | GET /invoices                                                           | read  | readOnlyHint    |
+| `get_invoice` (`withInherited?`)                                            | GET /invoices/{id}, by-number, /{id}/with-inherited                     | read  | readOnlyHint    |
+| `get_invoice_retry_attempts`                                                | GET /invoices/{id}/retry-attempts, by-number                            | read  | readOnlyHint    |
+| `create_customers`                                                          | POST /customers                                                         | write | destructiveHint |
+| `update_customer`                                                           | PATCH /customers/{id}, by-number                                        | write | destructiveHint |
+| `create_customer_pause` / `update_customer_pause` / `cancel_customer_pause` | POST/PATCH pauses, POST …/cancel                                        | write | destructiveHint |
+| `create_invoices`                                                           | POST /invoices                                                          | write | destructiveHint |
+| `create_credit_invoice`                                                     | POST /invoices/{id}/credit-invoice, by-number, /invoices/credit-invoice | write | destructiveHint |
+| `match_credit_invoice`                                                      | POST …/match-credit-invoice                                             | write | destructiveHint |
+| `update_invoice_due_date`                                                   | POST …/update-due-date                                                  | write | destructiveHint |
+| `update_invoice_stop_until_dates`                                           | POST …/update-stop-until-dates                                          | write | destructiveHint |
+| `reset_invoice_stage`                                                       | POST /invoices/{id}/reset-stage                                         | write | destructiveHint |
+| `create_payment` / `reverse_payment`                                        | POST /payments, /payments/reverse-payment                               | write | destructiveHint |
 
 Bulk `PATCH /customers` and the `PUT` variants are deliberately left out: PATCH covers updates, and bulk updates driven by an LLM are too risky.
 
@@ -105,25 +106,26 @@ Bulk `PATCH /customers` and the `PUT` variants are deliberately left out: PATCH 
 
 ### Local development
 
-| Service | Runtime | Purpose |
-|---------|---------|---------|
-| inio-mcp | Node 24, `tsx --watch` | server under development |
-| keycloak (tests) | Testcontainers | real `client_credentials` flow |
-| mock API (tests) | Prism or Postman mock from the OpenAPI spec, via Testcontainers | contract-faithful responses |
+| Service          | Runtime                                                         | Purpose                        |
+| ---------------- | --------------------------------------------------------------- | ------------------------------ |
+| inio-mcp         | Node 24, `tsx --watch`                                          | server under development       |
+| keycloak (tests) | Testcontainers                                                  | real `client_credentials` flow |
+| mock API (tests) | Prism or Postman mock from the OpenAPI spec, via Testcontainers | contract-faithful responses    |
 
-`.env` is gitignored; `.env.example` is committed without values. `yarn inspect` runs the server under the MCP Inspector.
+`.env` is gitignored; `.env.example` is committed without values. `npm run inspect` (added with the server in Phase 1) runs it under the MCP Inspector.
 
 ### CI / Release (GitHub Actions)
 
-| Workflow | Trigger | Jobs |
-|----------|---------|------|
-| `ci.yml` | PR, push to main | lint + typecheck, unit, integration (Testcontainers), Stryker incremental (break 80), build |
-| `mutation-nightly.yml` | nightly | full Stryker run, report artifact |
-| `release.yml` | tag `v*`, run manually in working hours | live smoke against a test environment, npm publish with provenance (trusted publishing), multi-arch Docker image to GHCR, GitHub Release |
+| Workflow               | Trigger                                 | Jobs                                                                                                                                     |
+| ---------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`               | PR, push to main                        | lint + typecheck, unit, integration (Testcontainers), Stryker incremental (break 80), build                                              |
+| `mutation-nightly.yml` | nightly                                 | full Stryker run, report artifact                                                                                                        |
+| `release.yml`          | tag `v*`, run manually in working hours | live smoke against a test environment, npm publish with provenance (trusted publishing), multi-arch Docker image to GHCR, GitHub Release |
 
 Live-environment secrets live only in a protected GitHub environment and are never available to fork PRs.
 
 ### Install targets
+
 - `npx -y @inio/mcp` (stdio), with config snippets for Claude Desktop, Cursor and VS Code in the README.
 - `docker run -i -e INIO_… ghcr.io/<owner>/inio-mcp` (stdio), or `MCP_TRANSPORT=http`.
 
@@ -156,12 +158,12 @@ No UI of its own; the MCP client is the UI. UX means tool ergonomics:
 
 ## Integration Points
 
-| Integration | Type | Purpose | Auth |
-|------------|------|---------|------|
-| Inio API realm (Keycloak) | OAuth2 token endpoint | access tokens | client credentials |
-| Inio API gateway | REST | all tool data | Bearer token |
-| npmjs.com | registry | publish `@inio/mcp` | GitHub OIDC trusted publishing |
-| GHCR | container registry | publish image | `GITHUB_TOKEN` |
+| Integration               | Type                  | Purpose             | Auth                           |
+| ------------------------- | --------------------- | ------------------- | ------------------------------ |
+| Inio API realm (Keycloak) | OAuth2 token endpoint | access tokens       | client credentials             |
+| Inio API gateway          | REST                  | all tool data       | Bearer token                   |
+| npmjs.com                 | registry              | publish `@inio/mcp` | GitHub OIDC trusted publishing |
+| GHCR                      | container registry    | publish image       | `GITHUB_TOKEN`                 |
 
 Failure modes: auth server down gives a clear auth error without retry storms; API 5xx returns an error with correlationId; token expiry mid-session refreshes transparently.
 
@@ -171,12 +173,12 @@ Failure modes: auth server down gives a clear auth error without retry storms; A
 
 Claude Code agents in `.claude/agents/`, driven by a `/tdd <story>` command:
 
-| Agent | Role | Writes |
-|-------|------|--------|
-| `senior-qa-automation` | turns acceptance criteria into failing unit and integration tests | `test/**` only |
-| `senior-developer` | minimum code to pass, then refactor | `src/**` only |
-| `reviewer` | reviews the diff for correctness, security (secret leakage, PII, write gating) and simplicity | review comments |
-| `mutation-tester` (adversary) | runs Stryker on changed files and sends surviving mutants back as challenges | Stryker config, challenge reports |
+| Agent                         | Role                                                                                          | Writes                            |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------- |
+| `senior-qa-automation`        | turns acceptance criteria into failing unit and integration tests                             | `test/**` only                    |
+| `senior-developer`            | minimum code to pass, then refactor                                                           | `src/**` only                     |
+| `reviewer`                    | reviews the diff for correctness, security (secret leakage, PII, write gating) and simplicity | review comments                   |
+| `mutation-tester` (adversary) | runs Stryker on changed files and sends surviving mutants back as challenges                  | Stryker config, challenge reports |
 
 Loop: QA (red), developer (green, refactor), reviewer, mutation tester, then back to QA while the changed-file score is below 90. CI enforces a hard floor of 80, so the gate cannot be bypassed locally.
 
@@ -185,26 +187,31 @@ Loop: QA (red), developer (green, refactor), reviewer, mutation tester, then bac
 ## Phase Breakdown
 
 ### Phase 1: Foundation and walking skeleton
-- **Build:** toolchain (Yarn 4, TS, ESLint/Prettier, Jest, StrykerJS); `ci.yml`; agent team and `/tdd`; auth module (token fetch, cache, `INIO_AUTH_URL` normalisation); generated OpenAPI types; config validation; stdio server with `get_invoice`.
+
+- **Build:** toolchain (npm, TypeScript 7, oxlint/Prettier, Vitest, StrykerJS); `ci.yml`; agent team and `/tdd`; auth module (token fetch, cache, `INIO_AUTH_URL` normalisation); generated OpenAPI types; config validation; stdio server with `get_invoice`.
 - **Testable:** unit tests for token cache, refresh and expiry, config validation, error mapping; integration test with Keycloak and mock API containers; Stryker at least 80 on the auth module; one full `/tdd` loop run by the agent team.
 - **Outcome:** Claude Desktop with the four env vars fetches a real invoice from a test environment.
 
 ### Phase 2: Read tools
+
 - **Build:** remaining read tools; pagination; response trimming; PII redaction; error mapping; 429/401 handling; optional MCP prompts.
 - **Testable:** per-tool unit tests (schema strictness, envelope unwrapping, redaction); integration tests against the mock; local live smoke suite; Stryker at least 80, target 90.
 - **Outcome:** a client can explore customers, invoices, pauses and retry attempts conversationally.
 
 ### Phase 3: Packaging and release
-- **Build:** tsup bin bundle; `@inio` npm org and trusted publishing; non-root multi-arch Dockerfile with stdio and HTTP; `release.yml`; README client snippets; changelog tooling; security review.
+
+- **Build:** `tsc` build to `dist/` with bin shebang; `@inio` npm org and trusted publishing; non-root multi-arch Dockerfile with stdio and HTTP; `release.yml`; README client snippets; changelog tooling; security review.
 - **Testable:** `npx -y @inio/mcp@next` works on a clean machine; Docker works in stdio and HTTP mode; release blocked when live smoke fails.
 - **Outcome:** `@inio/mcp` 0.1.0 publicly installable.
 
 ### Phase 4: Write tools (opt-in)
+
 - **Build:** write tools registered only with `INIO_ALLOW_WRITES=true`; `destructiveHint`; consequence-stating descriptions.
 - **Testable:** write tools absent by default; integration tests per write tool; live smoke on a dedicated test tenant (create customer, create invoice, payment, reverse).
 - **Outcome:** clients who opt in can act on their data from the assistant.
 
 ### Phase 5 (later): HTTP hardening
+
 - **Build:** optional bearer auth or per-request token passthrough for shared HTTP deployments; MCP OAuth protected-resource metadata.
 - **Testable:** unauthenticated HTTP requests rejected; per-request tokens isolate tenants.
 - **Outcome:** a team can safely share one HTTP instance.
@@ -213,15 +220,15 @@ Loop: QA (red), developer (green, refactor), reviewer, mutation tester, then bac
 
 ## Quality Gates
 
-| Gate | Threshold | When |
-|------|-----------|------|
-| Unit + integration tests | all passing | every PR |
-| Mutation score (Stryker) | break 80, high 90 | PR (incremental), nightly (full) |
-| Lint + typecheck | clean | every PR |
-| Secret-leak tests | pass | every PR |
-| `npm audit` | no high/critical | every PR |
-| Security review | no high/critical findings | each release |
-| Live smoke | pass | each release |
+| Gate                     | Threshold                 | When                             |
+| ------------------------ | ------------------------- | -------------------------------- |
+| Unit + integration tests | all passing               | every PR                         |
+| Mutation score (Stryker) | break 80, high 90         | PR (incremental), nightly (full) |
+| Lint + typecheck         | clean                     | every PR                         |
+| Secret-leak tests        | pass                      | every PR                         |
+| `npm audit`              | no high/critical          | every PR                         |
+| Security review          | no high/critical findings | each release                     |
+| Live smoke               | pass                      | each release                     |
 
 ---
 
