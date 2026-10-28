@@ -17,20 +17,20 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 2 of 5 (Read tools) — In progress
-Plan: 02-02 approved
-Status: Applying 02-02
-Last activity: 2026-10-28 — PR #4 merged; created .paul/phases/02-read-tools/02-02-PLAN.md
+Plan: 02-02 complete (2 of 3)
+Status: Ready for next PLAN (02-03)
+Last activity: 2026-10-28 — 02-02 unified, SUMMARY created
 
 Progress:
-- Milestone: [███░░░░░░░] 27%
-- Phase 2: [███░░░░░░░] 33%
+- Milestone: [███░░░░░░░] 33%
+- Phase 2: [██████░░░░] 67%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◉        ○     [Applying]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -49,6 +49,8 @@ See PROJECT.md Key Decisions.
 | 2026-10-28: 429 = one retry honoring Retry-After (cap 5 s), then RATE_LIMITED | Phase 2 | Built in 02-03 |
 | 2026-10-28: Sort/order as curated enums validated locally (API 500s on bad values) | Phase 2 | Pattern for list_invoices |
 | 2026-10-28: Free-text identifiers reject only control characters | Phase 2 | Encoding handles the rest |
+| 2026-10-28: Single invoice status sent twice (upstream 500 workaround) | Phase 2 | Remove when API is fixed |
+| 2026-10-28: QA and mutation-tester agents on Sonnet | Phase 2 | Token cost; reviewer/developer stay on Opus |
 
 ### Deferred Issues
 
@@ -61,7 +63,8 @@ See PROJECT.md Key Decisions.
 
 ### Blockers/Concerns
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
-- Phase 2: Confirmed live: invoice status (single or comma-separated) returns 500 — workaround repeated keys; retry-attempts page ignored. See 02-02-PLAN context.
+- Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
+- Phase 2: Detail tools are large (get_invoice ~2,050 tokens, mostly workflowsSettings); trimming needs a decision.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
 
 ### Git State
@@ -71,9 +74,9 @@ Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80)
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 02-02 created
-Next action: Continue /paul:apply .paul/phases/02-read-tools/02-02-PLAN.md
-Resume file: .paul/phases/02-read-tools/02-02-PLAN.md
+Stopped at: 02-02 loop closed
+Next action: Push feat/02-02-invoices and open PR, then /paul:plan for 02-03
+Resume file: .paul/phases/02-read-tools/02-02-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*
