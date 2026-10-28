@@ -20,8 +20,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.0.0 |
-| Status | Phase 1 complete |
-| Last Updated | 2026-10-28 |
+| Status | Phase 2 complete |
+| Last Updated | 2026-10-29 |
 
 ## Requirements
 
@@ -38,12 +38,15 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ `get_invoice` by id or number over stdio — Phase 1
 - ✓ PII redaction by default — Phase 1
 - ✓ Claude Desktop fetches a real invoice with the four env vars — Phase 1
+- ✓ Read tools: list_customers, get_customer, list_customer_pauses, get_customer_pause, list_invoices, get_invoice (withInherited, includeWorkflowSettings), get_invoice_retry_attempts — Phase 2
+- ✓ Pagination (limit/offset, nextOffset), summary fields in lists, compact detail results — Phase 2
+- ✓ 429 handling: one retry honoring Retry-After (≤5 s), then RATE_LIMITED — Phase 2
+- ✓ Clients explore customers, invoices, pauses and retry attempts in Claude Desktop — Phase 2
 
 ### Active (In Progress)
-- [ ] Phase 2: Read tools
+- [ ] Phase 3: Packaging and release
 
 ### Planned (Next)
-- Phase 3: Packaging and release
 - Phase 4: Write tools (opt-in)
 - Phase 5: HTTP hardening
 
@@ -89,13 +92,18 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Apache-2.0 | Free use, patent grant, trademark protection | 2026-10-28 | Active |
 | TypeScript 7 + npm + tsc, no Yarn/tsup; oxlint instead of ESLint | Simplicity, future-proof; typescript-eslint and Stryker TS checker lack TS 7 support | 2026-10-28 | Active |
 | MCP SDK v2, no OpenAPI codegen, text-only results, pino to stderr | Current SDK; codegen needs TS 5 API; saves context tokens | 2026-10-28 | Active |
+| Lists return curated summary fields; details are compacted (empties dropped before redaction) | Token budget (invoice list item ~9 KB raw → ~72 tokens) | 2026-10-28 | Active |
+| Sort/order curated enums validated locally | API answers bad values with HTTP 500 | 2026-10-28 | Active |
+| Upstream bug workarounds in code (invoice status sent as repeated key; retry attempts limit only) | API 500s on single status; page ignored | 2026-10-28 | Active — report upstream |
+| workflowsSettings opt-in via includeWorkflowSettings | Large, but answers stage distribution/fee questions | 2026-10-28 | Active |
+| QA and mutation-tester agents on Sonnet | Token cost; reviewer and mutation gate keep quality | 2026-10-28 | Active |
 
 ## Success Metrics
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Mutation score | ≥ 80 break, 90 target | 98.3% | On track |
-| Unit + integration tests | all green in CI | 316 unit + 10 integration green | Met |
+| Mutation score | ≥ 80 break, 90 target | 99.1% | On track |
+| Unit + integration tests | all green in CI | 749 unit + 20 integration green | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
 | Public install | `npx -y @inio/mcp` works on a clean machine | - | Not started |
 
@@ -123,4 +131,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-28 after Phase 1*
+*Last updated: 2026-10-29 after Phase 2*

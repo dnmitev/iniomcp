@@ -17,16 +17,32 @@ const Input = z
       .regex(/^[^\p{Cc}]+$/u)
       .optional()
       .describe('Business customer number, e.g. C-1001'),
+    includeWorkflowSettings: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Include workflowsSettings: how and when each stage (setup, invoicing1-4, paid, credit) is distributed (email, SMS, paper), escalation fees and timing, and which stages are enabled. Leave false unless the question is about these.',
+      ),
   })
   .refine((a) => (a.id === undefined) !== (a.number === undefined), {
     message: 'Provide exactly one of id or number.',
   });
 
+const AnyObject = z.record(z.string(), z.unknown());
+
 const Payload = z.object({
-  externalCustomer: z.record(z.string(), z.unknown()),
+  externalCustomer: AnyObject,
   serviceLine: z.unknown(),
   effectivePause: z.unknown(),
 });
+
+/** Copy of an object without workflowsSettings; non-objects (e.g. a null serviceLine) pass through. */
+function withoutWorkflowSettings(value: unknown): unknown {
+  const parsed = AnyObject.safeParse(value);
+  if (!parsed.success) return value;
+  const { workflowsSettings: _, ...rest } = parsed.data;
+  return rest;
+}
 
 export function registerGetCustomer(
   server: McpServer,
@@ -41,7 +57,7 @@ export function registerGetCustomer(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'get_customer', async ({ id, number }) => {
+    withToolLogging(logger, 'get_customer', async ({ id, number, includeWorkflowSettings }) => {
       try {
         const path =
           id !== undefined
@@ -52,7 +68,15 @@ export function registerGetCustomer(
           return fail('UPSTREAM_ERROR: Unexpected customer payload from the Inio API.');
         }
         const { externalCustomer, serviceLine, effectivePause } = parsed.data;
-        return ok(present({ customer: externalCustomer, serviceLine, effectivePause }, revealPii));
+        // workflowsSettings (on customer and service line) is large and rarely relevant; opt-in only.
+        const result = includeWorkflowSettings
+          ? { customer: externalCustomer, serviceLine, effectivePause }
+          : {
+              customer: withoutWorkflowSettings(externalCustomer),
+              serviceLine: withoutWorkflowSettings(serviceLine),
+              effectivePause,
+            };
+        return ok(present(result, revealPii));
       } catch (err) {
         return fail(errorText(err));
       }

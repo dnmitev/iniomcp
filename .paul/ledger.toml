@@ -95,3 +95,26 @@ action = "unify"
 phase = 2
 plan = "02-02"
 at = "2026-10-28T22:30:00Z"
+
+[[entry]]
+action = "plan"
+phase = 2
+plan = "02-03"
+at = "2026-10-28T23:00:00Z"
+
+[[entry]]
+action = "apply"
+phase = 2
+plan = "02-03"
+at = "2026-10-28T23:10:00Z"
+
+[[entry]]
+action = "unify"
+phase = 2
+plan = "02-03"
+at = "2026-10-29T01:00:00Z"
+
+[[entry]]
+action = "transition"
+phase = 2
+at = "2026-10-29T01:00:00Z"

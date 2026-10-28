@@ -242,4 +242,23 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(body.success).toBe(true);
     expect(text?.includes('temporalWorkflowId')).toBe(false);
   }, 30_000);
+
+  it('gets an invoice without workflowsSettings by default and with it on request', async () => {
+    const number = await firstClosedInvoiceNo();
+    const plain = await callTool('get_invoice', { number });
+    const flagged = await callTool('get_invoice', { number, includeWorkflowSettings: true });
+    expect([plain.isError, flagged.isError]).toEqual([false, false]);
+    expect(plain.text?.includes('"workflowsSettings"')).toBe(false);
+    expect(flagged.text?.includes('"workflowsSettings"')).toBe(true);
+  }, 30_000);
+
+  it('gets a customer without workflowsSettings by default and with it on request', async () => {
+    const [first] = (await listTwoCustomers()).items;
+    const id = z.string().parse(first?.id);
+    const plain = await callTool('get_customer', { id });
+    const flagged = await callTool('get_customer', { id, includeWorkflowSettings: true });
+    expect([plain.isError, flagged.isError]).toEqual([false, false]);
+    expect(plain.text?.includes('"workflowsSettings"')).toBe(false);
+    expect(flagged.text?.includes('"workflowsSettings"')).toBe(true);
+  }, 30_000);
 });

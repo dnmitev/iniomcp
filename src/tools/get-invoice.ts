@@ -23,6 +23,12 @@ const Input = z
       .describe(
         'Include inherited values (IBAN, bank, effective pause). With number this makes two API calls.',
       ),
+    includeWorkflowSettings: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Include workflowsSettings: how and when each stage (setup, invoicing1-4, paid, credit) is distributed (email, SMS, paper), escalation fees and timing, and which stages are enabled. Leave false unless the question is about these.',
+      ),
   })
   .refine((a) => (a.id === undefined) !== (a.number === undefined), {
     message: 'Provide exactly one of id or number.',
@@ -30,6 +36,7 @@ const Input = z
 
 const BAD_PAYLOAD = 'UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.';
 const WithId = z.object({ id: z.uuid() });
+const Invoice = z.record(z.string(), z.unknown());
 
 export function registerGetInvoice(
   server: McpServer,
@@ -44,28 +51,32 @@ export function registerGetInvoice(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'get_invoice', async ({ id, number, withInherited }) => {
-      try {
-        const byNumber = () => `/invoices/by-number/${pathSegment(number ?? '')}`;
-        let invoiceId = id;
-        // with-inherited exists only by id, so a number costs an extra lookup.
-        if (withInherited && invoiceId === undefined) {
-          const found = WithId.safeParse(await client.get(byNumber()));
-          if (!found.success) return fail(BAD_PAYLOAD);
-          invoiceId = found.data.id;
+    withToolLogging(
+      logger,
+      'get_invoice',
+      async ({ id, number, withInherited, includeWorkflowSettings }) => {
+        try {
+          const byNumber = () => `/invoices/by-number/${pathSegment(number ?? '')}`;
+          let invoiceId = id;
+          // with-inherited exists only by id, so a number costs an extra lookup.
+          if (withInherited && invoiceId === undefined) {
+            const found = WithId.safeParse(await client.get(byNumber()));
+            if (!found.success) return fail(BAD_PAYLOAD);
+            invoiceId = found.data.id;
+          }
+          const path =
+            invoiceId === undefined
+              ? byNumber()
+              : `/invoices/${pathSegment(invoiceId)}${withInherited ? '/with-inherited' : ''}`;
+          const parsed = Invoice.safeParse(await client.get(path));
+          if (!parsed.success) return fail(BAD_PAYLOAD);
+          // workflowsSettings is large and rarely relevant; opt-in only.
+          const { workflowsSettings: _, ...invoice } = parsed.data;
+          return ok(present(includeWorkflowSettings ? parsed.data : invoice, revealPii));
+        } catch (err) {
+          return fail(errorText(err));
         }
-        const path =
-          invoiceId === undefined
-            ? byNumber()
-            : `/invoices/${pathSegment(invoiceId)}${withInherited ? '/with-inherited' : ''}`;
-        const invoice = await client.get(path);
-        if (invoice === null || typeof invoice !== 'object' || Array.isArray(invoice)) {
-          return fail(BAD_PAYLOAD);
-        }
-        return ok(present(invoice, revealPii));
-      } catch (err) {
-        return fail(errorText(err));
-      }
-    }),
+      },
+    ),
   );
 }

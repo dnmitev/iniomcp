@@ -14,15 +14,15 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 
 **v0.1 Initial Release** (v0.1.0)
 Status: In progress
-Phases: 1 of 5 complete
+Phases: 2 of 5 complete
 
 ## Phases
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
-| 2 | Read tools | 2/3 | In progress | - |
-| 3 | Packaging and release | TBD | Not started | - |
+| 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
+| 3 | Packaging and release | TBD | 🔵 Next | - |
 | 4 | Write tools (opt-in) | TBD | Not started | - |
 | 5 | HTTP hardening | TBD | Not started | - |
 
@@ -56,7 +56,7 @@ Phases: 1 of 5 complete
 **Plans:**
 - [x] 02-01: Shared plumbing (query params, pagination, compact results) + list_customers, get_customer
 - [x] 02-02: list_invoices, get_invoice withInherited, get_invoice_retry_attempts, customer pause tools
-- [ ] 02-03: 429 handling, integration + live coverage for all read tools, Claude Desktop check
+- [x] 02-03: 429 handling, integration + live coverage for all read tools, Claude Desktop check
 
 ### Phase 3: Packaging and release
 
@@ -78,4 +78,4 @@ Phases: 1 of 5 complete
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-10-28 after Phase 1*
+*Last updated: 2026-10-29 after Phase 2*

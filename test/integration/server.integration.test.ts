@@ -6,7 +6,19 @@ import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainer
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { present } from '../../src/tools/result.ts';
-import { invoice, startFakeInioApi, type FakeInioApi } from './fake-inio-api.ts';
+import {
+  customer,
+  INHERITED_BANK,
+  INHERITED_FEE_DATE,
+  invoice,
+  pauses,
+  RATE_ALWAYS,
+  RATE_ONCE,
+  retryAttempts,
+  serviceLine,
+  startFakeInioApi,
+  type FakeInioApi,
+} from './fake-inio-api.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const REALM_FILE = fileURLToPath(new URL('./keycloak-realm.json', import.meta.url));
@@ -72,8 +84,8 @@ async function spawnServer(env: Partial<Record<string, string>> = {}) {
   const client = new Client({ name: 'integration-test', version: '0.0.0' });
   spawned.push(client);
   await client.connect(transport);
-  const call = async (args: Record<string, string>) => {
-    const result = await client.callTool({ name: 'get_invoice', arguments: args });
+  const call = async (args: Record<string, unknown>, name = 'get_invoice') => {
+    const result = await client.callTool({ name, arguments: args });
     const content = result.content as Array<{ type: string; text?: string }>;
     expect(content).toHaveLength(1);
     return { isError: result.isError === true, text: content[0]?.text ?? '' };
@@ -102,7 +114,47 @@ async function closedPort(): Promise<number> {
   return address.port;
 }
 
-const EXPECTED = present(invoice, false);
+const EXPECTED = present(omit(invoice, 'workflowsSettings'), false);
+
+function pick(source: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  return Object.fromEntries(keys.map((k) => [k, source[k]]));
+}
+
+function omit(source: Record<string, unknown>, key: string): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(source).filter(([k]) => k !== key));
+}
+
+const CUSTOMER_ID = String(customer.id);
+const PAUSE_ID = String(pauses[0]?.id);
+const INVOICE_KEYS = [
+  'id',
+  'invoiceNo',
+  'customerNo',
+  'invoiceDate',
+  'dueDate',
+  'currency',
+  'totalAmount',
+  'remainingAmount',
+  'status',
+  'stage',
+  'paymentStatus',
+];
+const CUSTOMER_KEYS = [
+  'id',
+  'customerNo',
+  'customerName',
+  'customerType',
+  'serviceLineName',
+  'directDebit',
+  'orgNr',
+  'createdAt',
+];
+const PAUSE_WITHOUT_WORKFLOW = omit(pauses[0] ?? {}, 'temporalWorkflowId');
+
+/** Requests the fake API saw since `before`, as "path?query" strings. */
+function urlsSince(before: number): string[] {
+  return api.requests.slice(before).map((r) => r.url);
+}
 
 describe('built server over stdio with real Keycloak and fake Inio API', () => {
   it('returns the redacted invoice by id', async () => {
@@ -116,6 +168,13 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
     const { call } = await spawnServer();
     const result = await call({ number: String(invoice.invoiceNo) });
     expect(result).toEqual({ isError: false, text: EXPECTED });
+  });
+
+  it('get_invoice without withInherited does not return the inherited values', async () => {
+    const { call } = await spawnServer();
+    const result = await call({ id: String(invoice.id) });
+    expect(result.text).not.toContain('feeApplicationDate');
+    expect(result.text).not.toContain(INHERITED_BANK);
   });
 
   it('sends the fake API a Bearer JWT issued by the realm for the mcp-it client', async () => {
@@ -175,6 +234,153 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       isError: true,
       text: 'NETWORK_ERROR: Cannot reach the Inio API (INIO_URL).',
     });
+  });
+
+  it('list_customers returns summary items only', async () => {
+    const { call } = await spawnServer();
+    const result = await call({}, 'list_customers');
+    expect(result).toEqual({
+      isError: false,
+      text: present(
+        { items: [pick(customer, CUSTOMER_KEYS)], total: 1, limit: 25, offset: 0 },
+        false,
+      ),
+    });
+    expect(result.text).not.toContain('workflowsSettings');
+    expect(result.text).not.toContain('billing@customer.example');
+  });
+
+  it('get_customer by id has no workflowsSettings anywhere by default', async () => {
+    const { call } = await spawnServer();
+    const result = await call({ id: CUSTOMER_ID }, 'get_customer');
+    expect(result).toEqual({
+      isError: false,
+      text: present(
+        {
+          customer: omit(customer, 'workflowsSettings'),
+          serviceLine: omit(serviceLine, 'workflowsSettings'),
+          effectivePause: { isPaused: false },
+        },
+        false,
+      ),
+    });
+    expect(result.text).not.toContain('workflowsSettings');
+    // Raw fixture PII, checked independently of present().
+    const address = z
+      .object({ zipCode: z.string(), addressLine1: z.string() })
+      .parse(customer.customerAddress);
+    for (const raw of [
+      String(customer.mobilePhoneNo),
+      String(customer.distributionEmailAddress),
+      address.zipCode,
+      address.addressLine1,
+    ]) {
+      expect(result.text).not.toContain(raw);
+    }
+  });
+
+  it('get_customer by number includes workflowsSettings on request', async () => {
+    const { call } = await spawnServer();
+    const result = await call(
+      { number: String(customer.customerNo), includeWorkflowSettings: true },
+      'get_customer',
+    );
+    expect(result).toEqual({
+      isError: false,
+      text: present({ customer, serviceLine, effectivePause: { isPaused: false } }, false),
+    });
+    expect(result.text.split('"workflowsSettings"')).toHaveLength(3);
+  });
+
+  it('list_customer_pauses drops temporalWorkflowId and redacts createdBy', async () => {
+    const { call } = await spawnServer();
+    const result = await call({ customerId: CUSTOMER_ID }, 'list_customer_pauses');
+    expect(result).toEqual({
+      isError: false,
+      text: present({ pauses: [PAUSE_WITHOUT_WORKFLOW] }, false),
+    });
+    expect(result.text).not.toContain('temporalWorkflowId');
+    expect(result.text).not.toContain('agent@inio.example');
+    expect(result.text).toContain('[redacted-email]');
+  });
+
+  it('get_customer_pause returns the pause without temporalWorkflowId', async () => {
+    const { call } = await spawnServer();
+    const result = await call({ customerId: CUSTOMER_ID, pauseId: PAUSE_ID }, 'get_customer_pause');
+    expect(result).toEqual({ isError: false, text: present(PAUSE_WITHOUT_WORKFLOW, false) });
+    expect(result.text).not.toContain('temporalWorkflowId');
+  });
+
+  it('list_invoices returns summaries and sends a single status twice', async () => {
+    const before = api.requests.length;
+    const { call } = await spawnServer();
+    const result = await call({ status: ['open'] }, 'list_invoices');
+    expect(result).toEqual({
+      isError: false,
+      text: present(
+        { items: [pick(invoice, INVOICE_KEYS)], total: 1, limit: 25, offset: 0 },
+        false,
+      ),
+    });
+    expect(urlsSince(before)).toEqual(['/v1/invoices?limit=25&offset=0&status=open&status=open']);
+  });
+
+  it('get_invoice withInherited by number makes the by-number lookup, then with-inherited', async () => {
+    const before = api.requests.length;
+    const { call } = await spawnServer();
+    const result = await call(
+      { number: String(invoice.invoiceNo), withInherited: true },
+      'get_invoice',
+    );
+    expect(result.isError).toBe(false);
+    expect(result.text).toContain(`"feeApplicationDate":"${INHERITED_FEE_DATE}"`);
+    expect(result.text).toContain(`"bankName":"${INHERITED_BANK}"`);
+    expect(result.text).not.toContain('workflowsSettings');
+    expect(urlsSince(before)).toEqual([
+      `/v1/invoices/by-number/${encodeURIComponent(String(invoice.invoiceNo))}`,
+      `/v1/invoices/${String(invoice.id)}/with-inherited`,
+    ]);
+  });
+
+  it('get_invoice_retry_attempts maps the misspelled count and drops totalItems', async () => {
+    const before = api.requests.length;
+    const { call } = await spawnServer();
+    const result = await call({ number: String(invoice.invoiceNo) }, 'get_invoice_retry_attempts');
+    expect(result).toEqual({
+      isError: false,
+      text: JSON.stringify({
+        attempts: retryAttempts.data,
+        failedPaymentCount: 1,
+        successfulAttemptsCount: 2,
+        directDebitEligible: true,
+      }),
+    });
+    expect(urlsSince(before)).toEqual([
+      `/v1/invoices/by-number/${encodeURIComponent(String(invoice.invoiceNo))}/retry-attempts?limit=10`,
+    ]);
+  });
+
+  it('succeeds after one 429 with Retry-After: 0', async () => {
+    api.resetRateLimit();
+    const before = api.requests.length;
+    const { call } = await spawnServer();
+    const result = await call({ number: RATE_ONCE });
+    expect(result).toEqual({ isError: false, text: EXPECTED });
+    expect(urlsSince(before)).toEqual([
+      `/v1/invoices/by-number/${RATE_ONCE}`,
+      `/v1/invoices/by-number/${RATE_ONCE}`,
+    ]);
+  });
+
+  it('reports RATE_LIMITED when the API keeps answering 429', async () => {
+    const before = api.requests.length;
+    const { call } = await spawnServer();
+    const result = await call({ number: RATE_ALWAYS });
+    expect(result.isError).toBe(true);
+    expect(result.text).toBe(
+      'RATE_LIMITED: The Inio API rate limit was reached. Try again in 1 s.',
+    );
+    expect(urlsSince(before)).toHaveLength(2);
   });
 
   // Runs last: inspects stderr of every server spawned above.

@@ -50,8 +50,9 @@ function setup(responses: Array<Response | Error>) {
     debug: vi.fn<(obj: object, msg?: string) => void>(),
     warn: vi.fn<(obj: object, msg?: string) => void>(),
   };
-  const client = createInioClient({ apiUrl: API_URL, tokens, fetch, logger });
-  return { client, fetch, tokens, logger };
+  const sleep = vi.fn<(ms: number) => Promise<void>>(() => Promise.resolve());
+  const client = createInioClient({ apiUrl: API_URL, tokens, fetch, logger, sleep });
+  return { client, fetch, tokens, logger, sleep };
 }
 
 async function apiErrorOf(p: Promise<unknown>): Promise<InioApiError> {
@@ -66,7 +67,26 @@ async function apiErrorOf(p: Promise<unknown>): Promise<InioApiError> {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
+
+const rateLimited = {
+  success: false,
+  status: 429,
+  code: 'TOO_MANY_REQUESTS',
+  message: 'slow down',
+  correlationId: 'c-429',
+};
+
+function tooMany(retryAfter?: string): Response {
+  return new Response(JSON.stringify(rateLimited), {
+    status: 429,
+    headers: {
+      'content-type': 'application/json',
+      ...(retryAfter === undefined ? {} : { 'retry-after': retryAfter }),
+    },
+  });
+}
 
 describe('createInioClient', () => {
   describe('request', () => {
@@ -129,6 +149,207 @@ describe('createInioClient', () => {
       await apiErrorOf(client.get('/invoices/abc'));
       expect(tokens.invalidate).not.toHaveBeenCalled();
       expect(fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('429 handling', () => {
+    it('waits the Retry-After seconds, retries once and returns the result', async () => {
+      const { client, fetch, sleep } = setup([tooMany('2'), ok({ id: 'abc' })]);
+      await expect(client.get('/invoices/abc')).resolves.toEqual({ id: 'abc' });
+      expect(sleep.mock.calls).toEqual([[2000]]);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries with the same URL (including query) and headers', async () => {
+      const { client, fetch } = setup([tooMany('1'), ok({})]);
+      await client.get('/invoices', {
+        query: { status: ['open', 'open'], limit: 2 },
+        headers: { 'x-extra': 'v' },
+      });
+      const [first, second] = fetch.mock.calls;
+      expect(second?.[0]).toBe('https://api.example/v1/invoices?status=open&status=open&limit=2');
+      expect(second?.[0]).toBe(first?.[0]);
+      expect(second?.[1]).toEqual(first?.[1]);
+      expect(new Headers(second?.[1]?.headers).get('x-extra')).toBe('v');
+    });
+
+    it('waits 0 ms for Retry-After: 0', async () => {
+      const { client, sleep } = setup([tooMany('0'), ok({})]);
+      await client.get('/x');
+      expect(sleep.mock.calls).toEqual([[0]]);
+    });
+
+    it('honors a Retry-After HTTP date', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+      const { client, sleep } = setup([
+        tooMany(new Date('2026-01-01T00:00:03Z').toUTCString()),
+        ok({}),
+      ]);
+      await client.get('/x');
+      expect(sleep.mock.calls).toEqual([[3000]]);
+    });
+
+    it('caps a far-future Retry-After HTTP date at 5000 ms', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+      const { client, sleep } = setup([
+        tooMany(new Date('2026-01-01T00:01:00Z').toUTCString()),
+        ok({}),
+      ]);
+      await client.get('/x');
+      expect(sleep.mock.calls).toEqual([[5000]]);
+    });
+
+    it.each([
+      ['missing', undefined],
+      ['not a number', 'abc'],
+      ['negative', '-3'],
+      ['empty', ''],
+    ])('waits 1000 ms when Retry-After is %s', async (_label, value) => {
+      const { client, sleep } = setup([tooMany(value), ok({})]);
+      await client.get('/x');
+      expect(sleep.mock.calls).toEqual([[1000]]);
+    });
+
+    it('caps the wait at 5000 ms', async () => {
+      const { client, sleep } = setup([tooMany('60'), ok({})]);
+      await client.get('/x');
+      expect(sleep.mock.calls).toEqual([[5000]]);
+    });
+
+    it('waits exactly 5000 ms for Retry-After: 5', async () => {
+      const { client, sleep } = setup([tooMany('5'), ok({})]);
+      await client.get('/x');
+      expect(sleep.mock.calls).toEqual([[5000]]);
+    });
+
+    it('throws RATE_LIMITED when the retry is also 429, after exactly two fetches', async () => {
+      const { client, fetch } = setup([tooMany('1'), tooMany('7')]);
+      const err = await apiErrorOf(client.get('/invoices/abc'));
+      expect(err.status).toBe(429);
+      expect(err.code).toBe('RATE_LIMITED');
+      expect(err.message).toBe('The Inio API rate limit was reached. Try again in 7 s.');
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('reports the API value (not the capped wait) in the message', async () => {
+      const { client } = setup([tooMany('1'), tooMany('60')]);
+      const err = await apiErrorOf(client.get('/x'));
+      expect(err.message).toBe('The Inio API rate limit was reached. Try again in 60 s.');
+    });
+
+    it.each([
+      ['missing', undefined, 1],
+      ['0', '0', 1],
+      ['invalid', 'abc', 1],
+      ['fractional', '2.5', 3],
+    ])('reports at least 1 s and rounds up when the second Retry-After is %s', async (_l, v, n) => {
+      const { client } = setup([tooMany('1'), tooMany(v)]);
+      const err = await apiErrorOf(client.get('/x'));
+      expect(err.message).toBe(`The Inio API rate limit was reached. Try again in ${n} s.`);
+    });
+
+    it('sleeps only once when the retry is also 429', async () => {
+      const { client, sleep } = setup([tooMany('1'), tooMany('1')]);
+      await apiErrorOf(client.get('/x'));
+      expect(sleep).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs a "rate limited" warning with the path, status and wait, never the query', async () => {
+      const { client, logger } = setup([tooMany('2'), ok({})]);
+      await client.get('/invoices', { query: { customerNo: 'SECRET-Q' } });
+      expect(logger.warn.mock.calls).toContainEqual([
+        { method: 'GET', path: '/invoices', status: 429, waitMs: 2000 },
+        'rate limited',
+      ]);
+      expect(JSON.stringify([logger.warn.mock.calls, logger.debug.mock.calls])).not.toContain(
+        'SECRET-Q',
+      );
+    });
+
+    it('logs "rate limited" only for the 429 that is waited on, then the final upstream error', async () => {
+      const { client, logger } = setup([tooMany('1'), tooMany('2')]);
+      await apiErrorOf(client.get('/x', { query: { a: 'SECRET-Q' } }));
+      const lines = logger.warn.mock.calls.filter(([, msg]) => msg === 'rate limited');
+      expect(lines).toEqual([
+        [{ method: 'GET', path: '/x', status: 429, waitMs: 1000 }, 'rate limited'],
+      ]);
+      expect(logger.warn.mock.calls).toContainEqual([
+        expect.objectContaining({ method: 'GET', path: '/x', status: 429, code: 'RATE_LIMITED' }),
+        'upstream error',
+      ]);
+      expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('SECRET-Q');
+    });
+
+    it('retries after a 429 with a null body', async () => {
+      const first = new Response(null, { status: 429, headers: { 'retry-after': '0' } });
+      const { client, fetch } = setup([first, ok({ id: 'abc' })]);
+      await expect(client.get('/x')).resolves.toEqual({ id: 'abc' });
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('throws RATE_LIMITED, not a TypeError, when both 429s have null bodies', async () => {
+      const { client } = setup([
+        new Response(null, { status: 429, headers: { 'retry-after': '0' } }),
+        new Response(null, { status: 429, headers: { 'retry-after': '0' } }),
+      ]);
+      const err = await apiErrorOf(client.get('/x'));
+      expect(err.code).toBe('RATE_LIMITED');
+      expect(err.status).toBe(429);
+    });
+
+    it('cancels the 429 response body before retrying', async () => {
+      const cancel = vi.fn<() => void>();
+      const first = new Response(new ReadableStream({ cancel }), {
+        status: 429,
+        headers: { 'retry-after': '1' },
+      });
+      const { client } = setup([first, ok({})]);
+      await client.get('/x');
+      expect(cancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('succeeds on 401, then 429, then 200', async () => {
+      const { client, fetch, tokens, sleep } = setup([
+        json(unauthorized, 401),
+        tooMany('1'),
+        ok({ id: 'abc' }),
+      ]);
+      await expect(client.get('/x')).resolves.toEqual({ id: 'abc' });
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(tokens.invalidate).toHaveBeenCalledTimes(1);
+      expect(sleep).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends the fresh token on the request after a 401 then a 429', async () => {
+      const { client, fetch, tokens } = setup([
+        json(unauthorized, 401),
+        tooMany('1'),
+        ok({ id: 'abc' }),
+      ]);
+      let current = TOKEN;
+      tokens.getToken.mockImplementation(() => Promise.resolve(current));
+      tokens.invalidate.mockImplementation(() => {
+        current = TOKEN2;
+      });
+      await client.get('/x');
+      const auth = fetch.mock.calls.map(([, init]) =>
+        new Headers(init?.headers).get('authorization'),
+      );
+      expect(auth).toEqual([`Bearer ${TOKEN}`, `Bearer ${TOKEN2}`, `Bearer ${TOKEN2}`]);
+    });
+
+    it('succeeds on 429, then 401, then 200', async () => {
+      const { client, fetch, tokens, sleep } = setup([
+        tooMany('1'),
+        json(unauthorized, 401),
+        ok({ id: 'abc' }),
+      ]);
+      await expect(client.get('/x')).resolves.toEqual({ id: 'abc' });
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(tokens.invalidate).toHaveBeenCalledTimes(1);
+      expect(sleep).toHaveBeenCalledTimes(1);
     });
   });
 

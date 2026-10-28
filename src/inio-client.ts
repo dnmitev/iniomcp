@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { noopLogger, type Logger, type TokenProvider } from './auth.ts';
 
@@ -27,6 +28,8 @@ type Options = {
   tokens: TokenProvider;
   fetch?: typeof globalThis.fetch;
   logger?: Pick<Logger, 'debug' | 'warn'>;
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
 };
 
 const SuccessEnvelope = z.object({ result: z.unknown() }).refine((b) => 'result' in b);
@@ -42,12 +45,23 @@ export function pathSegment(value: string): string {
   return encodeURIComponent(value);
 }
 
-/** Inio REST client: bearer auth, one retry on 401, unwraps the response envelope. */
+/** Retry-After as seconds (delta or HTTP date); undefined when missing, invalid or negative. */
+function retryAfterSeconds(header: string | null, now: number): number | undefined {
+  if (header === null || header === '') return undefined;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) return seconds >= 0 ? seconds : undefined;
+  const date = Date.parse(header);
+  return Number.isNaN(date) ? undefined : Math.max(0, (date - now) / 1000);
+}
+
+/** Inio REST client: bearer auth, one retry each on 401 and 429, unwraps the response envelope. */
 export function createInioClient({
   apiUrl,
   tokens,
   fetch = globalThis.fetch,
   logger = noopLogger,
+  sleep = delay,
+  now = Date.now,
 }: Options): InioClient {
   /** Logs a failed upstream call at warn and returns the error to throw. */
   function fail(path: string, err: InioApiError): InioApiError {
@@ -61,8 +75,8 @@ export function createInioClient({
     path: string,
     url: string,
     extraHeaders: Record<string, string>,
+    token: string,
   ): Promise<Response> {
-    const token = await tokens.getToken();
     const started = performance.now();
     let res: Response;
     try {
@@ -97,11 +111,45 @@ export function createInioClient({
           ([k]) => !['authorization', 'accept'].includes(k.toLowerCase()),
         ),
       );
-      let res = await send(path, url, extraHeaders);
-      if (res.status === 401) {
+      let token = await tokens.getToken();
+      let authRetried = false;
+      let rateRetried = false;
+      /** Retries a 401 (fresh token) or a 429 (after Retry-After) once each. */
+      const retry = async (res: Response): Promise<Response> => {
+        if (res.status === 401 && !authRetried) {
+          authRetried = true;
+          await res.body?.cancel();
+          tokens.invalidate();
+          token = await tokens.getToken();
+          return send(path, url, extraHeaders, token);
+        }
+        if (res.status === 429 && !rateRetried) {
+          rateRetried = true;
+          await res.body?.cancel();
+          const seconds = retryAfterSeconds(res.headers.get('retry-after'), now());
+          // 1 s when Retry-After is unusable; never more than 5 s inside one tool call.
+          const waitMs = seconds === undefined ? 1000 : Math.min(5000, Math.round(seconds * 1000));
+          logger.warn({ method: 'GET', path, status: 429, waitMs }, 'rate limited');
+          await sleep(waitMs);
+          // Same token: a 429 says nothing about the token.
+          return send(path, url, extraHeaders, token);
+        }
+        return res;
+      };
+      // Two passes cover a 401 and a 429 in either order.
+      const res = await retry(await retry(await send(path, url, extraHeaders, token)));
+      if (res.status === 429) {
         await res.body?.cancel();
-        tokens.invalidate();
-        res = await send(path, url, extraHeaders);
+        const retryAfter = retryAfterSeconds(res.headers.get('retry-after'), now());
+        const seconds = Math.max(1, Math.ceil(retryAfter ?? 1));
+        throw fail(
+          path,
+          new InioApiError(
+            429,
+            'RATE_LIMITED',
+            `The Inio API rate limit was reached. Try again in ${seconds} s.`,
+          ),
+        );
       }
       const body: unknown = await res.json().catch(() => undefined);
       if (res.ok) {
