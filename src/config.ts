@@ -6,7 +6,11 @@ export type Config = {
   allowWrites: boolean;
   revealPii: boolean;
   transport: 'stdio' | 'http';
+  logLevel: LogLevel;
 };
+
+const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
+export type LogLevel = (typeof LOG_LEVELS)[number];
 
 type Env = Record<string, string | undefined>;
 
@@ -31,16 +35,16 @@ export function loadConfig(env: Env): Config {
     return value;
   };
 
-  const oneOf = <T extends string>(name: string, allowed: readonly T[]): T => {
+  const oneOf = <T extends string>(name: string, allowed: readonly T[], fallback: T): T => {
     const raw = env[name];
-    if (!raw) return allowed[0]!;
+    if (!raw) return fallback;
     const value = allowed.find((a) => a === raw);
     if (value) return value;
     problems.push(`${name} must be one of: ${allowed.join(', ')}`);
-    return allowed[0]!;
+    return fallback;
   };
 
-  const flag = (name: string): boolean => oneOf(name, ['false', 'true']) === 'true';
+  const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
 
   const config: Config = {
     clientId: required('INIO_CLIENT_ID'),
@@ -49,7 +53,8 @@ export function loadConfig(env: Env): Config {
     apiUrl: url('INIO_URL').replace(/\/+$/, ''),
     allowWrites: flag('INIO_ALLOW_WRITES'),
     revealPii: flag('INIO_REVEAL_PII'),
-    transport: oneOf('MCP_TRANSPORT', ['stdio', 'http']),
+    transport: oneOf('MCP_TRANSPORT', ['stdio', 'http'], 'stdio'),
+    logLevel: oneOf('INIO_LOG_LEVEL', LOG_LEVELS, 'info'),
   };
 
   if (problems.length > 0) {

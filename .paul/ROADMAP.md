@@ -44,7 +44,7 @@ Phases: 0 of 5 complete
 
 **Plans:**
 - [x] 01-01: Toolchain, CI, agent team, config module
-- [ ] 01-02: Auth, API client, error mapping, get_invoice, stdio server
+- [x] 01-02: Auth, API client, error mapping, get_invoice, stdio server
 - [ ] 01-03: Integration tests + Claude Desktop verification
 
 ### Phase 2: Read tools

@@ -39,6 +39,7 @@ describe('loadConfig', () => {
         allowWrites: false,
         revealPii: false,
         transport: 'stdio',
+        logLevel: 'info',
       });
     });
 
@@ -53,6 +54,7 @@ describe('loadConfig', () => {
         'authUrl',
         'clientId',
         'clientSecret',
+        'logLevel',
         'revealPii',
         'transport',
       ]);
@@ -275,6 +277,37 @@ describe('loadConfig', () => {
 
     it.each(['sse', 'HTTP', 'websocket'])('rejects %j', (value) => {
       expect(errorOf(env({ MCP_TRANSPORT: value })).message).toContain('MCP_TRANSPORT');
+    });
+  });
+
+  describe('INIO_LOG_LEVEL', () => {
+    const LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
+
+    it('defaults to info when unset', () => {
+      expect(loadConfig(env({ INIO_LOG_LEVEL: undefined })).logLevel).toBe('info');
+    });
+
+    it('treats an empty string as unset and defaults to info', () => {
+      expect(loadConfig(env({ INIO_LOG_LEVEL: '' })).logLevel).toBe('info');
+    });
+
+    it.each(LEVELS)('accepts %s', (level) => {
+      expect(loadConfig(env({ INIO_LOG_LEVEL: level })).logLevel).toBe(level);
+    });
+
+    it.each(['INFO', 'verbose', 'warning', ' info', '30'])('rejects %j', (value) => {
+      expect(errorOf(env({ INIO_LOG_LEVEL: value })).message).toContain('INIO_LOG_LEVEL');
+    });
+
+    it('lists the allowed values in the exact message when rejected', () => {
+      expect(errorOf(env({ INIO_LOG_LEVEL: 'verbose' })).message).toBe(
+        'Invalid Inio MCP configuration:\n' +
+          '- INIO_LOG_LEVEL must be one of: fatal, error, warn, info, debug, trace, silent',
+      );
+    });
+
+    it('does not echo the rejected value', () => {
+      expect(errorOf(env({ INIO_LOG_LEVEL: SECRET })).message).not.toContain(SECRET);
     });
   });
 
