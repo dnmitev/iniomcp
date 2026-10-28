@@ -17,9 +17,9 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 2 of 5 (Read tools) — In progress
-Plan: 02-02 complete (2 of 3)
-Status: Ready for next PLAN (02-03)
-Last activity: 2026-10-28 — 02-02 unified, SUMMARY created
+Plan: 02-03 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-28 — PR #5 merged; created .paul/phases/02-read-tools/02-03-PLAN.md
 
 Progress:
 - Milestone: [███░░░░░░░] 33%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -51,6 +51,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-28: Free-text identifiers reject only control characters | Phase 2 | Encoding handles the rest |
 | 2026-10-28: Single invoice status sent twice (upstream 500 workaround) | Phase 2 | Remove when API is fixed |
 | 2026-10-28: QA and mutation-tester agents on Sonnet | Phase 2 | Token cost; reviewer/developer stay on Opus |
+| 2026-10-28: workflowsSettings opt-in (includeWorkflowSettings) on get_invoice/get_customer | Phase 2 | Stage distribution details stay one flag away |
 
 ### Deferred Issues
 
@@ -64,19 +65,18 @@ See PROJECT.md Key Decisions.
 ### Blockers/Concerns
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
 - Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
-- Phase 2: Detail tools are large (get_invoice ~2,050 tokens, mostly workflowsSettings); trimming needs a decision.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
 
 ### Git State
-Branch: feat/02-02-invoices
-Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80)
+Branch: feat/02-03-hardening
+Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80), PR #5 (fa88562)
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: 02-02 loop closed
-Next action: Push feat/02-02-invoices and open PR, then /paul:plan for 02-03
-Resume file: .paul/phases/02-read-tools/02-02-SUMMARY.md
+Stopped at: Plan 02-03 created
+Next action: Review and approve plan, then /paul:apply .paul/phases/02-read-tools/02-03-PLAN.md
+Resume file: .paul/phases/02-read-tools/02-03-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*
