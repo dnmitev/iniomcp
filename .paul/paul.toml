@@ -18,17 +18,15 @@ phases = 5
 number = 2
 name = "Read tools"
 status = "in_progress"
-plans_completed = 0
+plans_completed = 1
 
 [loop]
-position = "APPLY"
-plan = "02-01"
-plan_path = "phases/02-read-tools/02-01-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 3
+total_plans = 4
 total_phases = 5
-last_activity = "2026-10-28T16:45:00Z"
+last_activity = "2026-10-28T19:45:00Z"

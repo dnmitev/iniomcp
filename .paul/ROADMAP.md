@@ -21,7 +21,7 @@ Phases: 1 of 5 complete
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
-| 2 | Read tools | 0/3 | Planning | - |
+| 2 | Read tools | 1/3 | In progress | - |
 | 3 | Packaging and release | TBD | Not started | - |
 | 4 | Write tools (opt-in) | TBD | Not started | - |
 | 5 | HTTP hardening | TBD | Not started | - |
@@ -54,7 +54,7 @@ Phases: 1 of 5 complete
 **Research:** Unlikely
 
 **Plans:**
-- [ ] 02-01: Shared plumbing (query params, pagination, compact results) + list_customers, get_customer
+- [x] 02-01: Shared plumbing (query params, pagination, compact results) + list_customers, get_customer
 - [ ] 02-02: list_invoices, get_invoice withInherited, get_invoice_retry_attempts, customer pause tools
 - [ ] 02-03: 429 handling, integration + live coverage for all read tools, Claude Desktop check
 
