@@ -33,7 +33,7 @@ const CONFIG: Config = {
 
 const INVOICE = { id: ID, number: 'INV-1', total: 10, IBAN: 'BG80BNBG96611020345678' };
 const CUSTOMER = { id: ID, customerNo: 'C-1', customerName: 'Acme', SSN: '19800101-1234' };
-const TOOLS = ['get_customer', 'get_invoice', 'list_customers'];
+const TOOLS = ['get_customer', 'get_invoice', 'list_customers', 'list_invoices'];
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -56,6 +56,10 @@ function fakeFetch() {
     }
     if (url === `${API_URL}/customers?limit=25&offset=0`) {
       const page = { data: [CUSTOMER], total: 1, limit: 25, offset: 0 };
+      return Promise.resolve(json({ success: true, status: 200, result: page }));
+    }
+    if (url === `${API_URL}/invoices?limit=25&offset=0`) {
+      const page = { data: [{ ...INVOICE, invoiceNo: 'INV-1' }], total: 1, limit: 25, offset: 0 };
       return Promise.resolve(json({ success: true, status: 200, result: page }));
     }
     if (url === `${API_URL}/customers/${ID}`) {
@@ -98,7 +102,7 @@ describe('createServer', () => {
     expect(client.getServerVersion()).toMatchObject({ name: 'inio-mcp', version: PKG.version });
   });
 
-  it('lists exactly the get_customer, get_invoice and list_customers tools', async () => {
+  it('lists exactly the get_customer, get_invoice, list_customers and list_invoices tools', async () => {
     const { client } = await connect();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
@@ -135,6 +139,23 @@ describe('createServer', () => {
           'Fetch one customer with its service line and any active pause, by UUID (id) or customer number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
         inputs: { id: 'Customer UUID', number: 'Business customer number, e.g. C-1001' },
       },
+      list_invoices: {
+        title: 'List invoices',
+        description:
+          'List invoice summaries, filtered by invoiceNo, customerId or customerNo (not both), status or paymentStatus, with sort and limit/offset paging. Use get_invoice for full details. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          invoiceNo: 'Exact invoice number, e.g. INV-1001',
+          customerId: 'Customer UUID; not together with customerNo',
+          customerNo: 'Exact customer number, e.g. C-1001; not together with customerId',
+          status: 'Invoice status filter, any of open, paused, cancelled, closed',
+          paymentStatus:
+            'Payment status filter, any of notPaid, paid, overPaid, partiallyPaid, capitalPaid',
+          sort: 'Sort field (invoiceNo, invoiceDate, dueDate, totalAmount, remainingAmount, createdAt or updatedAt)',
+          order: 'Sort order; requires sort, default asc',
+          limit: 'Page size, 1-100',
+          offset: 'Number of items to skip',
+        },
+      },
       list_customers: {
         title: 'List customers',
         description:
@@ -168,6 +189,24 @@ describe('createServer', () => {
       },
     ]);
     expect(urlOf(fetch.mock.calls[1]?.[0] ?? '')).toBe(`${API_URL}/customers?limit=25&offset=0`);
+  });
+
+  it('wires list_invoices to GET /invoices with default paging and the summary shape', async () => {
+    const { client, fetch } = await connect();
+    const result = await client.callTool({ name: 'list_invoices', arguments: {} });
+    expect(result.isError).not.toBe(true);
+    expect(result.content).toEqual([
+      {
+        type: 'text',
+        text: JSON.stringify({
+          items: [{ id: ID, invoiceNo: 'INV-1' }],
+          total: 1,
+          limit: 25,
+          offset: 0,
+        }),
+      },
+    ]);
+    expect(urlOf(fetch.mock.calls[1]?.[0] ?? '')).toBe(`${API_URL}/invoices?limit=25&offset=0`);
   });
 
   it('wires get_customer to GET /customers/<id> with redaction from config', async () => {

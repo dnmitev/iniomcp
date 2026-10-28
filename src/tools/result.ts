@@ -73,3 +73,16 @@ export function toPage<T>(payload: unknown, mapItem: (item: Record<string, unkno
     ...(items.length > 0 && next < total ? { nextOffset: next } : {}),
   };
 }
+
+/** Page text for a list tool: each item cut to `fields` and compacted, then redacted unless revealPii. */
+export function presentPage(
+  payload: unknown,
+  fields: readonly string[],
+  revealPii: boolean,
+): string {
+  const page = toPage(payload, (item) =>
+    compact(Object.fromEntries(fields.map((k) => [k, item[k]]))),
+  );
+  // Compact items, not the page: present() would drop an empty items array.
+  return JSON.stringify(revealPii ? page : redact(page));
+}

@@ -7,6 +7,7 @@ import { createInioClient } from './inio-client.ts';
 import { registerGetCustomer } from './tools/get-customer.ts';
 import { registerGetInvoice } from './tools/get-invoice.ts';
 import { registerListCustomers } from './tools/list-customers.ts';
+import { registerListInvoices } from './tools/list-invoices.ts';
 
 // Read at runtime: a JSON import would sit outside rootDir and break the dist layout.
 export const { version } = z
@@ -29,6 +30,7 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
   const deps = { client, revealPii: config.revealPii, logger };
   registerGetInvoice(server, deps);
   registerListCustomers(server, deps);
+  registerListInvoices(server, deps);
   registerGetCustomer(server, deps);
   return server;
 }

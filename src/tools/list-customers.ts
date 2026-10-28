@@ -2,8 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
-import { redact } from '../redact.ts';
-import { compact, errorText, fail, ok, PageInput, toPage } from './result.ts';
+import { errorText, fail, ok, PageInput, presentPage } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -72,11 +71,7 @@ export function registerListCustomers(
             order: sort === undefined ? undefined : (order ?? 'asc'),
           },
         });
-        const page = toPage(payload, (item) =>
-          compact(Object.fromEntries(SUMMARY_FIELDS.map((k) => [k, item[k]]))),
-        );
-        // Compact items, not the page: present() would drop an empty items array.
-        return ok(JSON.stringify(revealPii ? page : redact(page)));
+        return ok(presentPage(payload, SUMMARY_FIELDS, revealPii));
       } catch (err) {
         return fail(errorText(err));
       }

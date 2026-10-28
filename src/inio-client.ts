@@ -16,7 +16,7 @@ export class InioApiError extends Error {
 }
 
 export type GetOptions = {
-  query?: Record<string, string | number | boolean | undefined>;
+  query?: Record<string, string | number | boolean | string[] | undefined>;
   headers?: Record<string, string>;
 };
 
@@ -85,7 +85,10 @@ export function createInioClient({
   return {
     async get(path: string, { query = {}, headers = {} }: GetOptions = {}): Promise<unknown> {
       const qs = new URLSearchParams(
-        Object.entries(query).flatMap(([k, v]) => (v === undefined ? [] : [[k, String(v)]])),
+        // Arrays become repeated keys; undefined and empty arrays add nothing.
+        Object.entries(query).flatMap(([k, v]) =>
+          v === undefined ? [] : Array.isArray(v) ? v.map((e) => [k, e]) : [[k, String(v)]],
+        ),
       ).toString();
       const url = apiUrl + path + (qs ? `?${qs}` : '');
       // Our auth and accept headers win over caller headers in any letter case.
