@@ -17,9 +17,9 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 2 of 5 (Read tools) — In progress
-Plan: 02-01 complete (1 of 3)
-Status: Ready for next PLAN (02-02)
-Last activity: 2026-10-28 — 02-01 unified, SUMMARY created
+Plan: 02-02 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-28 — PR #4 merged; created .paul/phases/02-read-tools/02-02-PLAN.md
 
 Progress:
 - Milestone: [███░░░░░░░] 27%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -61,19 +61,19 @@ See PROJECT.md Key Decisions.
 
 ### Blockers/Concerns
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
-- Phase 2: Suspected API bugs (invoice status=open 500, retry-attempts page ignored); verify in 02-02. See 02-API-NOTES.md.
+- Phase 2: Confirmed live: invoice status (single or comma-separated) returns 500 — workaround repeated keys; retry-attempts page ignored. See 02-02-PLAN context.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
 
 ### Git State
-Branch: feat/02-01-customers
-Feature branches merged: PR #3 (01-03) merged to main as d6af7bf
+Branch: feat/02-02-invoices
+Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80)
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: 02-01 loop closed
-Next action: Push feat/02-01-customers and open PR, then /paul:plan for 02-02
-Resume file: .paul/phases/02-read-tools/02-01-SUMMARY.md
+Stopped at: Plan 02-02 created
+Next action: Review and approve plan, then /paul:apply .paul/phases/02-read-tools/02-02-PLAN.md
+Resume file: .paul/phases/02-read-tools/02-02-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*
