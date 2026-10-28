@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 3 of 5 (Packaging and release) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-29 — Phase 2 complete (02-03 unified), transitioned to Phase 3
+Phase: 3 of 5 (Packaging and release) — Planning
+Plan: 03-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-29 — PR #6 merged; created .paul/phases/03-packaging-release/03-01-PLAN.md
 
 Progress:
 - Milestone: [████░░░░░░] 40%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -52,6 +52,9 @@ See PROJECT.md Key Decisions.
 | 2026-10-28: Single invoice status sent twice (upstream 500 workaround) | Phase 2 | Remove when API is fixed |
 | 2026-10-28: QA and mutation-tester agents on Sonnet | Phase 2 | Token cost; reviewer/developer stay on Opus |
 | 2026-10-28: workflowsSettings opt-in (includeWorkflowSettings) on get_invoice/get_customer | Phase 2 | Stage distribution details stay one flag away |
+| 2026-10-29: 0.1.0 published as @dnmitev/inio-mcp (personal scope; @inio later) | Phase 3 | Package name changes for users when moved |
+| 2026-10-29: 0.1.0 stdio only (npm and Docker); HTTP with auth in Phase 5 | Phase 3 | MCP_TRANSPORT=http rejected for now |
+| 2026-10-29: Release live gate via protected 'release' environment; user adds secrets | Phase 3 | Human-action checkpoint in 03-02 |
 
 ### Deferred Issues
 
@@ -69,15 +72,15 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: feat/02-03-hardening (PR pending)
-Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80), PR #5 (fa88562)
+Branch: feat/03-01-packaging
+Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80), PR #5 (fa88562), PR #6 (f56ec05)
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Phase 2 complete, ready to plan Phase 3
-Next action: Push feat/02-03-hardening and open PR, then /paul:plan for Phase 3
-Resume file: .paul/ROADMAP.md
+Stopped at: Plan 03-01 created
+Next action: Review and approve plan, then /paul:apply .paul/phases/03-packaging-release/03-01-PLAN.md
+Resume file: .paul/phases/03-packaging-release/03-01-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*

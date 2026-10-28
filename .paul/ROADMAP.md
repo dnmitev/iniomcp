@@ -22,7 +22,7 @@ Phases: 2 of 5 complete
 |-------|------|-------|--------|-----------|
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
-| 3 | Packaging and release | TBD | 🔵 Next | - |
+| 3 | Packaging and release | 0/2 | Planning | - |
 | 4 | Write tools (opt-in) | TBD | Not started | - |
 | 5 | HTTP hardening | TBD | Not started | - |
 
@@ -60,9 +60,13 @@ Phases: 2 of 5 complete
 
 ### Phase 3: Packaging and release
 
-**Goal:** `@inio/mcp` 0.1.0 publicly installable via npx and Docker.
+**Goal:** 0.1.0 publicly installable via npx and Docker (`@dnmitev/inio-mcp` for now; `@inio` later).
 **Depends on:** Phase 2
 **Research:** Likely (npm trusted publishing, multi-arch GHCR)
+
+**Plans:**
+- [ ] 03-01: Package metadata, transport guard, package and Docker smoke tests, README snippets, CHANGELOG, security review
+- [ ] 03-02: release.yml (live gate, npm trusted publishing with provenance, multi-arch GHCR, GitHub Release), first release
 
 ### Phase 4: Write tools (opt-in)
 
