@@ -362,3 +362,145 @@ describe('pathSegment', () => {
     expect(url.hash).toBe('');
   });
 });
+
+describe('createInioClient query and headers', () => {
+  function urlOf(fetch: ReturnType<typeof setup>['fetch'], call = 0): unknown {
+    return fetch.mock.calls[call]?.[0];
+  }
+
+  function headersOf(fetch: ReturnType<typeof setup>['fetch'], call = 0): Headers {
+    return new Headers(fetch.mock.calls[call]?.[1]?.headers);
+  }
+
+  it('appends defined query entries in insertion order and drops undefined ones', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', {
+      query: { limit: 25, offset: 0, customerNo: undefined, directDebit: false },
+    });
+    expect(urlOf(fetch)).toBe(
+      'https://api.example/v1/customers?limit=25&offset=0&directDebit=false',
+    );
+  });
+
+  it('serialises true as "true"', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { query: { directDebit: true } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/customers?directDebit=true');
+  });
+
+  it('URL-encodes query values', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { query: { customerNo: 'a b&c=æ' } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/customers?customerNo=a+b%26c%3D%C3%A6');
+  });
+
+  it('URL-encodes query keys', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { query: { 'a&b': 'x' } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/customers?a%26b=x');
+  });
+
+  it('keeps an empty-string value', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { query: { customerNo: '' } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/customers?customerNo=');
+  });
+
+  it('adds no "?" when every query value is undefined', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { query: { customerNo: undefined } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/customers');
+  });
+
+  it('adds no "?" for an empty query object', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { query: {} });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/customers');
+  });
+
+  it('adds no "?" when options carry only headers', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { headers: { 'x-customer-no': 'C-1' } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/customers');
+  });
+
+  it('sends extra headers alongside authorization and accept', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/customers', { headers: { 'x-customer-no': 'C-1' } });
+    const headers = headersOf(fetch);
+    expect(headers.get('x-customer-no')).toBe('C-1');
+    expect(headers.get('authorization')).toBe(`Bearer ${TOKEN}`);
+    expect(headers.get('accept')).toBe('application/json');
+  });
+
+  it.each(['authorization', 'Authorization', 'AUTHORIZATION'])(
+    'does not let a caller %s header replace the bearer token',
+    async (name) => {
+      const { client, fetch } = setup([ok({})]);
+      await client.get('/customers', { headers: { [name]: 'Bearer evil' } });
+      expect(headersOf(fetch).get('authorization')).toBe(`Bearer ${TOKEN}`);
+    },
+  );
+
+  it.each(['accept', 'Accept', 'ACCEPT'])(
+    'does not let a caller %s header replace accept: application/json',
+    async (name) => {
+      const { client, fetch } = setup([ok({})]);
+      await client.get('/customers', { headers: { [name]: 'text/html' } });
+      expect(headersOf(fetch).get('accept')).toBe('application/json');
+    },
+  );
+
+  it('retries a 401 that has no body', async () => {
+    const { client, fetch } = setup([new Response(null, { status: 401 }), ok({ id: 'abc' })]);
+    await expect(client.get('/invoices/abc')).resolves.toEqual({ id: 'abc' });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-sends the same URL and extra headers on the 401 retry', async () => {
+    const { client, fetch } = setup([json(unauthorized, 401), ok({})]);
+    await client.get('/customers', {
+      query: { limit: 10 },
+      headers: { 'x-customer-no': 'C-1' },
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(urlOf(fetch, 1)).toBe('https://api.example/v1/customers?limit=10');
+    const headers = headersOf(fetch, 1);
+    expect(headers.get('x-customer-no')).toBe('C-1');
+    expect(headers.get('authorization')).toBe(`Bearer ${TOKEN2}`);
+  });
+
+  it('logs the debug path without the query string', async () => {
+    vi.spyOn(performance, 'now').mockReturnValueOnce(100).mockReturnValueOnce(110);
+    const { client, logger } = setup([ok({})]);
+    await client.get('/customers', { query: { customerNo: 'SECRET-Q' } });
+    expect(logger.debug.mock.calls).toEqual([
+      [{ method: 'GET', path: '/customers', status: 200, durationMs: 10 }, 'upstream request'],
+    ]);
+  });
+
+  it('logs the warn path without the query string', async () => {
+    const { client, logger } = setup([json(notFound, 404)]);
+    await client.get('/customers', { query: { customerNo: 'SECRET-Q' } }).catch(() => {});
+    expect(logger.warn.mock.calls).toEqual([
+      [
+        { method: 'GET', path: '/customers', status: 404, code: 'NOT_FOUND', correlationId: 'c-1' },
+        'upstream error',
+      ],
+    ]);
+  });
+
+  it('logs the network-error path without the query string', async () => {
+    const { client, logger } = setup([new TypeError('fetch failed')]);
+    await client.get('/customers', { query: { customerNo: 'SECRET-Q' } }).catch(() => {});
+    expect(logger.warn.mock.calls).toEqual([
+      [{ method: 'GET', path: '/customers', status: 0, code: 'NETWORK_ERROR' }, 'upstream error'],
+    ]);
+  });
+
+  it('returns the envelope result for a request with query options', async () => {
+    const page = { data: [], total: 0, limit: 25, offset: 0 };
+    const { client } = setup([ok(page)]);
+    await expect(client.get('/customers', { query: { limit: 25 } })).resolves.toEqual(page);
+  });
+});

@@ -174,6 +174,15 @@ describe('get_invoice success', () => {
     expect(textOf(result)).toBe(JSON.stringify({ ...INVOICE, IBAN: '[redacted]' }));
   });
 
+  it('drops empty values before redacting, so a null SSN is removed rather than "[redacted]"', async () => {
+    const { call } = await setup(() =>
+      Promise.resolve({ ...INVOICE, SSN: null, note: '', tags: [], meta: {} }),
+    );
+    const result = await call({ id: ID });
+    expect(result.isError).not.toBe(true);
+    expect(textOf(result)).toBe(JSON.stringify({ ...INVOICE, IBAN: '[redacted]' }));
+  });
+
   it('keeps PII when revealPii is true', async () => {
     const { call } = await setup(() => Promise.resolve(INVOICE), true);
     const result = await call({ id: ID });
