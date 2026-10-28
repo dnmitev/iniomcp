@@ -14,12 +14,22 @@ const Input = z
       .string()
       .min(1)
       .max(100)
+      .regex(/^[^\p{Cc}]+$/u)
       .optional()
       .describe('Business invoice number, e.g. INV-1001'),
+    withInherited: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Include inherited values (IBAN, bank, effective pause). With number this makes two API calls.',
+      ),
   })
   .refine((a) => (a.id === undefined) !== (a.number === undefined), {
     message: 'Provide exactly one of id or number.',
   });
+
+const BAD_PAYLOAD = 'UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.';
+const WithId = z.object({ id: z.uuid() });
 
 export function registerGetInvoice(
   server: McpServer,
@@ -34,15 +44,23 @@ export function registerGetInvoice(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'get_invoice', async ({ id, number }) => {
+    withToolLogging(logger, 'get_invoice', async ({ id, number, withInherited }) => {
       try {
+        const byNumber = () => `/invoices/by-number/${pathSegment(number ?? '')}`;
+        let invoiceId = id;
+        // with-inherited exists only by id, so a number costs an extra lookup.
+        if (withInherited && invoiceId === undefined) {
+          const found = WithId.safeParse(await client.get(byNumber()));
+          if (!found.success) return fail(BAD_PAYLOAD);
+          invoiceId = found.data.id;
+        }
         const path =
-          id !== undefined
-            ? `/invoices/${pathSegment(id)}`
-            : `/invoices/by-number/${pathSegment(number ?? '')}`;
+          invoiceId === undefined
+            ? byNumber()
+            : `/invoices/${pathSegment(invoiceId)}${withInherited ? '/with-inherited' : ''}`;
         const invoice = await client.get(path);
         if (invoice === null || typeof invoice !== 'object' || Array.isArray(invoice)) {
-          return fail('UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.');
+          return fail(BAD_PAYLOAD);
         }
         return ok(present(invoice, revealPii));
       } catch (err) {

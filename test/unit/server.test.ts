@@ -33,7 +33,13 @@ const CONFIG: Config = {
 
 const INVOICE = { id: ID, number: 'INV-1', total: 10, IBAN: 'BG80BNBG96611020345678' };
 const CUSTOMER = { id: ID, customerNo: 'C-1', customerName: 'Acme', SSN: '19800101-1234' };
-const TOOLS = ['get_customer', 'get_invoice', 'list_customers', 'list_invoices'];
+const TOOLS = [
+  'get_customer',
+  'get_invoice',
+  'get_invoice_retry_attempts',
+  'list_customers',
+  'list_invoices',
+];
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -102,7 +108,7 @@ describe('createServer', () => {
     expect(client.getServerVersion()).toMatchObject({ name: 'inio-mcp', version: PKG.version });
   });
 
-  it('lists exactly the get_customer, get_invoice, list_customers and list_invoices tools', async () => {
+  it('lists exactly the get_customer, get_invoice, get_invoice_retry_attempts, list_customers and list_invoices tools', async () => {
     const { client } = await connect();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
@@ -131,7 +137,22 @@ describe('createServer', () => {
         title: 'Get invoice',
         description:
           'Fetch one invoice by UUID (id) or invoice number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
-        inputs: { id: 'Invoice UUID', number: 'Business invoice number, e.g. INV-1001' },
+        inputs: {
+          id: 'Invoice UUID',
+          number: 'Business invoice number, e.g. INV-1001',
+          withInherited:
+            'Include inherited values (IBAN, bank, effective pause). With number this makes two API calls.',
+        },
+      },
+      get_invoice_retry_attempts: {
+        title: 'Get invoice retry attempts',
+        description:
+          'Direct-debit retry attempts for one invoice, by UUID (id) or invoice number (number), newest first. Returns attempts plus failed and successful counts and whether the invoice is eligible for direct debit.',
+        inputs: {
+          id: 'Invoice UUID',
+          number: 'Business invoice number, e.g. INV-1001',
+          limit: 'Maximum attempts to return, 1-50',
+        },
       },
       get_customer: {
         title: 'Get customer',
