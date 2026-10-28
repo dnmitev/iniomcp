@@ -2,7 +2,7 @@
 
 Model Context Protocol (MCP) server for the [Inio](https://inio.com) REST API. Connect AI assistants such as Claude, Cursor or VS Code to your own Inio data: customers, invoices, pauses, retry attempts and payments.
 
-> **Status:** early development. One tool (`get_invoice`) works today; not yet published to npm. See [docs/PLANNING.md](docs/PLANNING.md).
+> **Status:** early development. Seven read-only tools work today; not yet published to npm. See [docs/PLANNING.md](docs/PLANNING.md).
 
 ## Planned usage
 
@@ -26,6 +26,25 @@ npx -y @inio/mcp
 | `INIO_LOG_LEVEL`     | no       | `info`  | `fatal` … `trace`, or `silent`                     |
 
 The server is read-only by default.
+
+## Tools
+
+All tools are read-only. Results are compacted (empty values dropped) and personal data is redacted unless `INIO_REVEAL_PII=true`.
+
+| Tool                         | Purpose                                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `list_customers`             | Customer summaries, filtered by customer number, direct debit or service line, with sort and paging       |
+| `get_customer`               | One customer with its service line and active pause, by UUID or customer number                           |
+| `get_customer_pause`         | One customer pause by customer UUID and pause UUID                                                        |
+| `list_customer_pauses`       | Pauses of a customer, optionally filtered by status                                                       |
+| `list_invoices`              | Invoice summaries, filtered by invoice number, customer, status or payment status, with sort and paging   |
+| `get_invoice`                | One invoice by UUID or invoice number                                                                     |
+| `get_invoice_retry_attempts` | Direct-debit retry attempts of an invoice, with failed and successful counts and direct-debit eligibility |
+
+Options on the detail tools:
+
+- `get_invoice` takes `withInherited` to add inherited values (IBAN, bank, effective pause). With an invoice number this makes two API calls.
+- `get_invoice` and `get_customer` take `includeWorkflowSettings` to add `workflowsSettings` (distribution method, escalation fees and timing, enabled stages). It is large, so it is off by default.
 
 ## Use with Claude Desktop (from source)
 

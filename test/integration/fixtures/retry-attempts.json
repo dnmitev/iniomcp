@@ -1,0 +1,13 @@
+{
+  "data": [
+    {
+      "timestamp": "2026-10-03T00:00:00.000Z",
+      "errorMessage": "Insufficient funds",
+      "retryReason": "nsf"
+    }
+  ],
+  "totalItems": 1,
+  "failedPaymentCount": 1,
+  "successfullAtemptsCount": 2,
+  "directDebitEligible": true
+}
