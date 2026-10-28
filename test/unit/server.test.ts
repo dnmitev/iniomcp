@@ -35,8 +35,10 @@ const INVOICE = { id: ID, number: 'INV-1', total: 10, IBAN: 'BG80BNBG96611020345
 const CUSTOMER = { id: ID, customerNo: 'C-1', customerName: 'Acme', SSN: '19800101-1234' };
 const TOOLS = [
   'get_customer',
+  'get_customer_pause',
   'get_invoice',
   'get_invoice_retry_attempts',
+  'list_customer_pauses',
   'list_customers',
   'list_invoices',
 ];
@@ -108,7 +110,7 @@ describe('createServer', () => {
     expect(client.getServerVersion()).toMatchObject({ name: 'inio-mcp', version: PKG.version });
   });
 
-  it('lists exactly the get_customer, get_invoice, get_invoice_retry_attempts, list_customers and list_invoices tools', async () => {
+  it('lists exactly the get_customer, get_invoice, get_invoice_retry_attempts, pause tools, list_customers and list_invoices', async () => {
     const { client } = await connect();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
@@ -175,6 +177,21 @@ describe('createServer', () => {
           order: 'Sort order; requires sort, default asc',
           limit: 'Page size, 1-100',
           offset: 'Number of items to skip',
+        },
+      },
+      get_customer_pause: {
+        title: 'Get customer pause',
+        description:
+          'Fetch one customer pause by customer UUID and pause UUID. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: { customerId: 'Customer UUID', pauseId: 'Pause UUID' },
+      },
+      list_customer_pauses: {
+        title: 'List customer pauses',
+        description:
+          'List pauses for one customer by customer UUID (get_customer returns it), optionally filtered by status. Returns all matching pauses ordered by start time. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          customerId: 'Customer UUID',
+          status: 'Pause status filter: scheduled, active, completed or cancelled',
         },
       },
       list_customers: {

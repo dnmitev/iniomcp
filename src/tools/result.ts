@@ -37,10 +37,14 @@ export function compact(value: unknown): unknown {
   );
 }
 
+/** JSON text for a tool result, redacted unless revealPii; the caller compacts the parts it wants compacted. */
+export function presentRaw(value: unknown, revealPii: boolean): string {
+  return JSON.stringify(revealPii ? value : redact(value));
+}
+
 /** JSON text for a tool result: compacted, then redacted unless revealPii. */
 export function present(value: unknown, revealPii: boolean): string {
-  const compacted = compact(value);
-  return JSON.stringify(revealPii ? compacted : redact(compacted));
+  return presentRaw(compact(value), revealPii);
 }
 
 /** Paging fields to spread into a list tool's input schema. */
@@ -84,5 +88,5 @@ export function presentPage(
     compact(Object.fromEntries(fields.map((k) => [k, item[k]]))),
   );
   // Compact items, not the page: present() would drop an empty items array.
-  return JSON.stringify(revealPii ? page : redact(page));
+  return presentRaw(page, revealPii);
 }

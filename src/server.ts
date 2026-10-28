@@ -5,8 +5,10 @@ import { createTokenProvider, noopLogger, type Logger } from './auth.ts';
 import type { Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
 import { registerGetCustomer } from './tools/get-customer.ts';
+import { registerGetCustomerPause } from './tools/get-customer-pause.ts';
 import { registerGetInvoice } from './tools/get-invoice.ts';
 import { registerGetInvoiceRetryAttempts } from './tools/get-invoice-retry-attempts.ts';
+import { registerListCustomerPauses } from './tools/list-customer-pauses.ts';
 import { registerListCustomers } from './tools/list-customers.ts';
 import { registerListInvoices } from './tools/list-invoices.ts';
 
@@ -34,5 +36,7 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
   registerListCustomers(server, deps);
   registerListInvoices(server, deps);
   registerGetCustomer(server, deps);
+  registerListCustomerPauses(server, deps);
+  registerGetCustomerPause(server, deps);
   return server;
 }

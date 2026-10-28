@@ -2,8 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { pathSegment, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
-import { redact } from '../redact.ts';
-import { compact, errorText, fail, ok } from './result.ts';
+import { compact, errorText, fail, ok, presentRaw } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -67,7 +66,7 @@ export function registerGetInvoiceRetryAttempts(
           successfulAttemptsCount: successfullAtemptsCount,
           directDebitEligible,
         };
-        return ok(JSON.stringify(revealPii ? result : redact(result)));
+        return ok(presentRaw(result, revealPii));
       } catch (err) {
         return fail(errorText(err));
       }
