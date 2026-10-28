@@ -1,0 +1,39 @@
+{
+  "name": "@inio/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Model Context Protocol server for the Inio REST API",
+  "license": "Apache-2.0",
+  "repository": "github:dnmitev/iniomcp",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "inio-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "node --watch src/index.ts",
+    "lint": "oxlint --type-aware --deny-warnings && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --dir test/unit",
+    "test:integration": "vitest run --dir test/integration --passWithNoTests",
+    "mutation": "stryker run",
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^10",
+    "@stryker-mutator/vitest-runner": "^10",
+    "@types/node": "^24",
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "prettier": "^3",
+    "typescript": "^7",
+    "vitest": "^5"
+  }
+}

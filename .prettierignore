@@ -1,0 +1,9 @@
+dist
+coverage
+reports
+.stryker-tmp
+package-lock.json
+openapi
+.paul
+LICENSE
+NOTICE
