@@ -11,24 +11,22 @@ source = "https://chrisai.cv/skool"
 [milestone]
 name = "v0.1 Initial Release"
 version = "0.1.0"
-status = "not_started"
+status = "in_progress"
 phases = 5
 
 [phase]
-number = 1
-name = "Foundation and walking skeleton"
-status = "in_progress"
-plans_completed = 2
+number = 2
+name = "Read tools"
+status = "not_started"
+plans_completed = 0
 
 [loop]
-position = "APPLY"
-plan = "01-03"
-plan_path = "phases/01-foundation/01-03-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 2
+total_plans = 3
 total_phases = 5
-last_activity = "2026-10-28T15:00:00Z"
+last_activity = "2026-10-28T16:15:00Z"
