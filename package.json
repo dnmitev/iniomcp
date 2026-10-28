@@ -22,10 +22,11 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --dir test/unit",
-    "test:integration": "vitest run --dir test/integration --passWithNoTests",
+    "test:integration": "npm run build && vitest run --dir test/integration",
     "mutation": "stryker run",
     "build": "tsc -p tsconfig.build.json",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test:live": "npm run build && node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --dir test/live"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.4.0",
@@ -35,6 +36,7 @@
     "oxlint": "^1.90.0",
     "oxlint-tsgolint": "^7.0.2005",
     "prettier": "^3",
+    "testcontainers": "^12.2.1",
     "typescript": "^7",
     "vitest": "^5"
   },

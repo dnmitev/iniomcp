@@ -13,7 +13,8 @@ Given a story with acceptance criteria (or a list of surviving mutants from muta
 ## Rules
 
 - Write and edit files under `test/` only. Never touch `src/`. If a test needs a type or export that does not exist yet, import it anyway; the developer will create it.
-- Unit tests go in `test/unit/<module>.test.ts`, integration tests in `test/integration/`.
+- Unit tests go in `test/unit/<module>.test.ts`; integration tests (Keycloak container + `test/integration/fake-inio-api.ts`, spawned `dist/index.js`) in `test/integration/`; opt-in live tests in `test/live/` (skipped unless `INIO_LIVE=1`). Stryker mutates against unit tests only, so behavior that matters must also have a unit test.
+- Integration and live tests exercise existing code: a failure is a real bug for the developer (or a test bug), not an expected red.
 - Use Vitest (`describe`, `it`, `expect`, `vi`). Import source with the `.ts` extension. No snapshot tests for behavior.
 - One behavior per `it`. Name tests after the behavior, not the implementation.
 - Cover every Given/When/Then in the acceptance criteria, plus boundaries and error paths.

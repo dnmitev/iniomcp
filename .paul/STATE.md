@@ -17,9 +17,9 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 1 of 5 (Foundation and walking skeleton) — In progress
-Plan: 01-02 complete (2 of 3)
-Status: Ready for next PLAN (01-03)
-Last activity: 2026-10-28 — Unified 01-02; PR #2 CI green
+Plan: 01-03 created, awaiting approval
+Status: Applying 01-03
+Last activity: 2026-10-28 — PR #2 merged; created .paul/phases/01-foundation/01-03-PLAN.md
 
 Progress:
 - Milestone: [█░░░░░░░░░] 13%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ◉        ○     [Applying]
 ```
 
 ## Accumulated Context
@@ -42,6 +42,7 @@ See PROJECT.md Key Decisions.
 |----------|-------|--------|
 | 2026-10-28: Vitest instead of Jest (ESM-native) | Phase 1 | Test runner, Stryker vitest-runner; deviates from the Inio product monorepo |
 | 2026-10-28: TypeScript 7, npm, tsc (no Yarn/tsup), oxlint (no ESLint) | Phase 1 | Stryker TS checker dropped; tsconfig rewrite disabled |
+| 2026-10-28: Integration mock = node:http fake API + synthetic fixture (not Prism; spec envelopes wrong) | Phase 1 | Live suite guards fixture drift |
 | 2026-10-28: MCP SDK v2, pino stderr logs, text-only results, wide PII redaction | Phase 1 | ~2,245 tokens/invoice measured; trimming in Phase 2 |
 
 ### Deferred Issues
@@ -60,9 +61,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 01-02 unified (PR #2)
-Next action: /paul:plan for 01-03 (integration tests with Keycloak + mock API, Claude Desktop check)
-Resume file: .paul/phases/01-foundation/01-02-SUMMARY.md
+Stopped at: Plan 01-03 created
+Next action: Decide mock (fake-api vs prism), approve, then /paul:apply .paul/phases/01-foundation/01-03-PLAN.md
+Resume file: .paul/phases/01-foundation/01-03-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*
