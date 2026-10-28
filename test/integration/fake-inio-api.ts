@@ -16,6 +16,15 @@ export const retryAttempts = z
   .record(z.string(), z.unknown())
   .parse(fixture('retry-attempts.json'));
 
+/** with-inherited differs from the plain invoice by a key it lacks and a changed bank name. */
+export const INHERITED_FEE_DATE = '2026-10-15T00:00:00.000Z';
+export const INHERITED_BANK = 'Inherited Bank';
+const withInherited = {
+  ...invoice,
+  feeApplicationDate: INHERITED_FEE_DATE,
+  bankName: INHERITED_BANK,
+};
+
 /** Invoice numbers the fake API answers with 429: once, then 200 / always. */
 export const RATE_ONCE = 'RATE-ONCE';
 export const RATE_ALWAYS = 'RATE-ALWAYS';
@@ -98,7 +107,7 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
       // by-number serves only the invoice number (and RATE-ONCE after its 429); with-inherited is id-only.
       const known = byNumber ? key === invoiceNo || key === RATE_ONCE : key === invoiceId;
       if (known && suffix === undefined) return ok(invoice);
-      if (known && !byNumber && suffix === 'with-inherited') return ok(invoice);
+      if (known && !byNumber && suffix === 'with-inherited') return ok(withInherited);
       if (known && suffix === 'retry-attempts') return ok(retryAttempts);
     }
     const missing = decodeURIComponent(url.split('/').pop() ?? '');

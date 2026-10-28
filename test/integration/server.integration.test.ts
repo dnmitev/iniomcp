@@ -8,6 +8,8 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { present } from '../../src/tools/result.ts';
 import {
   customer,
+  INHERITED_BANK,
+  INHERITED_FEE_DATE,
   invoice,
   pauses,
   RATE_ALWAYS,
@@ -168,6 +170,13 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
     expect(result).toEqual({ isError: false, text: EXPECTED });
   });
 
+  it('get_invoice without withInherited does not return the inherited values', async () => {
+    const { call } = await spawnServer();
+    const result = await call({ id: String(invoice.id) });
+    expect(result.text).not.toContain('feeApplicationDate');
+    expect(result.text).not.toContain(INHERITED_BANK);
+  });
+
   it('sends the fake API a Bearer JWT issued by the realm for the mcp-it client', async () => {
     const before = api.requests.length;
     const { call } = await spawnServer();
@@ -324,6 +333,8 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       'get_invoice',
     );
     expect(result.isError).toBe(false);
+    expect(result.text).toContain(`"feeApplicationDate":"${INHERITED_FEE_DATE}"`);
+    expect(result.text).toContain(`"bankName":"${INHERITED_BANK}"`);
     expect(result.text).not.toContain('workflowsSettings');
     expect(urlsSince(before)).toEqual([
       `/v1/invoices/by-number/${encodeURIComponent(String(invoice.invoiceNo))}`,
