@@ -144,6 +144,8 @@ describe('createServer', () => {
           number: 'Business invoice number, e.g. INV-1001',
           withInherited:
             'Include inherited values (IBAN, bank, effective pause). With number this makes two API calls.',
+          includeWorkflowSettings:
+            'Include workflowsSettings: how and when each stage (setup, invoicing1-4, paid, credit) is distributed (email, SMS, paper), escalation fees and timing, and which stages are enabled. Leave false unless the question is about these.',
         },
       },
       get_invoice_retry_attempts: {
@@ -160,7 +162,12 @@ describe('createServer', () => {
         title: 'Get customer',
         description:
           'Fetch one customer with its service line and any active pause, by UUID (id) or customer number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
-        inputs: { id: 'Customer UUID', number: 'Business customer number, e.g. C-1001' },
+        inputs: {
+          id: 'Customer UUID',
+          number: 'Business customer number, e.g. C-1001',
+          includeWorkflowSettings:
+            'Include workflowsSettings: how and when each stage (setup, invoicing1-4, paid, credit) is distributed (email, SMS, paper), escalation fees and timing, and which stages are enabled. Leave false unless the question is about these.',
+        },
       },
       list_invoices: {
         title: 'List invoices',

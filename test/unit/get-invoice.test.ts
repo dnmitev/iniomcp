@@ -77,11 +77,16 @@ describe('get_invoice registration', () => {
     });
   });
 
-  it('advertises a strict input schema with id, number and withInherited', async () => {
+  it('advertises a strict input schema with id, number, withInherited and includeWorkflowSettings', async () => {
     const { client } = await setup(() => Promise.resolve(INVOICE));
     const { tools } = await client.listTools();
     const schema = tools[0]?.inputSchema;
-    expect(Object.keys(schema?.properties ?? {}).sort()).toEqual(['id', 'number', 'withInherited']);
+    expect(Object.keys(schema?.properties ?? {}).sort()).toEqual([
+      'id',
+      'includeWorkflowSettings',
+      'number',
+      'withInherited',
+    ]);
     expect(schema).toMatchObject({
       type: 'object',
       additionalProperties: false,
@@ -89,6 +94,7 @@ describe('get_invoice registration', () => {
         id: { type: 'string', format: 'uuid' },
         number: { type: 'string', minLength: 1, maxLength: 100 },
         withInherited: { type: 'boolean', default: false },
+        includeWorkflowSettings: { type: 'boolean', default: false },
       },
     });
   });
@@ -469,6 +475,88 @@ describe('get_invoice withInherited', () => {
     const result = await call({ id: ID, withInherited: 'yes' });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain('withInherited');
+    expect(inio.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('get_invoice includeWorkflowSettings', () => {
+  const WF = { invoicing1: { distribution: 'sms', enabled: true } };
+  const WITH_WF = { ...INVOICE, workflowsSettings: WF };
+  const INHERITED_WF = { ...WITH_WF, bankName: 'Acme Bank' };
+
+  it('omits workflowsSettings by default', async () => {
+    const { call } = await setup(() => Promise.resolve(WITH_WF));
+    const text = textOf(await call({ id: ID }));
+    expect(text).not.toContain('workflowsSettings');
+    expect(JSON.parse(text)).toStrictEqual({ ...INVOICE, IBAN: '[redacted]' });
+  });
+
+  it('omits workflowsSettings when the flag is false', async () => {
+    const { call } = await setup(() => Promise.resolve(WITH_WF));
+    expect(textOf(await call({ id: ID, includeWorkflowSettings: false }))).not.toContain(
+      'workflowsSettings',
+    );
+  });
+
+  it('includes workflowsSettings when the flag is true', async () => {
+    const { call } = await setup(() => Promise.resolve(WITH_WF));
+    expect(JSON.parse(textOf(await call({ id: ID, includeWorkflowSettings: true })))).toStrictEqual(
+      {
+        ...INVOICE,
+        IBAN: '[redacted]',
+        workflowsSettings: WF,
+      },
+    );
+  });
+
+  it('works by number with the flag', async () => {
+    const { inio, call } = await setup(() => Promise.resolve(WITH_WF));
+    const text = textOf(await call({ number: 'INV-1', includeWorkflowSettings: true }));
+    expect(text).toContain('"workflowsSettings"');
+    expect(inio.get).toHaveBeenCalledWith('/invoices/by-number/INV-1');
+  });
+
+  it('omits workflowsSettings by default with withInherited by id', async () => {
+    const { inio, call } = await setup(() => Promise.resolve(INHERITED_WF));
+    const text = textOf(await call({ id: ID, withInherited: true }));
+    expect(text).not.toContain('workflowsSettings');
+    expect(text).toContain('"bankName":"Acme Bank"');
+    expect(inio.get.mock.calls).toEqual([[`/invoices/${ID}/with-inherited`]]);
+  });
+
+  it('includes workflowsSettings with withInherited by id and the flag', async () => {
+    const { call } = await setup(() => Promise.resolve(INHERITED_WF));
+    const text = textOf(await call({ id: ID, withInherited: true, includeWorkflowSettings: true }));
+    expect(text).toContain('"workflowsSettings"');
+    expect(text).toContain('"bankName":"Acme Bank"');
+  });
+
+  it.each([
+    [false, false],
+    [true, true],
+  ])(
+    'with withInherited by number and flag %s, workflowsSettings present is %s',
+    async (flag, present) => {
+      const { inio, call } = await setup((path) =>
+        Promise.resolve(path.endsWith('/with-inherited') ? INHERITED_WF : WITH_WF),
+      );
+      const text = textOf(
+        await call({ number: 'INV-1', withInherited: true, includeWorkflowSettings: flag }),
+      );
+      expect(text.includes('"workflowsSettings"')).toBe(present);
+      expect(text).toContain('"bankName":"Acme Bank"');
+      expect(inio.get.mock.calls).toEqual([
+        ['/invoices/by-number/INV-1'],
+        [`/invoices/${ID}/with-inherited`],
+      ]);
+    },
+  );
+
+  it('rejects a non-boolean flag without calling the API', async () => {
+    const { inio, call } = await setup(() => Promise.resolve(WITH_WF));
+    const result = await call({ id: ID, includeWorkflowSettings: 'yes' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('includeWorkflowSettings');
     expect(inio.get).not.toHaveBeenCalled();
   });
 });

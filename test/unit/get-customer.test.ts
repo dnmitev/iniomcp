@@ -95,17 +95,22 @@ describe('get_customer registration', () => {
     expect(tools[0]?.description ?? '').toMatch(/redacted/i);
   });
 
-  it('advertises a strict input schema with id and number', async () => {
+  it('advertises a strict input schema with id, number and includeWorkflowSettings', async () => {
     const { client } = await setup(okCustomer);
     const { tools } = await client.listTools();
     const schema = tools[0]?.inputSchema;
-    expect(Object.keys(schema?.properties ?? {}).sort()).toEqual(['id', 'number']);
+    expect(Object.keys(schema?.properties ?? {}).sort()).toEqual([
+      'id',
+      'includeWorkflowSettings',
+      'number',
+    ]);
     expect(schema).toMatchObject({
       type: 'object',
       additionalProperties: false,
       properties: {
         id: { type: 'string', format: 'uuid' },
         number: { type: 'string', minLength: 1, maxLength: 50 },
+        includeWorkflowSettings: { type: 'boolean', default: false },
       },
     });
   });
@@ -337,5 +342,120 @@ describe('get_customer tool-call logging', () => {
     const logged = JSON.stringify(logger.info.mock.calls);
     expect(logged).not.toContain('Acme');
     expect(logged).not.toContain('19800101-1234');
+  });
+});
+
+describe('get_customer includeWorkflowSettings', () => {
+  const WF = { invoicing1: { distribution: 'email', enabled: true } };
+  const withWf = () =>
+    Promise.resolve({
+      ...PAYLOAD,
+      externalCustomer: { ...PAYLOAD.externalCustomer, workflowsSettings: WF },
+    });
+
+  it('omits workflowsSettings by default', async () => {
+    const { call } = await setup(withWf);
+    const text = textOf(await call({ id: CID }));
+    expect(text).not.toContain('workflowsSettings');
+    expect(JSON.parse(text)).toStrictEqual({
+      customer: CUSTOMER_REDACTED,
+      serviceLine: SERVICE_LINE,
+      effectivePause: PAUSE,
+    });
+  });
+
+  it('omits workflowsSettings when the flag is false', async () => {
+    const { call } = await setup(withWf);
+    expect(textOf(await call({ id: CID, includeWorkflowSettings: false }))).not.toContain(
+      'workflowsSettings',
+    );
+  });
+
+  it('includes workflowsSettings in the customer when the flag is true', async () => {
+    const { call } = await setup(withWf);
+    expect(
+      JSON.parse(textOf(await call({ id: CID, includeWorkflowSettings: true }))),
+    ).toStrictEqual({
+      customer: { ...CUSTOMER_REDACTED, workflowsSettings: WF },
+      serviceLine: SERVICE_LINE,
+      effectivePause: PAUSE,
+    });
+  });
+
+  it('works by number with the flag', async () => {
+    const { inio, call } = await setup(withWf);
+    const text = textOf(await call({ number: 'C-1', includeWorkflowSettings: true }));
+    expect(text).toContain('"workflowsSettings"');
+    expect(inio.get).toHaveBeenCalledWith('/customers/by-number/C-1');
+  });
+
+  it('redacts an email inside workflowsSettings', async () => {
+    const wf = { invoicing1: { to: 'jane@home.example' } };
+    const { call } = await setup(() =>
+      Promise.resolve({
+        ...PAYLOAD,
+        externalCustomer: { ...PAYLOAD.externalCustomer, workflowsSettings: wf },
+      }),
+    );
+    const text = textOf(await call({ id: CID, includeWorkflowSettings: true }));
+    expect(text).toContain('[redacted-email]');
+    expect(text).not.toContain('jane@home.example');
+  });
+
+  describe('with workflowsSettings on the service line too', () => {
+    const SL_WF = { invoicing1: { distribution: 'paper' } };
+    const withBoth = () =>
+      Promise.resolve({
+        ...PAYLOAD,
+        externalCustomer: { ...PAYLOAD.externalCustomer, workflowsSettings: WF },
+        serviceLine: { ...PAYLOAD.serviceLine, workflowsSettings: SL_WF },
+      });
+
+    it('removes it from the customer and the service line by default', async () => {
+      const { call } = await setup(withBoth);
+      const text = textOf(await call({ id: CID }));
+      expect(text).not.toContain('workflowsSettings');
+      expect(JSON.parse(text)).toStrictEqual({
+        customer: CUSTOMER_REDACTED,
+        serviceLine: SERVICE_LINE,
+        effectivePause: PAUSE,
+      });
+    });
+
+    it('removes it from both when the flag is false', async () => {
+      const { call } = await setup(withBoth);
+      expect(textOf(await call({ id: CID, includeWorkflowSettings: false }))).not.toContain(
+        'workflowsSettings',
+      );
+    });
+
+    it('keeps it on both the customer and the service line when the flag is true', async () => {
+      const { call } = await setup(withBoth);
+      expect(
+        JSON.parse(textOf(await call({ id: CID, includeWorkflowSettings: true }))),
+      ).toStrictEqual({
+        customer: { ...CUSTOMER_REDACTED, workflowsSettings: WF },
+        serviceLine: { ...SERVICE_LINE, workflowsSettings: SL_WF },
+        effectivePause: PAUSE,
+      });
+    });
+
+    it('keeps a null serviceLine null-free and does not fail when it is absent', async () => {
+      const { call } = await setup(() => Promise.resolve({ ...PAYLOAD, serviceLine: null }));
+      const result = await call({ id: CID });
+      expect(result.isError).not.toBe(true);
+      expect(JSON.parse(textOf(result))).toStrictEqual({
+        customer: CUSTOMER_REDACTED,
+        effectivePause: PAUSE,
+      });
+    });
+  });
+
+  it('rejects a non-boolean flag without calling the API', async () => {
+    const { inio, call } = await setup(withWf);
+    const result = await call({ id: CID, includeWorkflowSettings: 'yes' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('includeWorkflowSettings');
+    expect(inio.get).not.toHaveBeenCalled();
   });
 });
