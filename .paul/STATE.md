@@ -18,7 +18,7 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 Milestone: v0.1 Initial Release
 Phase: 1 of 5 (Foundation and walking skeleton) — In progress
 Plan: 01-02 created, awaiting approval
-Status: Applying 01-02
+Status: APPLY complete, ready for UNIFY
 Last activity: 2026-10-28 — PR #1 merged; created .paul/phases/01-foundation/01-02-PLAN.md
 
 Progress:
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◉        ○     [Applying]
+  ✓        ✓        ○     [Applied, ready for UNIFY]
 ```
 
 ## Accumulated Context
@@ -56,8 +56,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 01-02 created
-Next action: Approve, then /paul:apply .paul/phases/01-foundation/01-02-PLAN.md
+Stopped at: Plan 01-02 applied, PR open (CI pending)
+Next action: Confirm CI green, then /paul:unify .paul/phases/01-foundation/01-02-PLAN.md
 Resume file: .paul/phases/01-foundation/01-02-PLAN.md
 
 ---

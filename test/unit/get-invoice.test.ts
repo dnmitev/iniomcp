@@ -302,3 +302,57 @@ describe('get_invoice errors', () => {
     expect(textOf(result)).toBe('UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.');
   });
 });
+
+describe('get_invoice tool-call logging', () => {
+  async function setupWithLogger(get: (path: string) => Promise<unknown>) {
+    const logger = {
+      debug: vi.fn<(obj: object, msg?: string) => void>(),
+      info: vi.fn<(obj: object, msg?: string) => void>(),
+      warn: vi.fn<(obj: object, msg?: string) => void>(),
+    };
+    const server = new McpServer({ name: 'test', version: '0.0.0' });
+    registerGetInvoice(server, { client: { get }, revealPii: false, logger });
+    const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    mcpClient = client;
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    return { logger, client };
+  }
+
+  it('logs one tool call line with tool get_invoice and outcome ok', async () => {
+    const { logger, client } = await setupWithLogger(() => Promise.resolve(INVOICE));
+    const result = await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    const bytes = Buffer.byteLength(textOf(result), 'utf8');
+    expect(logger.info.mock.calls).toEqual([
+      [
+        {
+          tool: 'get_invoice',
+          durationMs: expect.any(Number),
+          outcome: 'ok',
+          responseBytes: bytes,
+          approxTokens: Math.ceil(bytes / 4),
+        },
+        'tool call',
+      ],
+    ]);
+  });
+
+  it('logs outcome error when the API call fails', async () => {
+    const { logger, client } = await setupWithLogger(() =>
+      Promise.reject(new InioApiError(404, 'NOT_FOUND', 'nope', 'c-1')),
+    );
+    await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(logger.info.mock.calls[0]?.[0]).toMatchObject({
+      tool: 'get_invoice',
+      outcome: 'error',
+    });
+    expect(logger.info.mock.calls[0]?.[1]).toBe('tool call');
+  });
+
+  it('does not log invoice content or PII', async () => {
+    const { logger, client } = await setupWithLogger(() => Promise.resolve(INVOICE));
+    await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    expect(JSON.stringify(logger.info.mock.calls)).not.toContain(INVOICE.IBAN);
+  });
+});

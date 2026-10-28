@@ -46,7 +46,10 @@ function setup(responses: Array<Response | Error>) {
     ),
     invalidate: vi.fn<() => void>(),
   };
-  const logger = { debug: vi.fn<(obj: object, msg?: string) => void>() };
+  const logger = {
+    debug: vi.fn<(obj: object, msg?: string) => void>(),
+    warn: vi.fn<(obj: object, msg?: string) => void>(),
+  };
   const client = createInioClient({ apiUrl: API_URL, tokens, fetch, logger });
   return { client, fetch, tokens, logger };
 }
@@ -238,6 +241,101 @@ describe('createInioClient', () => {
       expect(logged).not.toContain(TOKEN);
       expect(logged).not.toContain(TOKEN2);
       expect(logged).not.toContain('tok-');
+    });
+  });
+
+  describe('warn logging', () => {
+    it('logs a non-2xx Inio error with method, path, status, code and correlationId', async () => {
+      const { client, logger } = setup([json(notFound, 404)]);
+      await client.get('/invoices/by-number/X').catch(() => {});
+      expect(logger.warn.mock.calls).toEqual([
+        [
+          {
+            method: 'GET',
+            path: '/invoices/by-number/X',
+            status: 404,
+            code: 'NOT_FOUND',
+            correlationId: 'c-1',
+          },
+          'upstream error',
+        ],
+      ]);
+    });
+
+    it('logs code UPSTREAM_ERROR and no correlationId for a non-envelope 5xx', async () => {
+      const { client, logger } = setup([new Response('<html>bad gateway</html>', { status: 502 })]);
+      await client.get('/invoices/abc').catch(() => {});
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      const [obj, msg] = logger.warn.mock.calls[0] ?? [];
+      expect(msg).toBe('upstream error');
+      expect(obj).toEqual({
+        method: 'GET',
+        path: '/invoices/abc',
+        status: 502,
+        code: 'UPSTREAM_ERROR',
+        correlationId: undefined,
+      });
+    });
+
+    it('logs once, for the final response, when the 401 retry is also 401', async () => {
+      const { client, logger } = setup([json(unauthorized, 401), json(unauthorized, 401)]);
+      await client.get('/invoices/abc').catch(() => {});
+      expect(logger.warn.mock.calls).toEqual([
+        [
+          {
+            method: 'GET',
+            path: '/invoices/abc',
+            status: 401,
+            code: 'UNAUTHORIZED',
+            correlationId: 'c-401',
+          },
+          'upstream error',
+        ],
+      ]);
+    });
+
+    it('does not warn when a 401 is recovered by the retry', async () => {
+      const { client, logger } = setup([json(unauthorized, 401), ok({})]);
+      await client.get('/invoices/abc');
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not warn on success', async () => {
+      const { client, logger } = setup([ok({ id: 'abc' })]);
+      await client.get('/invoices/abc');
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('logs a network error with status 0 and code NETWORK_ERROR', async () => {
+      const { client, logger } = setup([new TypeError('fetch failed: getaddrinfo api.internal')]);
+      await client.get('/invoices/abc').catch(() => {});
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      const [obj, msg] = logger.warn.mock.calls[0] ?? [];
+      expect(msg).toBe('upstream error');
+      expect(obj).toEqual({
+        method: 'GET',
+        path: '/invoices/abc',
+        status: 0,
+        code: 'NETWORK_ERROR',
+      });
+    });
+
+    it('still throws the same InioApiError after logging a network error', async () => {
+      const { client } = setup([new TypeError('fetch failed')]);
+      const err = await apiErrorOf(client.get('/invoices/abc'));
+      expect(err.code).toBe('NETWORK_ERROR');
+      expect(err.status).toBe(0);
+    });
+
+    it('never logs the token or network cause in warn lines', async () => {
+      const { client, logger } = setup([
+        json(unauthorized, 401),
+        new TypeError('fetch failed: getaddrinfo api.internal'),
+      ]);
+      await client.get('/invoices/abc').catch(() => {});
+      const logged = JSON.stringify(logger.warn.mock.calls);
+      expect(logged).not.toContain('tok-');
+      expect(logged).not.toContain('api.internal');
     });
   });
 });

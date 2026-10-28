@@ -21,7 +21,7 @@ type Options = {
   apiUrl: string;
   tokens: TokenProvider;
   fetch?: typeof globalThis.fetch;
-  logger?: Logger;
+  logger?: Pick<Logger, 'debug' | 'warn'>;
 };
 
 const SuccessEnvelope = z.object({ result: z.unknown() }).refine((b) => 'result' in b);
@@ -44,6 +44,13 @@ export function createInioClient({
   fetch = globalThis.fetch,
   logger = noopLogger,
 }: Options): InioClient {
+  /** Logs a failed upstream call at warn and returns the error to throw. */
+  function fail(path: string, err: InioApiError): InioApiError {
+    const { status, code, correlationId } = err;
+    logger.warn({ method: 'GET', path, status, code, correlationId }, 'upstream error');
+    return err;
+  }
+
   async function send(path: string): Promise<Response> {
     const token = await tokens.getToken();
     const started = performance.now();
@@ -54,8 +61,11 @@ export function createInioClient({
         headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
       });
     } catch {
-      // The cause may carry host/network details; keep it out of the client-facing message.
-      throw new InioApiError(0, 'NETWORK_ERROR', 'Cannot reach the Inio API (INIO_URL).');
+      // The cause may carry host/network details; keep it out of messages and logs.
+      throw fail(
+        path,
+        new InioApiError(0, 'NETWORK_ERROR', 'Cannot reach the Inio API (INIO_URL).'),
+      );
     }
     const durationMs = Math.round(performance.now() - started);
     logger.debug({ method: 'GET', path, status: res.status, durationMs }, 'upstream request');
@@ -78,14 +88,15 @@ export function createInioClient({
         const err = ErrorEnvelope.safeParse(body);
         if (err.success) {
           const { code, message, correlationId } = err.data;
-          throw new InioApiError(res.status, code, message, correlationId);
+          throw fail(path, new InioApiError(res.status, code, message, correlationId));
         }
       }
-      throw new InioApiError(
+      const unexpected = new InioApiError(
         res.status,
         'UPSTREAM_ERROR',
         `Unexpected response from the Inio API (HTTP ${res.status}).`,
       );
+      throw res.ok ? unexpected : fail(path, unexpected);
     },
   };
 }

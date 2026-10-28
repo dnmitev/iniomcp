@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
-/** Minimal pino-compatible logger; only debug is used. */
-export type Logger = { debug(obj: object, msg?: string): void };
+type LogFn = (obj: object, msg?: string) => void;
 
-export const noopLogger: Logger = { debug: () => {} };
+/** Minimal pino-compatible logger; modules take only the methods they use. */
+export type Logger = { debug: LogFn; info: LogFn; warn: LogFn };
+
+export const noopLogger: Logger = { debug: () => {}, info: () => {}, warn: () => {} };
 
 export type TokenProvider = { getToken(): Promise<string>; invalidate(): void };
 
@@ -13,7 +15,7 @@ type Options = {
   clientSecret: string;
   fetch?: typeof globalThis.fetch;
   now?: () => number;
-  logger?: Logger;
+  logger?: Pick<Logger, 'debug'>;
 };
 
 const EXPIRY_MARGIN_MS = 60_000;

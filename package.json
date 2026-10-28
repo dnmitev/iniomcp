@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "dev": "node --watch src/index.ts",
+    "inspect": "npx @modelcontextprotocol/inspector node src/index.ts",
     "lint": "oxlint --type-aware --deny-warnings && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",

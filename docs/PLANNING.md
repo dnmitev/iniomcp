@@ -145,6 +145,15 @@ Live-environment secrets live only in a protected GitHub environment and are nev
 
 ---
 
+## Observability and Token Budget
+
+- **Logs:** JSON lines (pino) on stderr only; stdout carries the MCP protocol. MCP clients capture stderr (Claude Desktop: `~/Library/Logs/Claude/mcp-server-*.log`). `INIO_LOG_LEVEL` (`info` default; `debug` adds every upstream call and token cache hit/miss). Secrets, tokens and authorization headers are redacted by the logger.
+- **Per tool call:** one `tool call` line with `tool`, `durationMs`, `outcome`, `responseBytes` and `approxTokens` (bytes / 4), so the context cost of each tool is measured, not guessed. Upstream failures log a `warn` line with status, code and correlationId.
+- **Token budget:** tool results return compact JSON text only (no duplicate `structuredContent`); write tools are not registered by default, which keeps tool definitions out of every request; Phase 2 adds field trimming and pagination caps.
+- **OpenTelemetry:** deferred to the HTTP deployment mode, where a collector is realistic.
+
+---
+
 ## UI/UX Needs
 
 No UI of its own; the MCP client is the UI. UX means tool ergonomics:

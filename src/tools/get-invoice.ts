@@ -1,9 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { InioApiError, pathSegment, type InioClient } from '../inio-client.ts';
+import { noopLogger, type Logger } from '../auth.ts';
 import { redact } from '../redact.ts';
+import { withToolLogging } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean };
+type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
 
 const Input = z
   .strictObject({
@@ -27,7 +29,10 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function registerGetInvoice(server: McpServer, { client, revealPii }: Deps): void {
+export function registerGetInvoice(
+  server: McpServer,
+  { client, revealPii, logger = noopLogger }: Deps,
+): void {
   server.registerTool(
     'get_invoice',
     {
@@ -37,7 +42,7 @@ export function registerGetInvoice(server: McpServer, { client, revealPii }: Dep
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    async ({ id, number }) => {
+    withToolLogging(logger, 'get_invoice', async ({ id, number }) => {
       const fail = (text: string) => ({
         content: [{ type: 'text' as const, text }],
         isError: true,
@@ -52,10 +57,10 @@ export function registerGetInvoice(server: McpServer, { client, revealPii }: Dep
           return fail('UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.');
         }
         const text = JSON.stringify(revealPii ? invoice : redact(invoice));
-        return { content: [{ type: 'text', text }] };
+        return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         return fail(errorText(err));
       }
-    },
+    }),
   );
 }
