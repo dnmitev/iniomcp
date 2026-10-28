@@ -408,6 +408,33 @@ describe('stdio entry point (spawned process)', () => {
   );
 
   it(
+    'exits 1 with the not-supported message and nothing on stdout for MCP_TRANSPORT=http',
+    () => {
+      const res = spawnSync(process.execPath, ['src/index.ts'], {
+        cwd: ROOT,
+        env: {
+          PATH: process.env.PATH ?? '',
+          INIO_CLIENT_ID: 'x',
+          INIO_CLIENT_SECRET: SECRET,
+          INIO_AUTH_URL: 'https://auth.example/realms/r',
+          INIO_URL: 'https://api.example/v1',
+          MCP_TRANSPORT: 'http',
+        },
+        encoding: 'utf8',
+        timeout: SPAWN_TIMEOUT,
+        input: '',
+      });
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        'MCP_TRANSPORT=http is not supported yet; only stdio is available.',
+      );
+      expect(res.stderr).not.toContain(SECRET);
+      expect(res.stdout).toBe('');
+    },
+    SPAWN_TIMEOUT,
+  );
+
+  it(
     'exits 1 with the config error on stderr and nothing on stdout when env is empty',
     () => {
       const res = spawnSync(process.execPath, ['src/index.ts'], {

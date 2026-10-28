@@ -257,9 +257,9 @@ describe('loadConfig', () => {
   });
 
   describe('MCP_TRANSPORT', () => {
-    it('lists the allowed values when rejected', () => {
-      expect(errorOf(env({ MCP_TRANSPORT: 'sse' })).message).toContain(
-        'MCP_TRANSPORT must be one of: stdio, http',
+    it('lists only stdio as allowed when rejected', () => {
+      expect(errorOf(env({ MCP_TRANSPORT: 'sse' })).message).toMatch(
+        /MCP_TRANSPORT must be one of: stdio$/m,
       );
     });
 
@@ -271,8 +271,18 @@ describe('loadConfig', () => {
       expect(loadConfig(env({ MCP_TRANSPORT: '' })).transport).toBe('stdio');
     });
 
-    it.each(['stdio', 'http'] as const)('accepts %s', (value) => {
-      expect(loadConfig(env({ MCP_TRANSPORT: value })).transport).toBe(value);
+    it('accepts stdio', () => {
+      expect(loadConfig(env({ MCP_TRANSPORT: 'stdio' })).transport).toBe('stdio');
+    });
+
+    it('rejects http as not supported yet', () => {
+      expect(errorOf(env({ MCP_TRANSPORT: 'http' })).message).toContain(
+        'MCP_TRANSPORT=http is not supported yet; only stdio is available.',
+      );
+    });
+
+    it('does not leak the client secret when rejecting http', () => {
+      expect(errorOf(env({ MCP_TRANSPORT: 'http' })).message).not.toContain(SECRET);
     });
 
     it.each(['sse', 'HTTP', 'websocket'])('rejects %j', (value) => {

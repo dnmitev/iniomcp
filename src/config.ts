@@ -5,7 +5,7 @@ export type Config = {
   apiUrl: string;
   allowWrites: boolean;
   revealPii: boolean;
-  transport: 'stdio' | 'http';
+  transport: 'stdio';
   logLevel: LogLevel;
 };
 
@@ -44,6 +44,13 @@ export function loadConfig(env: Env): Config {
     return fallback;
   };
 
+  // stdio is the only transport; http is planned, so name it instead of "must be one of".
+  if (env.MCP_TRANSPORT === 'http') {
+    problems.push('MCP_TRANSPORT=http is not supported yet; only stdio is available.');
+  } else {
+    oneOf('MCP_TRANSPORT', ['stdio'], 'stdio');
+  }
+
   const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
 
   const config: Config = {
@@ -53,7 +60,7 @@ export function loadConfig(env: Env): Config {
     apiUrl: url('INIO_URL').replace(/\/+$/, ''),
     allowWrites: flag('INIO_ALLOW_WRITES'),
     revealPii: flag('INIO_REVEAL_PII'),
-    transport: oneOf('MCP_TRANSPORT', ['stdio', 'http'], 'stdio'),
+    transport: 'stdio',
     logLevel: oneOf('INIO_LOG_LEVEL', LOG_LEVELS, 'info'),
   };
 

@@ -1,10 +1,23 @@
 {
-  "name": "@inio/mcp",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Model Context Protocol server for the Inio REST API",
+  "name": "@dnmitev/inio-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol (MCP) server for the Inio REST API: read customers, invoices, pauses and retry attempts from any AI assistant",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "inio",
+    "invoices",
+    "claude"
+  ],
   "license": "Apache-2.0",
-  "repository": "github:dnmitev/iniomcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dnmitev/iniomcp.git"
+  },
+  "homepage": "https://github.com/dnmitev/iniomcp#readme",
+  "bugs": {
+    "url": "https://github.com/dnmitev/iniomcp/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -13,8 +26,14 @@
     "inio-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE",
+    "CHANGELOG.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "node --watch src/index.ts",
     "inspect": "npx @modelcontextprotocol/inspector node src/index.ts",
@@ -26,7 +45,8 @@
     "mutation": "stryker run",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",
-    "test:live": "npm run build && node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --dir test/live"
+    "test:live": "npm run build && node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --dir test/live",
+    "test:package": "vitest run --dir test/package"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.4.0",
