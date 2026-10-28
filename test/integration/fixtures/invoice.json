@@ -1,0 +1,285 @@
+{
+  "id": "00000000-0000-4000-8000-000000000001",
+  "customerId": "00000000-0000-4000-8000-000000000002",
+  "bankAccountId": "00000000-0000-4000-8000-000000000003",
+  "type": "invoice",
+  "invoiceNo": "INV-1001",
+  "pdfURL": "https://api.example/v1/files/invoice-1001.pdf",
+  "digitalInvoiceURL": "https://invoice.example/view/00000000-0000-4000-8000-000000000999?c=example",
+  "customerNo": "CUST-42",
+  "distributionEmailAddress": "billing@customer.example",
+  "distributionEmailAddress2": null,
+  "distributionEmailAddress3": null,
+  "invoiceDate": "2026-10-01T00:00:00.000Z",
+  "dueDate": "2026-10-01T00:00:00.000Z",
+  "countryCode": "SE",
+  "city": "Stockholm",
+  "zipCode": "111 22",
+  "addressLine1": "Example Street 1",
+  "shippingAddress": null,
+  "remainingToBePaid": null,
+  "mobilePhoneNo": "+46700000000",
+  "vatAmount": "100.00",
+  "totalAmount": "100.00",
+  "paymentReference": "1001",
+  "description": "Consulting services, October",
+  "status": "unpaid",
+  "stage": "Invoiced",
+  "paymentStatus": "unpaid",
+  "metadata": {
+    "vatCurrency": "SEK",
+    "prevEscalation": "prevEscalation-example",
+    "vatAmountLocal": 100,
+    "currentEscalation": "currentEscalation-example",
+    "lastEscalationDate": "2026-10-01T00:00:00.000Z",
+    "scheduledPauseCurrentWait": {
+      "step": "step-example",
+      "startedAt": "2026-10-01T00:00:00.000Z"
+    }
+  },
+  "workflowsSettings": {
+    "other": {
+      "directDebitEnabled": false,
+      "invoicing2MinCapital": 100,
+      "invoicing4MinCapital": 100,
+      "approvedDiffOverpayment": 100,
+      "approvedDiffPartialPayment": 100
+    },
+    "templates": {
+      "paidSMS": "paidSMS-example",
+      "language": "sv",
+      "setupPDF": "setupPDF-example",
+      "setupSMS": "setupSMS-example",
+      "paidEmail": "paidEmail-example",
+      "setupEmail": "setupEmail-example",
+      "creditEmail": "creditEmail-example",
+      "cancelledSMS": "cancelledSMS-example",
+      "redistribute": "redistribute-example",
+      "invoicing1SMS": "invoicing1SMS-example",
+      "invoicing2PDF": "invoicing2PDF-example",
+      "invoicing2SMS": "invoicing2SMS-example",
+      "invoicing3SMS": "invoicing3SMS-example",
+      "invoicing4SMS": "invoicing4SMS-example",
+      "cancelledEmail": "cancelledEmail-example",
+      "invoicing1Email": "invoicing1Email-example",
+      "invoicing2Email": "invoicing2Email-example",
+      "invoicing3Email": "invoicing3Email-example",
+      "invoicing4Email": "invoicing4Email-example",
+      "partialPaymentSMS": "partialPaymentSMS-example",
+      "partialPaymentEmail": "partialPaymentEmail-example"
+    },
+    "escalationFees": {
+      "invoicing2FeeAmount": 100
+    },
+    "escalationTiming": {
+      "endHour": 0,
+      "startHour": 0,
+      "invoicing1Offset": 0,
+      "invoicing2Offset": 0,
+      "invoicing3Offset": 0,
+      "invoicing4Offset": 0
+    },
+    "escalationEnabled": {
+      "invoicing1": false,
+      "invoicing2": false,
+      "invoicing3": false,
+      "invoicing4": false
+    },
+    "distributionEnabled": {
+      "paid": false,
+      "setup": false,
+      "credit": false,
+      "cancelled": false,
+      "invoicing1": false,
+      "invoicing2": false,
+      "invoicing3": false,
+      "invoicing4": false,
+      "partiallyPaid": false
+    },
+    "distributionMethods": {
+      "paid": "paid-example",
+      "setup": "setup-example",
+      "credit": "credit-example",
+      "cancelled": "cancelled-example",
+      "invoicing1": "invoicing1-example",
+      "invoicing2": "invoicing2-example",
+      "invoicing3": "invoicing3-example",
+      "invoicing4": "invoicing4-example",
+      "partiallyPaid": "partiallyPaid-example"
+    }
+  },
+  "currency": "SEK",
+  "amountsByCurrencies": {
+    "paidAmount": {
+      "EUR": "100.00",
+      "SEK": "100.00"
+    },
+    "totalAmount": {
+      "EUR": "100.00",
+      "SEK": "100.00"
+    },
+    "remainingAmount": {
+      "EUR": "100.00",
+      "SEK": "100.00"
+    },
+    "currentBreakdown": {
+      "fee": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "capital": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "interest": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "serviceFee": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "serviceInterest": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      }
+    },
+    "initialBreakdown": {
+      "fee": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "capital": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "interest": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "serviceFee": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      },
+      "serviceInterest": {
+        "EUR": "100.00",
+        "SEK": "100.00"
+      }
+    },
+    "totalCacheAmount": {
+      "EUR": "100.00",
+      "SEK": "100.00"
+    }
+  },
+  "totalCacheAmount": "100.00",
+  "paidAmount": "100.00",
+  "remainingAmount": 100,
+  "reconciliationAmount": null,
+  "ourReference": null,
+  "yourReference": null,
+  "initialBreakdown": {
+    "fee": "100.00",
+    "capital": "100.00",
+    "interest": "100.00",
+    "serviceFee": "100.00",
+    "serviceInterest": "100.00"
+  },
+  "currentBreakdown": {
+    "fee": "100.00",
+    "capital": "100.00",
+    "interest": "100.00",
+    "serviceFee": "100.00",
+    "serviceInterest": "100.00"
+  },
+  "_deletedIntentionally": null,
+  "paidAt": "2026-10-01T00:00:00.000Z",
+  "createdAt": "2026-10-01T00:00:00.000Z",
+  "updatedAt": "2026-10-01T00:00:00.000Z",
+  "deletedAt": null,
+  "histories": [
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "amount": null,
+      "type": "invoice",
+      "date": "2026-10-01T00:00:00.000Z",
+      "messageData": {
+        "to": ["billing@customer.example"],
+        "from": "noreply@sender.example",
+        "type": "invoice",
+        "pdfUrl": "https://api.example/v1/files/invoice-1001.pdf",
+        "dueDate": "2026-10-01T00:00:00.000Z",
+        "subject": "Invoice INV-1001",
+        "snapshotStatus": "snapshotStatus-example",
+        "distributionChannel": "distributionChannel-example"
+      },
+      "currency": "SEK",
+      "createdAt": "2026-10-01T00:00:00.000Z",
+      "updatedAt": "2026-10-01T00:00:00.000Z",
+      "deletedAt": null
+    }
+  ],
+  "invoiceItems": [
+    {
+      "period": null,
+      "id": "00000000-0000-4000-8000-000000000005",
+      "debitItemId": null,
+      "subjectMatter": "Services",
+      "name": "Consulting",
+      "unitPrice": "100.00",
+      "itemDiscountPercent": null,
+      "productTag": null,
+      "itemType": "product",
+      "quantity": "100.00",
+      "currency": "SEK",
+      "initialAmount": null,
+      "amountsByCurrencies": {
+        "totalAmount": {
+          "EUR": "100.00",
+          "SEK": "100.00"
+        }
+      },
+      "VATPercent": null,
+      "_deletedIntentionally": null,
+      "metadata": {
+        "calc": {
+          "calcStrategyName": "calcStrategyName-example"
+        }
+      },
+      "calcInput": {
+        "vatPercent": 100
+      },
+      "calcData": {
+        "vatAmount": "100.00",
+        "vatPercent": "100.00",
+        "totalAmount": "100.00"
+      },
+      "invoiceId": "00000000-0000-4000-8000-000000000006",
+      "createdAt": "2026-10-01T00:00:00.000Z",
+      "updatedAt": "2026-10-01T00:00:00.000Z",
+      "deletedAt": null,
+      "totalAmount": "100.00",
+      "VATAmount": "100.00"
+    }
+  ],
+  "IBAN": "SE0000000000000000000000",
+  "bankName": "Example Bank",
+  "bankType": "iban",
+  "effectivePause": {
+    "reminders": {
+      "paused": false,
+      "origin": "origin-example",
+      "untilDate": null,
+      "reason": null,
+      "sourceRef": null
+    },
+    "dcTransfers": {
+      "paused": false,
+      "origin": "origin-example",
+      "untilDate": null,
+      "reason": null,
+      "sourceRef": null
+    },
+    "isPaused": false,
+    "primaryOrigin": "primaryOrigin-example"
+  }
+}

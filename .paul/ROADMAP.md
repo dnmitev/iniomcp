@@ -14,14 +14,14 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 
 **v0.1 Initial Release** (v0.1.0)
 Status: In progress
-Phases: 0 of 5 complete
+Phases: 1 of 5 complete
 
 ## Phases
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Foundation and walking skeleton | 3 | In progress | - |
-| 2 | Read tools | TBD | Not started | - |
+| 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
+| 2 | Read tools | TBD | 🔵 Next | - |
 | 3 | Packaging and release | TBD | Not started | - |
 | 4 | Write tools (opt-in) | TBD | Not started | - |
 | 5 | HTTP hardening | TBD | Not started | - |
@@ -45,7 +45,7 @@ Phases: 0 of 5 complete
 **Plans:**
 - [x] 01-01: Toolchain, CI, agent team, config module
 - [x] 01-02: Auth, API client, error mapping, get_invoice, stdio server
-- [ ] 01-03: Integration tests + Claude Desktop verification
+- [x] 01-03: Integration tests + Claude Desktop verification
 
 ### Phase 2: Read tools
 
@@ -73,4 +73,4 @@ Phases: 0 of 5 complete
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-10-28*
+*Last updated: 2026-10-28 after Phase 1*
