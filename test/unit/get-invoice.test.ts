@@ -77,17 +77,18 @@ describe('get_invoice registration', () => {
     });
   });
 
-  it('advertises a strict input schema with id and number', async () => {
+  it('advertises a strict input schema with id, number and withInherited', async () => {
     const { client } = await setup(() => Promise.resolve(INVOICE));
     const { tools } = await client.listTools();
     const schema = tools[0]?.inputSchema;
-    expect(Object.keys(schema?.properties ?? {}).sort()).toEqual(['id', 'number']);
+    expect(Object.keys(schema?.properties ?? {}).sort()).toEqual(['id', 'number', 'withInherited']);
     expect(schema).toMatchObject({
       type: 'object',
       additionalProperties: false,
       properties: {
         id: { type: 'string', format: 'uuid' },
         number: { type: 'string', minLength: 1, maxLength: 100 },
+        withInherited: { type: 'boolean', default: false },
       },
     });
   });
@@ -113,6 +114,15 @@ describe('get_invoice routing', () => {
     const result = await call({ number: 'x'.repeat(100) });
     expect(result.isError).not.toBe(true);
     expect(inio.get).toHaveBeenCalledWith(`/invoices/by-number/${'x'.repeat(100)}`);
+  });
+
+  it('accepts a number with non-ASCII letters, plus and hash', async () => {
+    const { inio, call } = await setup(() => Promise.resolve(INVOICE));
+    const result = await call({ number: 'Kund-æøå+#1' });
+    expect(result.isError).not.toBe(true);
+    expect(inio.get).toHaveBeenCalledWith(
+      `/invoices/by-number/${encodeURIComponent('Kund-æøå+#1')}`,
+    );
   });
 
   it('accepts a number of exactly 1 character', async () => {
@@ -142,6 +152,10 @@ describe('get_invoice input validation', () => {
       { number: 'x'.repeat(101) },
       'number: Too big: expected string to have <=100 characters',
     ],
+    ['a number with CR/LF', { number: 'INV-1\r\nX-Injected: 1' }, 'number'],
+    ['a number with a NUL', { number: 'INV\u00001' }, 'number'],
+    ['a number with a tab', { number: 'INV\t1' }, 'number'],
+    ['a number with DEL', { number: 'INV\u007f1' }, 'number'],
     [
       'a non-string number',
       { number: 42 },
@@ -363,5 +377,98 @@ describe('get_invoice tool-call logging', () => {
     const { logger, client } = await setupWithLogger(() => Promise.resolve(INVOICE));
     await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain(INVOICE.IBAN);
+  });
+});
+
+describe('get_invoice withInherited', () => {
+  const INHERITED = { ...INVOICE, bankName: 'Acme Bank', effectivePause: { id: 'p-1' } };
+
+  it('fetches /invoices/<id>/with-inherited once when given an id', async () => {
+    const { inio, call } = await setup(() => Promise.resolve(INHERITED));
+    const result = await call({ id: ID, withInherited: true });
+    expect(result.isError).not.toBe(true);
+    expect(inio.get).toHaveBeenCalledTimes(1);
+    expect(inio.get).toHaveBeenCalledWith(`/invoices/${ID}/with-inherited`);
+  });
+
+  it('looks the invoice up by number first, then fetches with-inherited by the returned id', async () => {
+    const { inio, call } = await setup((path) =>
+      Promise.resolve(path.endsWith('/with-inherited') ? INHERITED : INVOICE),
+    );
+    const result = await call({ number: 'INV 1/2', withInherited: true });
+    expect(result.isError).not.toBe(true);
+    expect(inio.get.mock.calls).toEqual([
+      ['/invoices/by-number/INV%201%2F2'],
+      [`/invoices/${ID}/with-inherited`],
+    ]);
+  });
+
+  it('returns the with-inherited response, redacted', async () => {
+    const { call } = await setup((path) =>
+      Promise.resolve(path.endsWith('/with-inherited') ? INHERITED : INVOICE),
+    );
+    const text = textOf(await call({ number: 'INV-1', withInherited: true }));
+    expect(JSON.parse(text)).toStrictEqual({
+      ...INHERITED,
+      IBAN: '[redacted]',
+    });
+  });
+
+  it('keeps PII in the with-inherited response when revealPii is true', async () => {
+    const { call } = await setup(() => Promise.resolve(INHERITED), true);
+    expect(JSON.parse(textOf(await call({ id: ID, withInherited: true })))).toStrictEqual(
+      INHERITED,
+    );
+  });
+
+  it('behaves as before when withInherited is false', async () => {
+    const { inio, call } = await setup(() => Promise.resolve(INVOICE));
+    await call({ id: ID, withInherited: false });
+    expect(inio.get.mock.calls).toEqual([[`/invoices/${ID}`]]);
+  });
+
+  it.each([
+    ['null', null],
+    ['an array', [INVOICE]],
+    ['an object without id', { number: 'INV-1' }],
+    ['an object with a numeric id', { id: 5 }],
+    ['an object with an empty id', { id: '' }],
+    ['an object with a path-traversal id', { id: '../x' }],
+    ['an object with a non-uuid id', { id: 'not-a-uuid' }],
+  ])('rejects a first response that is %s without a second call', async (_label, first) => {
+    const { inio, call } = await setup(() => Promise.resolve(first));
+    const result = await call({ number: 'INV-1', withInherited: true });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.');
+    expect(inio.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('formats an error from the first call', async () => {
+    const { inio, call } = await setup(() =>
+      Promise.reject(new InioApiError(404, 'NOT_FOUND', 'No such invoice', 'c-1')),
+    );
+    const result = await call({ number: 'INV-1', withInherited: true });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('NOT_FOUND: No such invoice (correlationId c-1)');
+    expect(inio.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('formats an error from the with-inherited call', async () => {
+    const { call } = await setup((path) =>
+      path.endsWith('/with-inherited')
+        ? Promise.reject(new InioApiError(500, 'INTERNAL', 'Boom', 'c-2'))
+        : Promise.resolve(INVOICE),
+    );
+    const result = await call({ number: 'INV-1', withInherited: true });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('INTERNAL: Boom (correlationId c-2)');
+  });
+
+  it('rejects a non-boolean withInherited without calling the API', async () => {
+    const { inio, call } = await setup(() => Promise.resolve(INVOICE));
+    const result = await call({ id: ID, withInherited: 'yes' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('withInherited');
+    expect(inio.get).not.toHaveBeenCalled();
   });
 });

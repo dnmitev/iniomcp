@@ -412,6 +412,36 @@ describe('createInioClient query and headers', () => {
     expect(urlOf(fetch)).toBe('https://api.example/v1/customers');
   });
 
+  it('appends each array element as a repeated key, in order', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/invoices', { query: { status: ['open', 'paused'], limit: 25 } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/invoices?status=open&status=paused&limit=25');
+  });
+
+  it('skips empty arrays and keeps scalar entries around them', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/invoices', { query: { limit: 5, status: [], offset: 0 } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/invoices?limit=5&offset=0');
+  });
+
+  it('adds no "?" when the only query value is an empty array', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/invoices', { query: { status: [] } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/invoices');
+  });
+
+  it('URL-encodes array elements and keeps duplicates', async () => {
+    const { client, fetch } = setup([ok({})]);
+    await client.get('/invoices', { query: { status: ['a b&c', 'a b&c'] } });
+    expect(urlOf(fetch)).toBe('https://api.example/v1/invoices?status=a+b%26c&status=a+b%26c');
+  });
+
+  it('does not log array query values', async () => {
+    const { client, logger } = setup([ok({})]);
+    await client.get('/invoices', { query: { status: ['SECRET-Q'] } });
+    expect(JSON.stringify(logger.debug.mock.calls)).not.toContain('SECRET-Q');
+  });
+
   it('adds no "?" for an empty query object', async () => {
     const { client, fetch } = setup([ok({})]);
     await client.get('/customers', { query: {} });

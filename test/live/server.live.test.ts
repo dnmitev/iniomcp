@@ -163,4 +163,83 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(text?.includes('@')).toBe(false);
     expect(piiRedacted(body.customer)).toBe(true);
   }, 30_000);
+
+  const INVOICE_SUMMARY_KEYS = [
+    'id',
+    'invoiceNo',
+    'customerNo',
+    'invoiceDate',
+    'dueDate',
+    'currency',
+    'totalAmount',
+    'remainingAmount',
+    'status',
+    'stage',
+    'paymentStatus',
+  ];
+
+  /** Booleans only: lists closed invoices and returns the first invoiceNo. */
+  async function firstClosedInvoiceNo(): Promise<string> {
+    const { isError, text } = await callTool('list_invoices', { status: ['closed'], limit: 2 });
+    expect(isError).toBe(false);
+    const page = z
+      .object({ items: z.array(z.record(z.string(), z.unknown())), total: z.number() })
+      .parse(JSON.parse(text ?? ''));
+    expect(page.items.length > 0).toBe(true);
+    const extraKeys = page.items
+      .flatMap((i) => Object.keys(i))
+      .filter((k) => !INVOICE_SUMMARY_KEYS.includes(k));
+    expect(extraKeys).toEqual([]);
+    return z.string().parse(page.items[0]?.invoiceNo);
+  }
+
+  it('lists closed invoices as summaries only', async () => {
+    expect((await firstClosedInvoiceNo()).length > 0).toBe(true);
+  }, 30_000);
+
+  it('lists open invoices without an error (single-status workaround)', async () => {
+    const { isError } = await callTool('list_invoices', { status: ['open'], limit: 1 });
+    expect(isError).toBe(false);
+  }, 30_000);
+
+  it('lists paid invoices without an error', async () => {
+    const { isError } = await callTool('list_invoices', { paymentStatus: ['paid'], limit: 1 });
+    expect(isError).toBe(false);
+  }, 30_000);
+
+  it('gets an invoice by number with inherited values, redacted', async () => {
+    const number = await firstClosedInvoiceNo();
+    const { isError, count, text } = await callTool('get_invoice', {
+      number,
+      withInherited: true,
+    });
+    expect({ isError, count }).toEqual({ isError: false, count: 1 });
+    const inv = z.record(z.string(), z.unknown()).parse(JSON.parse(text ?? ''));
+    expect(inv.invoiceNo === number).toBe(true);
+    expect('IBAN' in inv ? inv.IBAN === '[redacted]' : true).toBe(true);
+    expect(text?.includes('@')).toBe(false);
+  }, 30_000);
+
+  it('gets retry attempts by invoice number', async () => {
+    const number = await firstClosedInvoiceNo();
+    const { isError, text } = await callTool('get_invoice_retry_attempts', { number });
+    expect(isError).toBe(false);
+    const body = z
+      .object({ attempts: z.array(z.unknown()), directDebitEligible: z.boolean() })
+      .safeParse(JSON.parse(text ?? ''));
+    expect(body.success).toBe(true);
+  }, 30_000);
+
+  it('lists pauses for the customer of an invoice without temporalWorkflowId', async () => {
+    const number = await firstClosedInvoiceNo();
+    const inv = await callTool('get_invoice', { number });
+    const customerId = z
+      .object({ customerId: z.string() })
+      .parse(JSON.parse(inv.text ?? '')).customerId;
+    const { isError, text } = await callTool('list_customer_pauses', { customerId });
+    expect(isError).toBe(false);
+    const body = z.object({ pauses: z.array(z.unknown()) }).safeParse(JSON.parse(text ?? ''));
+    expect(body.success).toBe(true);
+    expect(text?.includes('temporalWorkflowId')).toBe(false);
+  }, 30_000);
 });
