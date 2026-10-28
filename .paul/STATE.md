@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 2 of 5 (Read tools) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-28 — Phase 1 complete (01-03 unified), transitioned to Phase 2
+Phase: 2 of 5 (Read tools) — In progress
+Plan: 02-01 approved
+Status: Applying 02-01
+Last activity: 2026-10-28 — Created .paul/phases/02-read-tools/02-01-PLAN.md
 
 Progress:
 - Milestone: [██░░░░░░░░] 20%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ◉        ○     [Applying]
 ```
 
 ## Accumulated Context
@@ -44,6 +44,9 @@ See PROJECT.md Key Decisions.
 | 2026-10-28: TypeScript 7, npm, tsc (no Yarn/tsup), oxlint (no ESLint) | Phase 1 | Stryker TS checker dropped; tsconfig rewrite disabled |
 | 2026-10-28: Integration mock = node:http fake API + synthetic fixture (not Prism; spec envelopes wrong) | Phase 1 | Live suite guards fixture drift; each Phase 2 tool adds a route + fixture |
 | 2026-10-28: MCP SDK v2, pino stderr logs, text-only results, wide PII redaction | Phase 1 | ~2,245 tokens/invoice measured; trimming in Phase 2 |
+| 2026-10-28: Phase 2 split into 3 plans (customers + plumbing; invoices/pauses/retries; 429 + integration + Desktop) | Phase 2 | 02-02 reuses result.ts |
+| 2026-10-28: Trimming = summary fields in lists, compact (no empties) detail | Phase 2 | Compact before redact |
+| 2026-10-28: 429 = one retry honoring Retry-After (cap 5 s), then RATE_LIMITED | Phase 2 | Built in 02-03 |
 
 ### Deferred Issues
 
@@ -59,15 +62,15 @@ See PROJECT.md Key Decisions.
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
 
 ### Git State
-Branch: feat/01-03-integration (PR #3 open, CI green)
-Feature branches merged: none yet for 01-03
+Branch: feat/02-01-customers
+Feature branches merged: PR #3 (01-03) merged to main as d6af7bf
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Phase 1 complete, ready to plan Phase 2
-Next action: Merge PR #3, then /paul:plan for Phase 2
-Resume file: .paul/ROADMAP.md
+Stopped at: Plan 02-01 created
+Next action: Merge PR #3, branch feat/02-01-customers from main, then /paul:apply .paul/phases/02-read-tools/02-01-PLAN.md
+Resume file: .paul/phases/02-read-tools/02-01-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*
