@@ -17,18 +17,16 @@ phases = 5
 [phase]
 number = 1
 name = "Foundation and walking skeleton"
-status = "planning"
-plans_completed = 0
+status = "in_progress"
+plans_completed = 1
 
 [loop]
-position = "APPLY"
-plan = "01-01"
-plan_path = "phases/01-foundation/01-01-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 0
+total_plans = 1
 total_phases = 5
-last_activity = "2026-10-28T09:00:00Z"
+last_activity = "2026-10-28T12:00:00Z"

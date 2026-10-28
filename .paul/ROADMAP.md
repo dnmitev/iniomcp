@@ -20,7 +20,7 @@ Phases: 0 of 5 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Foundation and walking skeleton | 3 | Planning | - |
+| 1 | Foundation and walking skeleton | 3 | In progress | - |
 | 2 | Read tools | TBD | Not started | - |
 | 3 | Packaging and release | TBD | Not started | - |
 | 4 | Write tools (opt-in) | TBD | Not started | - |
@@ -43,7 +43,7 @@ Phases: 0 of 5 complete
 - Integration test with Keycloak + mock API containers
 
 **Plans:**
-- [ ] 01-01: Toolchain, CI, agent team, config module
+- [x] 01-01: Toolchain, CI, agent team, config module
 - [ ] 01-02: Auth, API client, error mapping, get_invoice, stdio server
 - [ ] 01-03: Integration tests + Claude Desktop verification
 

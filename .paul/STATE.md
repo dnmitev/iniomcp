@@ -16,21 +16,21 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 1 of 5 (Foundation and walking skeleton) — Planning
-Plan: 01-01 created, awaiting approval
-Status: Applying 01-01
-Last activity: 2026-10-28 — Created .paul/phases/01-foundation/01-01-PLAN.md
+Phase: 1 of 5 (Foundation and walking skeleton) — In progress
+Plan: 01-01 complete (1 of 3)
+Status: Ready for next PLAN (01-02)
+Last activity: 2026-10-28 — Unified 01-01; PR #1 CI green
 
 Progress:
-- Milestone: [░░░░░░░░░░] 0%
-- Phase 1: [░░░░░░░░░░] 0%
+- Milestone: [█░░░░░░░░░] 7%
+- Phase 1: [███░░░░░░░] 33%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◉        ○     [Applying]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -41,9 +41,14 @@ See PROJECT.md Key Decisions.
 | Decision | Phase | Impact |
 |----------|-------|--------|
 | 2026-10-28: Vitest instead of Jest (ESM-native) | Phase 1 | Test runner, Stryker vitest-runner; deviates from the Inio product monorepo |
+| 2026-10-28: TypeScript 7, npm, tsc (no Yarn/tsup), oxlint (no ESLint) | Phase 1 | Stryker TS checker dropped; tsconfig rewrite disabled |
 
 ### Deferred Issues
-None yet.
+
+| Issue | Origin | Effort | Revisit |
+|-------|--------|--------|---------|
+| Stryker TS checker / tsconfig handling disabled (no TS 7 JS API) | 01-01 | S | Stryker supports TS 7 |
+| Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 
 ### Blockers/Concerns
 None yet.
@@ -51,9 +56,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 01-01 created
-Next action: Approve plan (test-runner decision), then /paul:apply .paul/phases/01-foundation/01-01-PLAN.md
-Resume file: .paul/phases/01-foundation/01-01-PLAN.md
+Stopped at: Plan 01-01 unified (PR #1 open, CI green)
+Next action: Merge PR #1, then /paul:plan for 01-02 (auth, API client, get_invoice, stdio server)
+Resume file: .paul/phases/01-foundation/01-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*
