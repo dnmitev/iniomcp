@@ -27,6 +27,7 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
     "@stryker-mutator/core": "^10",
     "@stryker-mutator/vitest-runner": "^10",
     "@types/node": "^24",
@@ -35,5 +36,10 @@
     "prettier": "^3",
     "typescript": "^7",
     "vitest": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
   }
 }

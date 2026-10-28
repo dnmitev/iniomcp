@@ -17,9 +17,9 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 1 of 5 (Foundation and walking skeleton) — In progress
-Plan: 01-01 complete (1 of 3)
-Status: Ready for next PLAN (01-02)
-Last activity: 2026-10-28 — Unified 01-01; PR #1 CI green
+Plan: 01-02 created, awaiting approval
+Status: Applying 01-02
+Last activity: 2026-10-28 — PR #1 merged; created .paul/phases/01-foundation/01-02-PLAN.md
 
 Progress:
 - Milestone: [█░░░░░░░░░] 7%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ◉        ○     [Applying]
 ```
 
 ## Accumulated Context
@@ -56,9 +56,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 01-01 unified (PR #1 open, CI green)
-Next action: Merge PR #1, then /paul:plan for 01-02 (auth, API client, get_invoice, stdio server)
-Resume file: .paul/phases/01-foundation/01-01-SUMMARY.md
+Stopped at: Plan 01-02 created
+Next action: Approve, then /paul:apply .paul/phases/01-foundation/01-02-PLAN.md
+Resume file: .paul/phases/01-foundation/01-02-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*
