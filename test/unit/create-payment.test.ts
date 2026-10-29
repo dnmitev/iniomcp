@@ -109,6 +109,9 @@ describe('create_payment registration', () => {
       .record(z.string(), z.looseObject({ description: z.string().min(1) }))
       .parse(tools[0]?.inputSchema.properties);
     expect(Object.keys(props)).toHaveLength(7);
+    // The fee waiver must be explained so the assistant asks before enabling it.
+    expect(props.confirmFeeAutoRemoval?.description).toMatch(/backdated/);
+    expect(props.confirmFeeAutoRemoval?.description).toMatch(/escalation fee/);
   });
 });
 

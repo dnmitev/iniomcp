@@ -46,7 +46,9 @@ const inputSchema = z
     confirmFeeAutoRemoval: z
       .boolean()
       .optional()
-      .describe('Confirm that fees are removed automatically when the payment settles them'),
+      .describe(
+        'Only for a backdated paidDate: allows an in-scope escalation fee to be removed (waived) before the payment is applied. Ask the user before setting it',
+      ),
   })
   .refine((a) => (a.amount === undefined) !== (a.fullPayment === undefined), {
     message: 'Provide exactly one of amount or fullPayment.',
