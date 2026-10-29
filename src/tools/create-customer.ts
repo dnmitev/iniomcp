@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { InioApiError, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger, type TokenProvider } from '../auth.ts';
+import { CustomerRef } from './customer-ref.ts';
 import {
   city,
   countryCode,
@@ -45,7 +46,9 @@ const id = (max: number, text: string) => z.string().min(1).max(max).describe(te
 
 const Input = z
   .strictObject({
-    customerNo: id(50, 'New customer number, 1-50 characters; must not exist yet'),
+    customerNo: CustomerRef.number
+      .unwrap()
+      .describe('New customer number, 1-50 characters; must not exist yet'),
     customerName: z.string().min(2).max(100).describe('Customer name, 2-100 characters'),
     customerType: z.enum(['B', 'C']).describe('B for a business, C for a consumer'),
     languageCode: z.enum(['EN', 'SV', 'BG', 'DE']).describe('Language: EN, SV, BG or DE'),

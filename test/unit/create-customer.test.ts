@@ -184,6 +184,9 @@ describe('create_customer request', () => {
   it.each([
     ['a customerNo of 1 character', { customerNo: 'x' }],
     ['a customerNo of 50 characters', { customerNo: 'x'.repeat(50) }],
+    ['a customerNo with an embedded dot', { customerNo: 'C-1.a_b' }],
+    ['a customerNo of three dots', { customerNo: '...' }],
+    ['a customerNo with æ, + and #', { customerNo: 'Kund-æøå+#1' }],
     ['a customerName of 2 characters', { customerName: 'Jo' }],
     ['a customerName of 100 characters', { customerName: 'x'.repeat(100) }],
     ['a serviceLineName of 1 character', { serviceLineName: 'x' }],
@@ -265,6 +268,13 @@ describe('create_customer input validation', () => {
     ['a null shippingAddress', { ...ARGS, shippingAddress: null }, 'shippingAddress'],
     ['an empty customerNo', { ...ARGS, customerNo: '' }, 'customerNo'],
     ['a customerNo over 50 characters', { ...ARGS, customerNo: 'x'.repeat(51) }, 'customerNo'],
+    ['a customerNo with a tab', { ...ARGS, customerNo: 'C\t1' }, 'customerNo'],
+    ['a customerNo with CR/LF', { ...ARGS, customerNo: 'C-1\r\nX' }, 'customerNo'],
+    ['a customerNo with a control character', { ...ARGS, customerNo: 'C\u00001' }, 'customerNo'],
+    ['a customerNo with a lone LF', { ...ARGS, customerNo: 'C-1\nX' }, 'customerNo'],
+    ['a customerNo with DEL', { ...ARGS, customerNo: 'C\u007f1' }, 'customerNo'],
+    ['a customerNo of .', { ...ARGS, customerNo: '.' }, 'Invalid path segment'],
+    ['a customerNo of ..', { ...ARGS, customerNo: '..' }, 'Invalid path segment'],
     ['a one-character customerName', { ...ARGS, customerName: 'a' }, 'customerName'],
     [
       'a customerName over 100 characters',
