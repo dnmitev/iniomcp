@@ -6,6 +6,7 @@ import type { Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
 import { registerCancelCustomerPause } from './tools/cancel-customer-pause.ts';
 import { registerCreateCreditInvoice } from './tools/create-credit-invoice.ts';
+import { registerCreateCustomer } from './tools/create-customer.ts';
 import { registerCreatePayment } from './tools/create-payment.ts';
 import { registerCreateCustomerPause } from './tools/create-customer-pause.ts';
 import { registerGetCustomer } from './tools/get-customer.ts';
@@ -67,6 +68,7 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
     registerCreateCreditInvoice(server, deps);
     registerMatchCreditInvoice(server, deps);
     registerCreatePayment(server, { ...deps, tokens });
+    registerCreateCustomer(server, { ...deps, tokens });
   }
   return server;
 }

@@ -38,6 +38,7 @@ export const CREDIT_INVOICE_ID = '00000000-0000-4000-8000-000000000040';
 export const CREDIT_INVOICE_NO = 'CR-1001';
 export const CREDIT_PAYMENT_REFERENCE = '1234567';
 export const PAYMENT_ID = '00000000-0000-4000-8000-000000000060';
+export const CREATED_CUSTOMER_ID = '00000000-0000-4000-8000-000000000070';
 export const RESET_WORKFLOW_ID = 'wf-reset-example';
 
 export interface RecordedRequest {
@@ -159,6 +160,24 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
         if (a === customerId && c === pause.id && path[6] === 'cancel' && method === 'POST') {
           return ok({ ...pause, status: 'cancelled', updatedAt: '2026-10-29T00:00:00.000Z' });
         }
+      }
+      if (v1 === 'v1' && root === 'customers' && a === undefined && method === 'POST') {
+        const [first] = z.array(z.record(z.string(), z.unknown())).catch([]).parse(JSON.parse(raw));
+        if (first?.customerNo === customerNo) {
+          return send(409, {
+            success: false,
+            status: 409,
+            code: 'CONFLICT',
+            message: `Customer ${customerNo} already exists`,
+            correlationId: 'it-409',
+          });
+        }
+        return send(201, {
+          success: true,
+          status: 201,
+          correlationId: 'it-ok',
+          result: [CREATED_CUSTOMER_ID],
+        });
       }
       if (v1 === 'v1' && root === 'payments' && a === undefined && method === 'POST') {
         return send(201, {

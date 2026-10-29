@@ -11,14 +11,14 @@ source = "https://chrisai.cv/skool"
 [milestone]
 name = "v0.1 Initial Release"
 version = "0.1.0"
-status = "in_progress"
+status = "not_started"
 phases = 5
 
 [phase]
-number = 4
-name = "Write tools (opt-in)"
-status = "in_progress"
-plans_completed = 3
+number = 5
+name = "HTTP hardening"
+status = "not_started"
+plans_completed = 0
 
 [loop]
 position = "IDLE"
@@ -27,6 +27,6 @@ position = "IDLE"
 groom = true
 
 [stats]
-total_plans = 12
+total_plans = 13
 total_phases = 5
-last_activity = "2026-10-29T16:36:23Z"
+last_activity = "2026-10-29T17:20:18Z"

@@ -356,6 +356,7 @@ describe('write gate', () => {
   const WRITE_TOOLS = [
     'cancel_customer_pause',
     'create_credit_invoice',
+    'create_customer',
     'create_customer_pause',
     'create_payment',
     'match_credit_invoice',
@@ -399,7 +400,7 @@ describe('write gate', () => {
   it('lists the write tools besides the 7 read tools when allowWrites is true', async () => {
     const { client } = await connect({ ...CONFIG, allowWrites: true });
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(17);
+    expect(tools).toHaveLength(18);
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...WRITE_TOOLS].sort());
   });
 
@@ -428,6 +429,17 @@ describe('write gate', () => {
     expect(tools.find((t) => t.name === 'create_payment')?.description).toContain(fragment);
   });
 
+  it.each([
+    'serviceLineName',
+    'get_customer',
+    'customerNo must be new',
+    'nothing is sent to the customer',
+  ])('says in the create_customer description: %s', async (fragment) => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true });
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === 'create_customer')?.description).toContain(fragment);
+  });
+
   it('advertises each write tool with its title, description and input descriptions', async () => {
     const { client } = await connect({ ...CONFIG, allowWrites: true });
     const { tools } = await client.listTools();
@@ -437,7 +449,8 @@ describe('write gate', () => {
           (t) =>
             WRITE_TOOLS.includes(t.name) &&
             !CREDIT_TOOLS.includes(t.name) &&
-            t.name !== 'create_payment',
+            t.name !== 'create_payment' &&
+            t.name !== 'create_customer',
         )
         .map((t) => [
           t.name,

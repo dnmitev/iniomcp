@@ -14,7 +14,7 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 
 **v0.1 Initial Release** (v0.1.0)
 Status: In progress
-Phases: 3 of 5 complete
+Phases: 4 of 5 complete
 
 ## Phases
 
@@ -23,7 +23,7 @@ Phases: 3 of 5 complete
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
 | 3 | Packaging and release | 3/3 | ✅ Complete | 2026-10-29 |
-| 4 | Write tools (opt-in) | 3/4 | In progress | - |
+| 4 | Write tools (opt-in) | 4/4 | ✅ Complete | 2026-10-29 |
 | 5 | HTTP hardening | TBD | Not started | - |
 
 ## Phase Details
@@ -79,7 +79,7 @@ Phases: 3 of 5 complete
 - [x] 04-01: Write plumbing + customer pauses + invoice due date / stop-until dates
 - [x] 04-02: Update customer, reset invoice stage, credit invoices
 - [x] 04-03: create_payment (curated types, explicit full payment)
-- [ ] 04-04: create_customer; reverse_payment if the allocation-id probe works; create_invoice reconsidered
+- [x] 04-04: create_customer (reverse_payment and create_invoice out of v0.1)
 
 ### Phase 5: HTTP hardening
 
@@ -89,4 +89,4 @@ Phases: 3 of 5 complete
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-10-29 after Phase 3*
+*Last updated: 2026-10-29 after Phase 4*

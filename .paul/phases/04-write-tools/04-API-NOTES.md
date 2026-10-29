@@ -75,3 +75,8 @@ Source root: `temporal-monorepo/packages`. Short names: `V` = `shared/validation
 - GET /invoices/{id} has no `clientId`, and no payment or allocation data (checked on partiallyPaid and paid invoices). No public read endpoint exposes a `paymentAllocationId`.
 - POST /payments returns 201 with an array of payment ids. Whether a payment id can be used as a `paymentAllocationId` is unverified; that needs a live write probe.
 - List responses are `{ data, limit, offset, total }`.
+- **Reverse probe (live writes approved by the user, 2026-10-29):**
+  - Two 0.01 direct_payments were recorded on test invoice 20260925-07. Both are still there (0.02 in total); reverse them in the back office.
+  - Payments are processed asynchronously: remainingAmount changed within about 5–10 s.
+  - Calling `POST /payments/reverse-payment` with the payment id from POST /payments after processing returns `400 {"message":"Payment allocation was not found!"}`. **A payment id is not a paymentAllocationId**, and no public endpoint exposes allocation ids, so `reverse_payment` cannot work through the public API. It is left out of v0.1; ask the API team for an allocation lookup.
+  - reverse-payment errors are a bare `{message}`, which the client reports as `UPSTREAM_ERROR: Unexpected response (HTTP 400)`.

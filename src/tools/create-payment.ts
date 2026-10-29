@@ -1,9 +1,18 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { InioApiError, type InioClient } from '../inio-client.ts';
+import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger, type TokenProvider } from '../auth.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
-import { errorText, fail, isUnreadableSuccess, IsoDate, ok, present } from './result.ts';
+import {
+  clientIdOf,
+  errorText,
+  fail,
+  isUncertainOutcome,
+  isUnreadableSuccess,
+  IsoDate,
+  ok,
+  present,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = {
@@ -74,17 +83,6 @@ const Invoice = z.object({
   paymentStatus: z.string(),
 });
 
-/** The inio_client_id claim of the token, which the payments endpoint wants in the body. Never echoes the token. */
-function clientIdOf(token: string): string {
-  try {
-    const payload = Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8');
-    return z.object({ inio_client_id: z.string().min(1) }).parse(JSON.parse(payload))
-      .inio_client_id;
-  } catch {
-    throw new Error('The access token has no usable inio_client_id claim.');
-  }
-}
-
 export function registerCreatePayment(
   server: McpServer,
   { client, revealPii, logger = noopLogger, tokens }: Deps,
@@ -131,8 +129,7 @@ export function registerCreatePayment(
         // A 2xx the client could not parse (no result envelope) also means the payment exists.
         if (isUnreadableSuccess(err))
           return ok(present({ ...summary, note: UNREADABLE }, revealPii));
-        const uncertain = err instanceof InioApiError && (err.status === 0 || err.status >= 500);
-        return fail(errorText(err) + (uncertain ? UNCERTAIN : ''));
+        return fail(errorText(err) + (isUncertainOutcome(err) ? UNCERTAIN : ''));
       }
     }),
   );

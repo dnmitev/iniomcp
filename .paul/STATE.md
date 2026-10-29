@@ -11,26 +11,26 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-28)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.1 — Phase 4 Write tools (opt-in)
+**Current focus:** v0.1 — Phase 5 HTTP hardening
 
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — In progress
-Plan: 04-03 complete
-Status: Ready for next PLAN (04-04)
-Last activity: 2026-10-29 — 04-03 unified; SUMMARY created
+Phase: 5 of 5 (HTTP hardening)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-29 — Phase 4 complete, transitioned to Phase 5
 
 Progress:
-- Milestone: [████████░░] 77%
-- Phase 4: [████████░░] 75%
+- Milestone: [████████░░] 80%
+- Phase 5: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ○        ○        ○     [Ready for first PLAN]
 ```
 
 ## Accumulated Context
@@ -69,6 +69,9 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: Payment types curated (direct_payment, good_will, bank, reminder_fee_waiver); full payment must be explicit | Phase 4 | No credit_loss/cancelled until asked |
 | 2026-10-29: clientId for payments from token claim inio_client_id | Phase 4 | No config var |
 | 2026-10-29: Non-idempotent writes: status 0 or >= 500 = uncertain, hint to check before retry | Phase 4 | create_payment; reuse in 04-04 |
+| 2026-10-29: reverse_payment out of v0.1 (payment id is not an allocation id; probe) | Phase 4 | Ask API team for allocation lookup |
+| 2026-10-29: create_invoice out of v0.1 (reaches end customer at once) | Phase 4 | Revisit after usage |
+| 2026-10-29: create_customer accepts SSN (C) and orgNr/vatNo (B); no workflowsSettings | Phase 4 | 04-04 |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -82,25 +85,28 @@ See PROJECT.md Key Decisions.
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
+| Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | Next schema change to customers |
+| Ask API team: allocation lookup for reverse_payment; JSON error envelope on reverse-payment | 04-04 | - | Upstream |
 
 ### Blockers/Concerns
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
 - Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
-- Phase 4: Public API has no role checks; anything enabled is allowed. Reset stage / credit invoices can re-send to end customers and waive fees (04-02).
-- Phase 4: No public read endpoint exposes paymentAllocationId; reverse_payment blocked until probed (04-04).
+- Phase 4: Public API has no role checks; anything enabled is allowed. Defaults keep end customers out of it unless asked.
+- Phase 4: Claude declines to send an SSN, so consumer customers cannot be created from Claude (documented).
+- Phase 4: No public endpoint exposes paymentAllocationId, so payments cannot be reversed via the API; test invoice 20260925-07 carries two 0.01 probe payments (reverse in back office).
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: feat/04-03-plan
-Releases: v0.1.2 (npm latest); 04-01 #27, 04-02 #28 merged; 04-03 on branch; all unreleased
+Branch: feat/04-04-plan
+Releases: v0.1.2 (npm latest); Phase 4 (04-01..04-04) unreleased; 04-04 on branch
 
 ## Session Continuity
 
 Last session: 2026-10-29
-Stopped at: 04-03 loop closed
-Next action: commit and PR 04-03, then /paul:plan for 04-04
-Resume file: .paul/phases/04-write-tools/04-03-SUMMARY.md
+Stopped at: Phase 4 complete, ready to plan Phase 5
+Next action: merge 04-04 PR, then /paul:plan for Phase 5 (or release the write tools first)
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*
