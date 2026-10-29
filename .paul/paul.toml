@@ -21,7 +21,7 @@ status = "in_progress"
 plans_completed = 0
 
 [loop]
-position = "PLAN"
+position = "APPLY"
 plan = "04-01"
 plan_path = "phases/04-write-tools/04-01-PLAN.md"
 
