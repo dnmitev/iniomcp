@@ -5,6 +5,7 @@ import { createTokenProvider, noopLogger, type Logger } from './auth.ts';
 import type { Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
 import { registerCancelCustomerPause } from './tools/cancel-customer-pause.ts';
+import { registerCreateCreditInvoice } from './tools/create-credit-invoice.ts';
 import { registerCreateCustomerPause } from './tools/create-customer-pause.ts';
 import { registerGetCustomer } from './tools/get-customer.ts';
 import { registerGetCustomerPause } from './tools/get-customer-pause.ts';
@@ -13,6 +14,9 @@ import { registerGetInvoiceRetryAttempts } from './tools/get-invoice-retry-attem
 import { registerListCustomerPauses } from './tools/list-customer-pauses.ts';
 import { registerListCustomers } from './tools/list-customers.ts';
 import { registerListInvoices } from './tools/list-invoices.ts';
+import { registerMatchCreditInvoice } from './tools/match-credit-invoice.ts';
+import { registerResetInvoiceStage } from './tools/reset-invoice-stage.ts';
+import { registerUpdateCustomer } from './tools/update-customer.ts';
 import { registerUpdateCustomerPause } from './tools/update-customer-pause.ts';
 import { registerUpdateInvoiceDueDate } from './tools/update-invoice-due-date.ts';
 import { registerUpdateInvoiceStopUntilDates } from './tools/update-invoice-stop-until-dates.ts';
@@ -57,6 +61,10 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
     registerCancelCustomerPause(server, deps);
     registerUpdateInvoiceDueDate(server, deps);
     registerUpdateInvoiceStopUntilDates(server, deps);
+    registerUpdateCustomer(server, deps);
+    registerResetInvoiceStage(server, deps);
+    registerCreateCreditInvoice(server, deps);
+    registerMatchCreditInvoice(server, deps);
   }
   return server;
 }

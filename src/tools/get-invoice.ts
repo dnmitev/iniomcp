@@ -2,8 +2,8 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
-import { EXACTLY_ONE_REF, exactlyOneRef, InvoiceRef, invoicePath } from './invoice-ref.ts';
-import { errorText, fail, ok, present } from './result.ts';
+import { BAD_INVOICE_PAYLOAD, InvoiceRef, invoicePath, lookUpInvoiceId } from './invoice-ref.ts';
+import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -26,8 +26,6 @@ const Input = z
   })
   .refine(exactlyOneRef, EXACTLY_ONE_REF);
 
-const BAD_PAYLOAD = 'UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.';
-const WithId = z.object({ id: z.uuid() });
 const Invoice = z.record(z.string(), z.unknown());
 
 export function registerGetInvoice(
@@ -51,16 +49,14 @@ export function registerGetInvoice(
           let invoiceId = id;
           // with-inherited exists only by id, so a number costs an extra lookup.
           if (withInherited && invoiceId === undefined) {
-            const found = WithId.safeParse(await client.get(invoicePath({ number })));
-            if (!found.success) return fail(BAD_PAYLOAD);
-            invoiceId = found.data.id;
+            invoiceId = await lookUpInvoiceId(client, number ?? '');
           }
           const path =
             invoiceId === undefined
               ? invoicePath({ number })
               : `${invoicePath({ id: invoiceId })}${withInherited ? '/with-inherited' : ''}`;
           const parsed = Invoice.safeParse(await client.get(path));
-          if (!parsed.success) return fail(BAD_PAYLOAD);
+          if (!parsed.success) return fail(BAD_INVOICE_PAYLOAD);
           // workflowsSettings is large and rarely relevant; opt-in only.
           const { workflowsSettings: _, ...invoice } = parsed.data;
           return ok(present(includeWorkflowSettings ? parsed.data : invoice, revealPii));

@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { pathSegment, type InioClient } from '../inio-client.ts';
-import { errorText } from './result.ts';
+import { InioApiError, pathSegment, type InioClient } from '../inio-client.ts';
+import { errorText, IsoDate } from './result.ts';
 
 /** id/number fields to spread into an invoice tool's input schema; pair with exactlyOneRef. */
 export const InvoiceRef = {
@@ -16,15 +16,29 @@ export const InvoiceRef = {
 
 type Ref = { id?: string | undefined; number?: string | undefined };
 
-/** Refine check and message: exactly one of id or number. */
-export const exactlyOneRef = (a: Ref): boolean => (a.id === undefined) !== (a.number === undefined);
-export const EXACTLY_ONE_REF = { message: 'Provide exactly one of id or number.' };
+export const BAD_INVOICE_PAYLOAD = 'UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.';
+
+/** A by-number lookup answer usable as an id: a UUID, which also keeps '..' and the like out of paths. */
+const WithInvoiceId = z.object({ id: z.uuid() });
 
 /** /invoices/<id> or /invoices/by-number/<number>, each segment encoded. */
 export function invoicePath({ id, number }: Ref): string {
   return id !== undefined
     ? `/invoices/${pathSegment(id)}`
     : `/invoices/by-number/${pathSegment(number ?? '')}`;
+}
+
+/** The invoice id for a business number; for endpoints that exist only by id. Throws on an unusable answer. */
+export async function lookUpInvoiceId(
+  client: Pick<InioClient, 'get'>,
+  number: string,
+): Promise<string> {
+  const found = WithInvoiceId.safeParse(await client.get(invoicePath({ number })));
+  if (!found.success) {
+    // 200 on purpose: the API answered, but with a body we cannot use.
+    throw new InioApiError(200, 'UPSTREAM_ERROR', 'Unexpected invoice payload from the Inio API.');
+  }
+  return found.data.id;
 }
 
 /**
@@ -44,7 +58,29 @@ export async function readBackInvoice<T>(
     return note(errorText(err));
   }
   const parsed = schema.safeParse(payload);
-  return parsed.success
-    ? parsed.data
-    : note('UPSTREAM_ERROR: Unexpected invoice payload from the Inio API.');
+  return parsed.success ? parsed.data : note(BAD_INVOICE_PAYLOAD);
 }
+
+/** Fields shared by the credit invoice tools; pair with pastPaidDateRule. */
+export const CreditFields = {
+  creditInvoiceNo: z.string().min(1).max(50),
+  paidDate: IsoDate.optional().describe(
+    'Date the credit counts as paid, YYYY-MM-DD; before today (UTC) needs additionalInformation',
+  ),
+  additionalInformation: z
+    .string()
+    .min(1)
+    .max(100)
+    .optional()
+    .describe('Free-text note, up to 100 characters; required when paidDate is in the past'),
+};
+
+/** Refine check and message: a paidDate before today (UTC, as the API counts it) needs additionalInformation. */
+export const pastPaidDateRule = (now: () => number) =>
+  [
+    (a: { paidDate?: string | undefined; additionalInformation?: string | undefined }) =>
+      a.paidDate === undefined ||
+      a.additionalInformation !== undefined ||
+      a.paidDate >= new Date(now()).toISOString().slice(0, 10),
+    { message: 'additionalInformation is required when paidDate is in the past' },
+  ] as const;

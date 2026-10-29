@@ -207,3 +207,15 @@ action = "apply"
 phase = 4
 plan = "04-02"
 at = "2026-10-29T18:10:00Z"
+
+[[entry]]
+action = "apply-complete"
+phase = 4
+plan = "04-02"
+at = "2026-10-29T15:50:38Z"
+
+[[entry]]
+action = "unify"
+phase = 4
+plan = "04-02"
+at = "2026-10-29T15:53:21Z"

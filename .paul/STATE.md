@@ -17,20 +17,20 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 4 of 5 (Write tools, opt-in) — In progress
-Plan: 04-02 approved
-Status: Applying 04-02
-Last activity: 2026-10-29 — PR #27 merged; created .paul/phases/04-write-tools/04-02-PLAN.md
+Plan: 04-02 complete
+Status: Ready for next PLAN (04-03)
+Last activity: 2026-10-29 — 04-02 unified; SUMMARY created
 
 Progress:
-- Milestone: [██████▒░░░] 67%
-- Phase 4: [███░░░░░░░] 33%
+- Milestone: [███████░░░] 73%
+- Phase 4: [██████░░░░] 67%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◉        ○     [Applying]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -50,7 +50,8 @@ See PROJECT.md Key Decisions.
 | 2026-10-28: Sort/order as curated enums validated locally (API 500s on bad values) | Phase 2 | Pattern for list_invoices |
 | 2026-10-28: Free-text identifiers reject only control characters | Phase 2 | Encoding handles the rest |
 | 2026-10-28: Single invoice status sent twice (upstream 500 workaround) | Phase 2 | Remove when API is fixed |
-| 2026-10-28: QA and mutation-tester agents on Sonnet | Phase 2 | Token cost; reviewer/developer stay on Opus |
+| 2026-10-28: QA and mutation-tester agents on Sonnet | Phase 2 | Token cost; reviewer stays on Opus |
+| 2026-10-29: senior-developer agent on Sonnet, medium effort | Phase 4 | Patterns settled; reviewer stays on Opus |
 | 2026-10-28: workflowsSettings opt-in (includeWorkflowSettings) on get_invoice/get_customer | Phase 2 | Stage distribution details stay one flag away |
 | 2026-10-29: 0.1.0 published as @dnmitev/inio-mcp (personal scope; @inio later) | Phase 3 | Package name changes for users when moved |
 | 2026-10-29: 0.1.0 stdio only (npm and Docker); HTTP with auth in Phase 5 | Phase 3 | MCP_TRANSPORT=http rejected for now |
@@ -63,6 +64,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: Write safety = INIO_ALLOW_WRITES + annotations + echo; no confirm flag | Phase 4 | Clients confirm via destructiveHint |
 | 2026-10-29: 04-02 defaults: reset redistribute=false, credit distributionEnabled=false, update_customer contact+address only | Phase 4 | Nothing reaches end customers unless asked |
 | 2026-10-29: Live write checks via `npm run smoke:writes -- <customerNo> [invoiceNo]`; identifiers from the conversation, not env | Phase 4 | Never in release gate; self-cleaning |
+| 2026-10-29: Writes never fail after the POST resolves; unreadable 2xx = success + note (AC-3 amended) | Phase 4 | Apply to payments in 04-03 (no idempotency) |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -86,14 +88,14 @@ See PROJECT.md Key Decisions.
 
 ### Git State
 Branch: feat/04-02-plan
-Releases: v0.1.2 (npm latest); 04-01 merged as #27, unreleased
+Releases: v0.1.2 (npm latest); 04-01 merged as #27, 04-02 uncommitted on branch; both unreleased
 
 ## Session Continuity
 
-Last session: 2026-10-28
-Stopped at: Plan 04-02 created
-Next action: Continue /paul:apply .paul/phases/04-write-tools/04-02-PLAN.md
-Resume file: .paul/phases/04-write-tools/04-02-PLAN.md
+Last session: 2026-10-29
+Stopped at: 04-02 loop closed
+Next action: commit and PR 04-02, then /paul:plan for 04-03
+Resume file: .paul/phases/04-write-tools/04-02-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*

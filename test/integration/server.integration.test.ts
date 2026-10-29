@@ -10,6 +10,9 @@ import {
   CONFLICT_CUSTOMER_ID,
   CONFLICT_MESSAGE,
   CREATED_PAUSE_ID,
+  CREDIT_INVOICE_ID,
+  CREDIT_INVOICE_NO,
+  CREDIT_PAYMENT_REFERENCE,
   customer,
   INHERITED_BANK,
   INHERITED_FEE_DATE,
@@ -17,6 +20,7 @@ import {
   pauses,
   RATE_ALWAYS,
   RATE_ONCE,
+  RESET_WORKFLOW_ID,
   retryAttempts,
   serviceLine,
   startFakeInioApi,
@@ -393,6 +397,10 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       'update_customer_pause',
       'update_invoice_due_date',
       'update_invoice_stop_until_dates',
+      'update_customer',
+      'reset_invoice_stage',
+      'create_credit_invoice',
+      'match_credit_invoice',
     ];
     const READ_TOOLS = [
       'get_customer',
@@ -435,10 +443,10 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       expect(tools.map((t) => t.name).sort()).toEqual(READ_TOOLS);
     });
 
-    it('lists 12 tools when INIO_ALLOW_WRITES=true', async () => {
+    it('lists 16 tools when INIO_ALLOW_WRITES=true', async () => {
       const { client } = await spawnServer(WRITES);
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(12);
+      expect(tools).toHaveLength(16);
       expect(tools.map((t) => t.name).sort()).toEqual([...READ_TOOLS, ...WRITE_TOOLS].sort());
     });
 
@@ -605,6 +613,231 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
           body: '',
           userRealName: undefined,
         },
+      ]);
+    });
+
+    const INVOICE_ID = String(invoice.id);
+    const ITEM_ID = '00000000-0000-4000-8000-000000000004';
+
+    it('update_customer patches by id and returns the customer without workflowsSettings', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { id: CUSTOMER_ID, customerName: 'Renamed AB', mobilePhoneNo: null },
+        'update_customer',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before)).toEqual([
+        {
+          method: 'PATCH',
+          url: `/v1/customers/${CUSTOMER_ID}`,
+          body: JSON.stringify({ customerName: 'Renamed AB', mobilePhoneNo: null }),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      const out = z
+        .object({ id: z.string(), customerName: z.string() })
+        .parse(JSON.parse(result.text));
+      expect(out).toMatchObject({ id: CUSTOMER_ID, customerName: 'Renamed AB' });
+      expect(result.text).not.toContain('mobilePhoneNo');
+      expect(result.text).not.toContain('workflowsSettings');
+    });
+
+    it('update_customer patches by number', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const no = String(customer.customerNo);
+      const result = await call({ number: no, languageCode: 'EN' }, 'update_customer');
+      expect(result.isError).toBe(false);
+      expect(sent(before)).toEqual([
+        {
+          method: 'PATCH',
+          url: `/v1/customers/by-number/${encodeURIComponent(no)}`,
+          body: JSON.stringify({ languageCode: 'EN' }),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      expect(JSON.parse(result.text)).toMatchObject({ customerNo: no, languageCode: 'EN' });
+    });
+
+    it('reset_invoice_stage by id posts the reset and returns the plan without workflowId', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { id: INVOICE_ID, targetStage: 'reminded', reason: 'Wrong stage' },
+        'reset_invoice_stage',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before)).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/invoices/${INVOICE_ID}/reset-stage`,
+          body: JSON.stringify({
+            targetStage: 'reminded',
+            reason: 'Wrong stage',
+            redistribute: false,
+          }),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      expect(JSON.parse(result.text)).toMatchObject({
+        targetStage: 'reminded',
+        willRedistribute: false,
+      });
+      expect(result.text).not.toContain(RESET_WORKFLOW_ID);
+    });
+
+    it('reset_invoice_stage by number looks up the id, then posts to the id route', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { number: NO, targetStage: 'invoiced', dueDate: '2099-01-31', reason: 'Wrong stage' },
+        'reset_invoice_stage',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before)).toEqual([
+        {
+          method: 'GET',
+          url: `/v1/invoices/by-number/${encodeURIComponent(NO)}`,
+          body: '',
+          userRealName: undefined,
+        },
+        {
+          method: 'POST',
+          url: `/v1/invoices/${INVOICE_ID}/reset-stage`,
+          body: JSON.stringify({
+            targetStage: 'invoiced',
+            dueDate: '2099-01-31',
+            reason: 'Wrong stage',
+            redistribute: false,
+          }),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      expect(JSON.parse(result.text)).toMatchObject({
+        targetStage: 'invoiced',
+        dueDate: '2099-01-31',
+      });
+    });
+
+    it('reset_invoice_stage fails without a reset when the number lookup is 404', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { number: 'NO-SUCH', targetStage: 'reminded', reason: 'Wrong stage' },
+        'reset_invoice_stage',
+      );
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain('NOT_FOUND');
+      expect(sent(before).map((r) => r.method)).toEqual(['GET']);
+    });
+
+    it('create_credit_invoice posts by id and returns the new credit invoice', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        {
+          id: INVOICE_ID,
+          creditInvoiceNo: CREDIT_INVOICE_NO,
+          items: [{ debitItemId: ITEM_ID, unitPrice: -10, quantity: 2 }],
+        },
+        'create_credit_invoice',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before)).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/invoices/${INVOICE_ID}/credit-invoice`,
+          body: JSON.stringify({
+            invoiceNo: CREDIT_INVOICE_NO,
+            invoiceItems: [{ debitItemId: ITEM_ID, unitPrice: -10, quantity: 2 }],
+            isReverseTaxation: false,
+            distributionEnabled: false,
+            distributionMethod: '',
+          }),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      expect(JSON.parse(result.text)).toEqual({
+        created: true,
+        id: CREDIT_INVOICE_ID,
+        invoiceNo: CREDIT_INVOICE_NO,
+        paymentReference: CREDIT_PAYMENT_REFERENCE,
+        items: [
+          {
+            id: '00000000-0000-4000-8000-000000000050',
+            debitItemId: ITEM_ID,
+            unitPrice: -10,
+            quantity: 2,
+          },
+        ],
+      });
+    });
+
+    it('create_credit_invoice posts by number', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        {
+          number: NO,
+          creditInvoiceNo: CREDIT_INVOICE_NO,
+          items: [{ debitItemId: ITEM_ID, unitPrice: 0, quantity: 1 }],
+        },
+        'create_credit_invoice',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before).map(({ method, url }) => ({ method, url }))).toEqual([
+        { method: 'POST', url: `/v1/invoices/by-number/${encodeURIComponent(NO)}/credit-invoice` },
+      ]);
+    });
+
+    it('match_credit_invoice posts by id, reads back, and reports the result', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { id: INVOICE_ID, creditInvoiceNo: CREDIT_INVOICE_NO, amount: -25.5 },
+        'match_credit_invoice',
+      );
+      expect(result).toEqual({
+        isError: false,
+        text: present(
+          {
+            matched: true,
+            invoice: INVOICE_ID,
+            creditInvoiceNo: CREDIT_INVOICE_NO,
+            amount: -25.5,
+            creditInvoiceId: CREDIT_INVOICE_ID,
+            remainingAmount: invoice.remainingAmount,
+            paymentStatus: invoice.paymentStatus,
+          },
+          false,
+        ),
+      });
+      expect(sent(before)).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/invoices/${INVOICE_ID}/match-credit-invoice`,
+          body: JSON.stringify({ creditInvoiceNo: CREDIT_INVOICE_NO, amount: -25.5 }),
+          userRealName: 'inio-mcp',
+        },
+        { method: 'GET', url: `/v1/invoices/${INVOICE_ID}`, body: '', userRealName: undefined },
+      ]);
+    });
+
+    it('match_credit_invoice posts by number', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { number: NO, creditInvoiceNo: CREDIT_INVOICE_NO, amount: -1 },
+        'match_credit_invoice',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before).map(({ method, url }) => ({ method, url }))).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/invoices/by-number/${encodeURIComponent(NO)}/match-credit-invoice`,
+        },
+        { method: 'GET', url: `/v1/invoices/by-number/${encodeURIComponent(NO)}` },
       ]);
     });
 

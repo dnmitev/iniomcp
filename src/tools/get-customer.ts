@@ -1,22 +1,16 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { pathSegment, type InioClient } from '../inio-client.ts';
+import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
-import { errorText, fail, ok, present } from './result.ts';
+import { CustomerRef, customerPath } from './customer-ref.ts';
+import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
 
 const Input = z
   .strictObject({
-    id: z.uuid().optional().describe('Customer UUID'),
-    number: z
-      .string()
-      .min(1)
-      .max(50)
-      .regex(/^[^\p{Cc}]+$/u)
-      .optional()
-      .describe('Business customer number, e.g. C-1001'),
+    ...CustomerRef,
     includeWorkflowSettings: z
       .boolean()
       .default(false)
@@ -24,9 +18,7 @@ const Input = z
         'Include workflowsSettings: how and when each stage (setup, invoicing1-4, paid, credit) is distributed (email, SMS, paper), escalation fees and timing, and which stages are enabled. Leave false unless the question is about these.',
       ),
   })
-  .refine((a) => (a.id === undefined) !== (a.number === undefined), {
-    message: 'Provide exactly one of id or number.',
-  });
+  .refine(exactlyOneRef, EXACTLY_ONE_REF);
 
 const AnyObject = z.record(z.string(), z.unknown());
 
@@ -59,10 +51,7 @@ export function registerGetCustomer(
     },
     withToolLogging(logger, 'get_customer', async ({ id, number, includeWorkflowSettings }) => {
       try {
-        const path =
-          id !== undefined
-            ? `/customers/${pathSegment(id)}`
-            : `/customers/by-number/${pathSegment(number ?? '')}`;
+        const path = customerPath({ id, number });
         const parsed = Payload.safeParse(await client.get(path));
         if (!parsed.success) {
           return fail('UPSTREAM_ERROR: Unexpected customer payload from the Inio API.');
