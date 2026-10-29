@@ -9,6 +9,7 @@ import { present } from '../../src/tools/result.ts';
 import {
   CONFLICT_CUSTOMER_ID,
   CONFLICT_MESSAGE,
+  CREATED_CUSTOMER_ID,
   CREATED_PAUSE_ID,
   CREDIT_INVOICE_ID,
   CREDIT_INVOICE_NO,
@@ -403,6 +404,7 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       'create_credit_invoice',
       'match_credit_invoice',
       'create_payment',
+      'create_customer',
     ];
     const READ_TOOLS = [
       'get_customer',
@@ -445,10 +447,10 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       expect(tools.map((t) => t.name).sort()).toEqual(READ_TOOLS);
     });
 
-    it('lists 17 tools when INIO_ALLOW_WRITES=true', async () => {
+    it('lists 18 tools when INIO_ALLOW_WRITES=true', async () => {
       const { client } = await spawnServer(WRITES);
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(17);
+      expect(tools).toHaveLength(18);
       expect(tools.map((t) => t.name).sort()).toEqual([...READ_TOOLS, ...WRITE_TOOLS].sort());
     });
 
@@ -892,6 +894,53 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       expect(JSON.parse(post?.body ?? '')).toEqual([
         { clientId: TEST_TOKEN_CLIENT_ID, invoiceNo: NO, transactionType: 'direct_payment' },
       ]);
+    });
+
+    const NEW_CUSTOMER = {
+      customerNo: 'NEW-1',
+      customerName: 'Test Person',
+      customerType: 'C',
+      languageCode: 'EN',
+      serviceLineName: 'Default',
+      customerAddress: {
+        countryCode: 'SE',
+        city: 'Stockholm',
+        zipCode: '11122',
+        addressLine1: 'Main St 1',
+      },
+      SSN: '19900101-1234',
+    };
+
+    it('create_customer posts the customer with the token clientId and audit header', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(NEW_CUSTOMER, 'create_customer');
+      expect(result.isError).toBe(false);
+      const posts = sent(before);
+      expect(posts).toHaveLength(1);
+      expect(posts[0]).toMatchObject({
+        method: 'POST',
+        url: '/v1/customers',
+        userRealName: 'inio-mcp',
+      });
+      expect(JSON.parse(posts[0]?.body ?? '')).toEqual([
+        { ...NEW_CUSTOMER, clientId: TEST_TOKEN_CLIENT_ID },
+      ]);
+      expect(JSON.parse(result.text)).toEqual({
+        created: true,
+        id: CREATED_CUSTOMER_ID,
+        customerNo: 'NEW-1',
+      });
+    });
+
+    it('create_customer reports an existing customerNo as already existing', async () => {
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { ...NEW_CUSTOMER, customerNo: String(customer.customerNo) },
+        'create_customer',
+      );
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain('already exists');
     });
 
     it('does not send the audit header on read requests', async () => {

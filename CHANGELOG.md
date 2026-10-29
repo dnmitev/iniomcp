@@ -9,6 +9,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Opt-in write tools, registered only with `INIO_ALLOW_WRITES=true` and annotated as destructive: `create_customer_pause`, `update_customer_pause`, `cancel_customer_pause`, `update_invoice_due_date` (postpone only) and `update_invoice_stop_until_dates`. Writes are attributed to `inio-mcp` in Inio's audit fields.
 - More opt-in write tools: `update_customer` (contact details and addresses only), `reset_invoice_stage` (no re-sending unless `redistribute: true`), `create_credit_invoice` (not sent to the end customer unless `distributionEnabled: true`) and `match_credit_invoice`. With `INIO_ALLOW_WRITES=true` the server now has 16 tools.
 - `create_payment` write tool for `direct_payment`, `good_will`, `bank` and `reminder_fee_waiver` payments. A full payment must be explicit (`fullPayment: true`). The client id comes from the access token. An accepted payment is never reported as failed, and uncertain outcomes say to check the invoice before retrying. With `INIO_ALLOW_WRITES=true` the server now has 17 tools.
+- `create_customer` write tool: one consumer (with SSN) or business (with orgNr and vatNo) per call, with the client id from the access token. A customerNo that already exists is rejected. With `INIO_ALLOW_WRITES=true` the server now has 18 tools.
 - API validation errors list the affected fields; values of personal-data fields are redacted.
 
 ## [0.1.2] - 2026-10-29

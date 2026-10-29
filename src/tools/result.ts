@@ -115,3 +115,18 @@ export function presentPage(
 /** True for an API error whose HTTP status is 2xx: the write went through but the client could not parse the answer. */
 export const isUnreadableSuccess = (err: unknown): boolean =>
   err instanceof InioApiError && err.status >= 200 && err.status < 300;
+
+/** True when the outcome of a write is unknown: no response (status 0) or a server error. */
+export const isUncertainOutcome = (err: unknown): boolean =>
+  err instanceof InioApiError && (err.status === 0 || err.status >= 500);
+
+/** The inio_client_id claim of the token, which some endpoints want in the body. Never echoes the token. */
+export function clientIdOf(token: string): string {
+  try {
+    const payload = Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8');
+    return z.object({ inio_client_id: z.string().min(1) }).parse(JSON.parse(payload))
+      .inio_client_id;
+  } catch {
+    throw new Error('The access token has no usable inio_client_id claim.');
+  }
+}

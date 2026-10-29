@@ -3,6 +3,15 @@ import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
 import { CustomerRef, customerPath } from './customer-ref.ts';
+import {
+  city,
+  countryCode,
+  DISTINCT_EMAILS,
+  distinctEmails,
+  email,
+  line,
+  zipCode,
+} from './customer-fields.ts';
 import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
@@ -12,21 +21,14 @@ type Deps = {
   logger?: Pick<Logger, 'info'>;
 };
 
-const line = z.string().min(1).max(60);
 const optionalLine = line.nullable().optional();
 
 // Every field optional: the API merges a partial address into the stored one.
 const Address = z
   .strictObject({
-    countryCode: z
-      .string()
-      .regex(/^[A-Za-z]{2}$/)
-      .optional(),
-    city: z.string().min(1).max(50).optional(),
-    zipCode: z
-      .string()
-      .regex(/^[0-9A-Za-z ]{4,6}$/)
-      .optional(),
+    countryCode: countryCode.optional(),
+    city: city.optional(),
+    zipCode: zipCode.optional(),
     addressLine1: line.optional(),
     addressLine2: optionalLine,
     addressLine3: optionalLine,
@@ -35,9 +37,6 @@ const Address = z
   })
   .refine((a) => Object.keys(a).length > 0, { message: 'Provide at least one address field.' });
 
-const email = (which: string) =>
-  z.email().nullable().optional().describe(`${which} distribution email address, or null to clear`);
-
 const Fields = {
   customerName: z
     .string()
@@ -45,9 +44,9 @@ const Fields = {
     .max(100)
     .optional()
     .describe('New customer name, 2-100 characters'),
-  distributionEmailAddress: email('Primary'),
-  distributionEmailAddress2: email('Second'),
-  distributionEmailAddress3: email('Third'),
+  distributionEmailAddress: email('Primary', true),
+  distributionEmailAddress2: email('Second', true),
+  distributionEmailAddress3: email('Third', true),
   mobilePhoneNo: z
     .string()
     .regex(/^\+\d{1,17}$/)
@@ -75,20 +74,7 @@ const Input = z
   .refine((a) => Object.keys(Fields).some((k) => k in a), {
     message: 'Provide at least one field to update.',
   })
-  .refine(
-    (a) => {
-      const emails = [
-        a.distributionEmailAddress,
-        a.distributionEmailAddress2,
-        a.distributionEmailAddress3,
-      ]
-        .filter((e) => typeof e === 'string')
-        // Email addresses are case-insensitive in practice, so A@x and a@x count as the same.
-        .map((e) => e.toLowerCase());
-      return new Set(emails).size === emails.length;
-    },
-    { message: 'Distribution email addresses must be different.' },
-  );
+  .refine(distinctEmails, DISTINCT_EMAILS);
 
 // The API answers with a one-element array holding the updated customer.
 const Payload = z.tuple([z.record(z.string(), z.unknown())]);

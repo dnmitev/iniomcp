@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.1.2 |
-| Status | Phase 3 complete; 0.1.2 released |
+| Status | Phase 4 complete (write tools, unreleased); 0.1.2 released |
 | Last Updated | 2026-10-29 |
 
 ## Requirements
@@ -46,17 +46,22 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Docker image `ghcr.io/dnmitev/inio-mcp` (stdio, non-root, amd64 + arm64) — Phase 3
 - ✓ Tag-driven release with live gate, trusted publishing, GitHub Releases — Phase 3
 - ✓ Request timeout (30 s default) with a clear TIMEOUT result — Phase 3 (0.1.2)
+- ✓ Opt-in write tools behind INIO_ALLOW_WRITES (10): customer pauses (create/update/cancel), invoice due date and stop-until dates, update_customer, reset_invoice_stage, create/match credit invoices, create_payment, create_customer — Phase 4
+- ✓ Writes attributed to `inio-mcp` in audit fields; accepted writes never reported as failed; uncertain outcomes tell the model to check before retrying — Phase 4
 
 ### Active (In Progress)
-- [ ] Phase 4: Write tools (opt-in)
+- [ ] Phase 5: HTTP hardening
 
 ### Planned (Next)
-- Phase 5: HTTP hardening
+- v0.1 release with the write tools
 
 ### Out of Scope
 - Internal MCP for dev/QA/business (DB access, internal services) — separate future project
 - Bulk `PATCH /customers` and `PUT` variants — PATCH covers updates; bulk LLM updates too risky
 - Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard
+- `reverse_payment` — the public API exposes no paymentAllocationId (payment id is not one; live probe 2026-10-29)
+- `create_invoice` in v0.1 — sends to the end customer at once and needs full calcInput
+- `credit_loss`/`cancelled` payments and other non-curated transaction types — until asked for
 
 ## Target Users
 
@@ -105,6 +110,11 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Invoice links (pdfURL, digitalInvoiceURL) and error-message emails redacted by default | Bearer links bypass field redaction | 2026-10-29 | Active |
 | Releases by tag via release.yml: live gate, npm trusted publishing, multi-arch GHCR | No long-lived tokens; provenance | 2026-10-29 | Active |
 | devops-reviewer agent (Sonnet) for all CI/CD and release changes | Supply-chain and release safety | 2026-10-29 | Active |
+| Write safety = INIO_ALLOW_WRITES + destructive annotations + echo; no confirm flag | Clients confirm via annotations; no upstream roles | 2026-10-29 | Active |
+| Writes never fail after a 2xx; status 0/≥500 = uncertain with check-before-retry hint | Payments have no idempotency; avoid double credits/payments | 2026-10-29 | Active |
+| Safe defaults: no redistribution, no credit-note distribution, curated payment types, explicit full payment | Nothing reaches end customers or moves money unless asked | 2026-10-29 | Active |
+| Tenant clientId from the token's inio_client_id claim | No extra config | 2026-10-29 | Active |
+| senior-developer agent on Sonnet (medium effort) | Patterns settled; reviewer stays on Opus | 2026-10-29 | Active |
 
 ## Success Metrics
 
@@ -139,4 +149,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-29 after Phase 3*
+*Last updated: 2026-10-29 after Phase 4*

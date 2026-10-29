@@ -11,26 +11,26 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-28)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.1 — Phase 4 Write tools (opt-in)
+**Current focus:** v0.1 — Phase 5 HTTP hardening
 
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — Planning
-Plan: 04-04 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-10-29 — Reverse probe done; created .paul/phases/04-write-tools/04-04-PLAN.md
+Phase: 5 of 5 (HTTP hardening)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-29 — Phase 4 complete, transitioned to Phase 5
 
 Progress:
-- Milestone: [████████░░] 77%
-- Phase 4: [████████░░] 75%
+- Milestone: [████████░░] 80%
+- Phase 5: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ○        ○        ○     [Ready for first PLAN]
 ```
 
 ## Accumulated Context
@@ -85,25 +85,28 @@ See PROJECT.md Key Decisions.
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
+| Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | Next schema change to customers |
+| Ask API team: allocation lookup for reverse_payment; JSON error envelope on reverse-payment | 04-04 | - | Upstream |
 
 ### Blockers/Concerns
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
 - Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
-- Phase 4: Public API has no role checks; anything enabled is allowed. Reset stage / credit invoices can re-send to end customers and waive fees (04-02).
+- Phase 4: Public API has no role checks; anything enabled is allowed. Defaults keep end customers out of it unless asked.
+- Phase 4: Claude declines to send an SSN, so consumer customers cannot be created from Claude (documented).
 - Phase 4: No public endpoint exposes paymentAllocationId, so payments cannot be reversed via the API; test invoice 20260925-07 carries two 0.01 probe payments (reverse in back office).
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: main
-Releases: v0.1.2 (npm latest); 04-01 #27, 04-02 #28, 04-03 #29 merged; all unreleased
+Branch: feat/04-04-plan
+Releases: v0.1.2 (npm latest); Phase 4 (04-01..04-04) unreleased; 04-04 on branch
 
 ## Session Continuity
 
 Last session: 2026-10-29
-Stopped at: Plan 04-04 created
-Next action: Review and approve plan, then run /paul:apply .paul/phases/04-write-tools/04-04-PLAN.md
-Resume file: .paul/phases/04-write-tools/04-04-PLAN.md
+Stopped at: Phase 4 complete, ready to plan Phase 5
+Next action: merge 04-04 PR, then /paul:plan for Phase 5 (or release the write tools first)
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*
