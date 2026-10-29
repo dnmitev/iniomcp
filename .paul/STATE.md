@@ -99,13 +99,13 @@ See PROJECT.md Key Decisions.
 
 ### Git State
 Branch: feat/04-04-plan
-Releases: v0.1.2 (npm latest); Phase 4 (04-01..04-04) unreleased; 04-04 on branch
+Releases: v0.1.2 (npm latest); 0.2.0 (Phase 4 write tools) in release PR
 
 ## Session Continuity
 
 Last session: 2026-10-29
 Stopped at: Phase 4 complete, ready to plan Phase 5
-Next action: merge 04-04 PR, then /paul:plan for Phase 5 (or release the write tools first)
+Next action: merge release PR, tag v0.2.0, approve live gate; then /paul:plan for Phase 5
 Resume file: .paul/ROADMAP.md
 
 ---
