@@ -19,7 +19,7 @@ Milestone: v0.1 Initial Release
 Phase: 3 of 5 (Packaging and release) — In progress
 Plan: 03-02 approved
 Status: Applying 03-02
-Last activity: 2026-10-29 — PR #7 merged; created .paul/phases/03-packaging-release/03-02-PLAN.md
+Last activity: 2026-10-29 — 0.1.1-rc.1 released by CI (npm next with provenance, GHCR amd64/arm64, GitHub pre-release)
 
 Progress:
 - Milestone: [█████░░░░░] 50%
@@ -68,7 +68,8 @@ See PROJECT.md Key Decisions.
 | Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 | Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
-| Dependabot (actions, docker) + base image digest pin | 03-01 | S | 03-02 |
+| Dependabot PRs #9-#15 (major bumps); ignore majors for node image and @types/node | 03-02 | S | After 0.1.1 |
+| Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 
 ### Blockers/Concerns

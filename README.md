@@ -2,7 +2,7 @@
 
 Model Context Protocol (MCP) server for the [Inio](https://inio.com) REST API. Connect AI assistants such as Claude, Cursor or VS Code to your own Inio data: customers, invoices, pauses, retry attempts and payments.
 
-> **Status:** 0.1.0, read-only, stdio only. Published as `@dnmitev/inio-mcp` until it moves to the `@inio` scope.
+> **Status:** 0.1.1, read-only, stdio only. Published as `@dnmitev/inio-mcp` until it moves to the `@inio` scope.
 
 ## Install
 
@@ -25,7 +25,7 @@ npx -y @dnmitev/inio-mcp
 | `INIO_REVEAL_PII`    | no       | `false` | `true` disables redaction of personal data               |
 | `INIO_LOG_LEVEL`     | no       | `info`  | `fatal` … `trace`, or `silent`                           |
 | `MCP_TRANSPORT`      | no       | `stdio` | Only `stdio` is supported; HTTP comes in a later release |
-| `INIO_ALLOW_WRITES`  | no       | `false` | Reserved for write tools (none in 0.1.0)                 |
+| `INIO_ALLOW_WRITES`  | no       | `false` | Reserved for write tools (none yet)                      |
 
 ### Claude Desktop
 
