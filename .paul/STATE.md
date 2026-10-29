@@ -65,6 +65,7 @@ See PROJECT.md Key Decisions.
 | Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 | Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
+| Dependabot (actions, docker) + base image digest pin | 03-01 | S | 03-02 |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 
 ### Blockers/Concerns
