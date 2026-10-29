@@ -68,6 +68,7 @@ See PROJECT.md Key Decisions.
 | Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 | Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
+| API request timeout: default 60 s (INIO_REQUEST_TIMEOUT_MS), TIMEOUT tool error; live test timeout above it | 03-02 (v0.1.2-rc.1 live gate hit 30 s test timeouts) | S | Before Phase 4 |
 | Dependabot PRs #9-#15 (major bumps); ignore majors for node image and @types/node | 03-02 | S | After 0.1.1 |
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
