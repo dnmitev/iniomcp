@@ -27,6 +27,21 @@ describe('errorText', () => {
     expect(errorText(new InioApiError(500, 'X', 'boom', ''))).toBe('X: boom');
   });
 
+  it('redacts an email in an InioApiError message and keeps code and correlationId', () => {
+    const err = new InioApiError(404, 'NOT_FOUND', 'No invoice for a.b@x.example', 'c-1');
+    expect(errorText(err)).toBe('NOT_FOUND: No invoice for [redacted-email] (correlationId c-1)');
+  });
+
+  it('redacts an email in a thrown non-Error string', () => {
+    expect(errorText('failed for a.b@x.example')).toBe('failed for [redacted-email]');
+  });
+
+  it('redacts an email in a plain Error message', () => {
+    expect(errorText(new Error('failed for jane@home.example today'))).toBe(
+      'failed for [redacted-email] today',
+    );
+  });
+
   it('returns the message of a plain Error', () => {
     expect(errorText(new Error('plain failure'))).toBe('plain failure');
   });

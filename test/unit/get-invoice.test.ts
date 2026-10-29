@@ -203,6 +203,20 @@ describe('get_invoice success', () => {
     expect(textOf(result)).toBe(JSON.stringify({ ...INVOICE, IBAN: '[redacted]' }));
   });
 
+  it('redacts the pdfURL link', async () => {
+    const withPdf = { ...INVOICE, pdfURL: 'https://files.example/inv-1.pdf' };
+    const { call } = await setup(() => Promise.resolve(withPdf));
+    const text = textOf(await call({ id: ID }));
+    expect(text).toContain('"pdfURL":"[redacted]"');
+    expect(text).not.toContain('files.example');
+  });
+
+  it('keeps the pdfURL link when revealPii is true', async () => {
+    const withPdf = { ...INVOICE, pdfURL: 'https://files.example/inv-1.pdf' };
+    const { call } = await setup(() => Promise.resolve(withPdf), true);
+    expect(textOf(await call({ id: ID }))).toContain('"pdfURL":"https://files.example/inv-1.pdf"');
+  });
+
   it('keeps PII when revealPii is true', async () => {
     const { call } = await setup(() => Promise.resolve(INVOICE), true);
     const result = await call({ id: ID });

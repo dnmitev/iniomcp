@@ -15,7 +15,7 @@ First public release. Read-only, stdio only.
   - `list_customer_pauses`, `get_customer_pause`
   - `list_invoices`, `get_invoice` (`withInherited`, `includeWorkflowSettings`), `get_invoice_retry_attempts`
 - OAuth2 client-credentials authentication with token caching and a single retry on 401.
-- Personal data redacted by default (IBAN, SSN, emails, phone numbers, addresses, invoice links); `INIO_REVEAL_PII=true` disables it.
+- Personal data redacted by default (IBAN, SSN, emails, phone numbers, addresses), including the invoice links `digitalInvoiceURL` and `pdfURL`, which open the invoice without login, and email addresses in API error messages; `INIO_REVEAL_PII=true` disables it for tool data (emails in error messages stay redacted).
 - Compact results: list tools return summary fields with `limit`/`offset` paging and `nextOffset`; detail tools drop empty values; `workflowsSettings` is opt-in.
 - HTTP 429 handling: one retry honoring `Retry-After` (at most 5 s), then a `RATE_LIMITED` error.
 - JSON logs on stderr with one `tool call` line per call, including `approxTokens`.

@@ -55,6 +55,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: 0.1.0 published as @dnmitev/inio-mcp (personal scope; @inio later) | Phase 3 | Package name changes for users when moved |
 | 2026-10-29: 0.1.0 stdio only (npm and Docker); HTTP with auth in Phase 5 | Phase 3 | MCP_TRANSPORT=http rejected for now |
 | 2026-10-29: Release live gate via protected 'release' environment; user adds secrets | Phase 3 | Human-action checkpoint in 03-02 |
+| 2026-10-29: pdfURL and digitalInvoiceURL redacted by default (bearer links, verified public) | Phase 3 | Revealed only with INIO_REVEAL_PII=true |
 
 ### Deferred Issues
 
@@ -63,6 +64,7 @@ See PROJECT.md Key Decisions.
 | Stryker TS checker / tsconfig handling disabled (no TS 7 JS API) | 01-01 | S | Stryker supports TS 7 |
 | Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 | Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
+| INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 
 ### Blockers/Concerns

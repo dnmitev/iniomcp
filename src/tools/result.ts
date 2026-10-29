@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import { InioApiError } from '../inio-client.ts';
-import { redact } from '../redact.ts';
+import { redact, redactText } from '../redact.ts';
 
-/** Formats an error as the tool's error text: "<code>: <message> (correlationId <id>)" for API errors. */
+/** Formats an error as the tool's error text: "<code>: <message> (correlationId <id>)" for API errors; emails in messages are redacted. */
 export function errorText(err: unknown): string {
   if (err instanceof InioApiError) {
     const suffix = err.correlationId ? ` (correlationId ${err.correlationId})` : '';
-    return `${err.code}: ${err.message}${suffix}`;
+    return `${err.code}: ${redactText(err.message)}${suffix}`;
   }
-  return err instanceof Error ? err.message : String(err);
+  return redactText(err instanceof Error ? err.message : String(err));
 }
 
 /** Successful tool result carrying one text item. */
