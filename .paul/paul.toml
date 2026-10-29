@@ -18,17 +18,15 @@ phases = 5
 number = 3
 name = "Packaging and release"
 status = "in_progress"
-plans_completed = 0
+plans_completed = 1
 
 [loop]
-position = "APPLY"
-plan = "03-01"
-plan_path = "phases/03-packaging-release/03-01-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 6
+total_plans = 7
 total_phases = 5
-last_activity = "2026-10-29T01:00:00Z"
+last_activity = "2026-10-29T12:00:00Z"

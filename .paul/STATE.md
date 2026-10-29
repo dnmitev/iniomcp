@@ -17,20 +17,20 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 3 of 5 (Packaging and release) — In progress
-Plan: 03-01 applied
-Status: APPLY complete, ready for UNIFY
-Last activity: 2026-10-29 — 03-01 tasks 1-3 committed
+Plan: 03-01 complete (1 of 2)
+Status: Ready for next PLAN (03-02)
+Last activity: 2026-10-29 — 03-01 unified, SUMMARY created
 
 Progress:
-- Milestone: [████░░░░░░] 40%
-- Phase 3: [░░░░░░░░░░] 0%
+- Milestone: [█████░░░░░] 50%
+- Phase 3: [█████░░░░░] 50%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [Applied, ready for UNIFY]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -56,6 +56,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: 0.1.0 stdio only (npm and Docker); HTTP with auth in Phase 5 | Phase 3 | MCP_TRANSPORT=http rejected for now |
 | 2026-10-29: Release live gate via protected 'release' environment; user adds secrets | Phase 3 | Human-action checkpoint in 03-02 |
 | 2026-10-29: pdfURL and digitalInvoiceURL redacted by default (bearer links, verified public) | Phase 3 | Revealed only with INIO_REVEAL_PII=true |
+| 2026-10-29: devops-reviewer agent (Sonnet) reviews all CI/CD and release changes | Phase 3 | Also for lead-written workflows |
 
 ### Deferred Issues
 
@@ -81,9 +82,9 @@ Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80), PR #5 (fa88562), PR #
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: 03-01 APPLY complete
-Next action: /paul:unify .paul/phases/03-packaging-release/03-01-PLAN.md
-Resume file: .paul/phases/03-packaging-release/03-01-PLAN.md
+Stopped at: 03-01 loop closed
+Next action: Push feat/03-01-packaging and open PR, then /paul:plan for 03-02
+Resume file: .paul/phases/03-packaging-release/03-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*

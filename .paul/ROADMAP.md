@@ -22,7 +22,7 @@ Phases: 2 of 5 complete
 |-------|------|-------|--------|-----------|
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
-| 3 | Packaging and release | 0/2 | Planning | - |
+| 3 | Packaging and release | 1/2 | In progress | - |
 | 4 | Write tools (opt-in) | TBD | Not started | - |
 | 5 | HTTP hardening | TBD | Not started | - |
 
@@ -65,7 +65,7 @@ Phases: 2 of 5 complete
 **Research:** Likely (npm trusted publishing, multi-arch GHCR)
 
 **Plans:**
-- [ ] 03-01: Package metadata, transport guard, package and Docker smoke tests, README snippets, CHANGELOG, security review
+- [x] 03-01: Package metadata, transport guard, package and Docker smoke tests, README snippets, CHANGELOG, security review
 - [ ] 03-02: release.yml (live gate, npm trusted publishing with provenance, multi-arch GHCR, GitHub Release), first release
 
 ### Phase 4: Write tools (opt-in)
