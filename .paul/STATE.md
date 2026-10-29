@@ -16,21 +16,21 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — In progress
-Plan: 04-02 complete
-Status: Ready for next PLAN (04-03)
-Last activity: 2026-10-29 — 04-02 unified; SUMMARY created
+Phase: 4 of 5 (Write tools, opt-in) — Planning
+Plan: 04-03 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-29 — Created .paul/phases/04-write-tools/04-03-PLAN.md
 
 Progress:
 - Milestone: [███████░░░] 73%
-- Phase 4: [██████░░░░] 67%
+- Phase 4: [█████░░░░░] 50%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -65,6 +65,9 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: 04-02 defaults: reset redistribute=false, credit distributionEnabled=false, update_customer contact+address only | Phase 4 | Nothing reaches end customers unless asked |
 | 2026-10-29: Live write checks via `npm run smoke:writes -- <customerNo> [invoiceNo]`; identifiers from the conversation, not env | Phase 4 | Never in release gate; self-cleaning |
 | 2026-10-29: Writes never fail after the POST resolves; unreadable 2xx = success + note (AC-3 amended) | Phase 4 | Apply to payments in 04-03 (no idempotency) |
+| 2026-10-29: Phase 4 gets a 4th plan: 04-03 create_payment only; 04-04 create_customer (+ reverse_payment if probe works, create_invoice reconsidered) | Phase 4 | Smaller money-path plan |
+| 2026-10-29: Payment types curated (direct_payment, good_will, bank, reminder_fee_waiver); full payment must be explicit | Phase 4 | No credit_loss/cancelled until asked |
+| 2026-10-29: clientId for payments from token claim inio_client_id | Phase 4 | No config var |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -84,18 +87,19 @@ See PROJECT.md Key Decisions.
 - Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
 - Phase 4: Public API has no role checks; anything enabled is allowed. Reset stage / credit invoices can re-send to end customers and waive fees (04-02).
+- Phase 4: No public read endpoint exposes paymentAllocationId; reverse_payment blocked until probed (04-04).
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: feat/04-02-plan
-Releases: v0.1.2 (npm latest); 04-01 merged as #27, 04-02 uncommitted on branch; both unreleased
+Branch: main
+Releases: v0.1.2 (npm latest); 04-01 merged as #27, 04-02 merged as #28; both unreleased
 
 ## Session Continuity
 
 Last session: 2026-10-29
-Stopped at: 04-02 loop closed
-Next action: commit and PR 04-02, then /paul:plan for 04-03
-Resume file: .paul/phases/04-write-tools/04-02-SUMMARY.md
+Stopped at: Plan 04-03 created
+Next action: Review and approve plan, then run /paul:apply .paul/phases/04-write-tools/04-03-PLAN.md
+Resume file: .paul/phases/04-write-tools/04-03-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*

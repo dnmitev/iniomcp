@@ -69,3 +69,9 @@ Source root: `temporal-monorepo/packages`. Short names: `V` = `shared/validation
 - **POST /payments/reverse-payment:**
   - Fields: `paymentAllocationId`; optional `reversalReason`.
   - Synchronous and idempotent per allocation: a second call returns 500.
+
+## Live findings (read-only, 2026-10-29)
+- The access token carries `inio_client_id` (string). It is the `clientId` that POST /payments requires.
+- GET /invoices/{id} has no `clientId`, and no payment or allocation data (checked on partiallyPaid and paid invoices). No public read endpoint exposes a `paymentAllocationId`.
+- POST /payments returns 201 with an array of payment ids. Whether a payment id can be used as a `paymentAllocationId` is unverified; that needs a live write probe.
+- List responses are `{ data, limit, offset, total }`.
