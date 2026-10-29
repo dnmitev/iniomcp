@@ -17,9 +17,9 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 4 of 5 (Write tools, opt-in) — In progress
-Plan: 04-01 complete (1 of 3)
-Status: Ready for next PLAN (04-02)
-Last activity: 2026-10-29 — 04-01 unified (5 write tools, verified live and in Claude Desktop)
+Plan: 04-02 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-29 — PR #27 merged; created .paul/phases/04-write-tools/04-02-PLAN.md
 
 Progress:
 - Milestone: [██████▒░░░] 67%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -61,6 +61,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: Request timeout 30 s default (INIO_REQUEST_TIMEOUT_MS) | Phase 3 | MCP clients time out at ~60 s |
 | 2026-10-29: Phase 4 order low-risk first (pauses, dates → customer/reset/credit → create/payments) | Phase 4 | 3 plans |
 | 2026-10-29: Write safety = INIO_ALLOW_WRITES + annotations + echo; no confirm flag | Phase 4 | Clients confirm via destructiveHint |
+| 2026-10-29: 04-02 defaults: reset redistribute=false, credit distributionEnabled=false, update_customer contact+address only | Phase 4 | Nothing reaches end customers unless asked |
 | 2026-10-29: Live write checks via `npm run smoke:writes -- <customerNo> [invoiceNo]`; identifiers from the conversation, not env | Phase 4 | Never in release gate; self-cleaning |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
@@ -84,15 +85,15 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: feat/phase-4-plan
-Releases: v0.1.1, v0.1.2 (npm latest 0.1.2)
+Branch: feat/04-02-plan
+Releases: v0.1.2 (npm latest); 04-01 merged as #27, unreleased
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: 04-01 loop closed
-Next action: Push feat/phase-4-plan and open PR, then /paul:plan for 04-02
-Resume file: .paul/phases/04-write-tools/04-01-SUMMARY.md
+Stopped at: Plan 04-02 created
+Next action: Review and approve plan, then /paul:apply .paul/phases/04-write-tools/04-02-PLAN.md
+Resume file: .paul/phases/04-write-tools/04-02-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*
