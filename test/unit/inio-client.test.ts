@@ -1048,10 +1048,42 @@ describe('createInioClient writes', () => {
       expect(err.correlationId).toBe('c-1');
     });
 
-    it('maps a network failure to NETWORK_ERROR', async () => {
+    it('maps a network failure to NETWORK_ERROR with the uncertain-outcome message', async () => {
       const { client } = build([new TypeError('fetch failed')]);
       const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.status).toBe(0);
       expect(err.code).toBe('NETWORK_ERROR');
+      expect(err.message).toBe(
+        'Cannot reach the Inio API (INIO_URL). The change may or may not have been applied; check before retrying.',
+      );
+    });
+
+    it.each([
+      ['a non-JSON body', new Response('<html>ok</html>', { status: 200 }), 200],
+      ['an empty body', new Response(null, { status: 200 }), 200],
+      ['JSON without a result', json({ success: true, status: 201 }, 201), 201],
+    ])('flags a 2xx response with %s as possibly applied', async (_label, res, status) => {
+      const { client } = build([res]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.status).toBe(status);
+      expect(err.code).toBe('UPSTREAM_ERROR');
+      expect(err.message).toBe(
+        `Unexpected response from the Inio API (HTTP ${status}). The change may or may not have been applied; check before retrying.`,
+      );
+    });
+
+    it('keeps the plain text for a non-2xx response that is not an error envelope', async () => {
+      const { client } = build([new Response('<html>bad gateway</html>', { status: 502 })]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.status).toBe(502);
+      expect(err.code).toBe('UPSTREAM_ERROR');
+      expect(err.message).toBe('Unexpected response from the Inio API (HTTP 502).');
+    });
+
+    it('keeps the API error text for a rejected write (nothing was applied)', async () => {
+      const { client } = build([json(notFound, 404)]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.message).toBe(notFound.message);
     });
 
     it('gives each attempt its own fresh signal', async () => {
@@ -1171,6 +1203,23 @@ describe('createInioClient writes', () => {
     const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
     expect(headers.has('content-type')).toBe(false);
     expect(headers.has('x-user-real-name')).toBe(false);
+  });
+
+  it('keeps the plain network error message for GET', async () => {
+    const { client } = build([new TypeError('fetch failed')]);
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.code).toBe('NETWORK_ERROR');
+    expect(err.message).toBe('Cannot reach the Inio API (INIO_URL).');
+  });
+
+  it.each([
+    ['a non-JSON body', () => new Response('<html>ok</html>', { status: 200 })],
+    ['JSON without a result', () => json({ success: true, status: 200 })],
+  ])('keeps the plain unexpected-response message for GET with %s', async (_label, make) => {
+    const { client } = build([make()]);
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.code).toBe('UPSTREAM_ERROR');
+    expect(err.message).toBe('Unexpected response from the Inio API (HTTP 200).');
   });
 
   it('keeps the plain timeout message for GET', async () => {

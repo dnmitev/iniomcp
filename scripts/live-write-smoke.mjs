@@ -46,11 +46,15 @@ function check(step, ok, detail = '') {
 }
 // Error texts carry only codes, API messages and correlation ids, never personal data.
 const errorOf = (r) => r.text.slice(0, 200);
+// A write that timed out or lost its response may still have been applied.
+const maybeApplied = (r) => r.isError && r.text.includes('may or may not have been applied');
 
 await client.connect(transport);
 let customerId;
 let pauseId;
 let pauseCancelled = false;
+let stopUntilSet = false;
+let pauseUncertain = false;
 try {
   const { tools } = await client.listTools();
   check(
@@ -75,6 +79,7 @@ try {
       reason: REASON,
     });
     pauseId = created.json?.id;
+    pauseUncertain = maybeApplied(created);
     check(
       'create_customer_pause',
       !created.isError &&
@@ -111,39 +116,89 @@ try {
   }
 
   if (invoiceNo) {
-    const set = await call('update_invoice_stop_until_dates', {
-      number: invoiceNo,
-      invoicing1: day(30),
-      reason: REASON,
-    });
-    if (set.isError) {
-      // Feature off, or an API rule (e.g. step already passed, debt collection): report, don't fail.
-      console.log(`skip update_invoice_stop_until_dates (${errorOf(set)})`);
-    } else {
-      check(
-        'stop-until set',
-        set.json?.updated === true &&
-          dateOf(set.json?.stopUntilDates?.invoicing1StopUntilDate) === day(30),
+    const before = await call('get_invoice', { number: invoiceNo });
+    check('get_invoice', !before.isError, before.isError ? errorOf(before) : '');
+    if (before.json?.metadata?.invoicing1StopUntilDate) {
+      // Never overwrite an existing hold: the previous date could not be restored.
+      console.log(
+        'skip update_invoice_stop_until_dates (invoicing1 already has a stop-until date)',
       );
-      const cleared = await call('update_invoice_stop_until_dates', {
+    } else if (!before.isError) {
+      const set = await call('update_invoice_stop_until_dates', {
         number: invoiceNo,
-        invoicing1: null,
-        reason: `${REASON}: clear`,
+        invoicing1: day(30),
+        reason: REASON,
       });
-      check(
-        'stop-until cleared',
-        !cleared.isError && cleared.json?.stopUntilDates?.invoicing1StopUntilDate === undefined,
-      );
+      const expectedRejection =
+        /^FEATURE_DISABLED:/.test(set.text) ||
+        (/^BAD_REQUEST:/.test(set.text) && !set.text.includes(' Fields: '));
+      if (set.isError && expectedRejection) {
+        // Feature off, or a business rule (step already passed, debt collection): expected.
+        // A BAD_REQUEST with field errors means the request itself was wrong, so it fails.
+        console.log(`skip update_invoice_stop_until_dates (${errorOf(set)})`);
+      } else {
+        stopUntilSet = !set.isError || maybeApplied(set);
+        check(
+          'stop-until set',
+          set.json?.updated === true &&
+            dateOf(set.json?.stopUntilDates?.invoicing1StopUntilDate) === day(30),
+          set.isError ? errorOf(set) : '',
+        );
+        if (!set.isError) {
+          const cleared = await call('update_invoice_stop_until_dates', {
+            number: invoiceNo,
+            invoicing1: null,
+            reason: `${REASON}: clear`,
+          });
+          // Any failed clear leaves the date possibly set, so the finally block retries it.
+          stopUntilSet = cleared.isError;
+          check(
+            'stop-until cleared',
+            !cleared.isError && cleared.json?.stopUntilDates?.invoicing1StopUntilDate === undefined,
+            cleared.isError ? errorOf(cleared) : '',
+          );
+        }
+      }
     }
   }
 } finally {
+  if (invoiceNo && stopUntilSet) {
+    const cleanup = await call('update_invoice_stop_until_dates', {
+      number: invoiceNo,
+      invoicing1: null,
+      reason: `${REASON}: cleanup`,
+    });
+    check(
+      'cleanup update_invoice_stop_until_dates',
+      !cleanup.isError,
+      cleanup.isError ? errorOf(cleanup) : '',
+    );
+  }
+  if (customerId && !pauseId && pauseUncertain) {
+    // The create may have been applied without an id coming back: cancel leftovers of this script.
+    const listed = await call('list_customer_pauses', { customerId, status: 'scheduled' });
+    for (const p of listed.json?.pauses ?? []) {
+      if (typeof p.reason === 'string' && p.reason.startsWith(REASON)) {
+        const cleanup = await call('cancel_customer_pause', {
+          customerId,
+          pauseId: p.id,
+          reason: `${REASON}: cleanup`,
+        });
+        check('cleanup leftover pause', !cleanup.isError, cleanup.isError ? errorOf(cleanup) : '');
+      }
+    }
+  }
   if (customerId && pauseId && !pauseCancelled) {
     const cleanup = await call('cancel_customer_pause', {
       customerId,
       pauseId,
       reason: `${REASON}: cleanup`,
     });
-    console.log(`cleanup cancel_customer_pause: ${cleanup.isError ? errorOf(cleanup) : 'ok'}`);
+    check(
+      'cleanup cancel_customer_pause',
+      !cleanup.isError,
+      cleanup.isError ? errorOf(cleanup) : '',
+    );
   }
   await client.close();
 }

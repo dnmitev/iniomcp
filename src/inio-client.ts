@@ -91,6 +91,16 @@ function isTimeout(err: unknown): boolean {
   return err instanceof Error && err.name === 'TimeoutError';
 }
 
+/**
+ * Suffix for write failures whose outcome is unknown (timeout, network error, unreadable 2xx):
+ * the change may have landed, so say so instead of inviting a blind retry. Empty for GET.
+ */
+function uncertainOutcome({ method }: Request): string {
+  return method === 'GET'
+    ? ''
+    : ' The change may or may not have been applied; check before retrying.';
+}
+
 /** Retry-After as seconds (delta or HTTP date); undefined when missing, invalid or negative. */
 function retryAfterSeconds(header: string | null, now: number): number | undefined {
   if (header === null || header === '') return undefined;
@@ -120,17 +130,12 @@ export function createInioClient({
   /** Logs and returns the TIMEOUT error for a request whose signal fired. */
   function timedOut(req: Request): InioApiError {
     const seconds = Math.ceil(timeoutMs / 1000);
-    // A write may have landed before the timeout; say so instead of inviting a blind retry.
-    const uncertain =
-      req.method === 'GET'
-        ? ''
-        : ' The change may or may not have been applied; check before retrying.';
     return fail(
       req,
       new InioApiError(
         0,
         'TIMEOUT',
-        `The Inio API did not respond within ${seconds} s.${uncertain}`,
+        `The Inio API did not respond within ${seconds} s.${uncertainOutcome(req)}`,
       ),
     );
   }
@@ -153,7 +158,11 @@ export function createInioClient({
       // The cause may carry host/network details; keep it out of messages and logs.
       throw fail(
         req,
-        new InioApiError(0, 'NETWORK_ERROR', 'Cannot reach the Inio API (INIO_URL).'),
+        new InioApiError(
+          0,
+          'NETWORK_ERROR',
+          `Cannot reach the Inio API (INIO_URL).${uncertainOutcome(req)}`,
+        ),
       );
     }
     const durationMs = Math.round(performance.now() - started);
@@ -247,10 +256,11 @@ export function createInioClient({
         );
       }
     }
+    // A 2xx suggests the write landed, but without a readable result we cannot confirm it.
     const unexpected = new InioApiError(
       res.status,
       'UPSTREAM_ERROR',
-      `Unexpected response from the Inio API (HTTP ${res.status}).`,
+      `Unexpected response from the Inio API (HTTP ${res.status}).${res.ok ? uncertainOutcome(req) : ''}`,
     );
     throw res.ok ? unexpected : fail(req, unexpected);
   }
