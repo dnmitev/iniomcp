@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import type { InioClient } from '../inio-client.ts';
+import { InioApiError, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
 import { CreditFields, InvoiceRef, invoicePath, pastPaidDateRule } from './invoice-ref.ts';
 import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
@@ -91,6 +91,10 @@ export function registerCreateCreditInvoice(
       logger,
       'create_credit_invoice',
       async ({ id, number, creditInvoiceNo, items, distributionMethod, ...rest }) => {
+        const unreadable = () => {
+          const note = 'The credit invoice was created, but the API answer could not be read.';
+          return ok(present({ created: true, creditInvoiceNo, note }, revealPii));
+        };
         try {
           const body = {
             invoiceNo: creditInvoiceNo,
@@ -102,13 +106,13 @@ export function registerCreateCreditInvoice(
             await client.post(`${invoicePath({ id, number })}/credit-invoice`, body),
           );
           // The credit invoice exists once the POST resolves, so an unreadable answer is still success.
-          if (!created.success) {
-            const note = 'The credit invoice was created, but the API answer could not be read.';
-            return ok(present({ created: true, creditInvoiceNo, note }, revealPii));
-          }
+          if (!created.success) return unreadable();
           const { creditInvoiceItems, ...invoice } = created.data;
           return ok(present({ created: true, ...invoice, items: creditInvoiceItems }, revealPii));
         } catch (err) {
+          // A 2xx the client could not parse (no result envelope) also means the credit invoice exists.
+          if (err instanceof InioApiError && err.status >= 200 && err.status < 300)
+            return unreadable();
           return fail(errorText(err));
         }
       },

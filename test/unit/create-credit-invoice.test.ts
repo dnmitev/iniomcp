@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { registerCreateCreditInvoice } from '../../src/tools/create-credit-invoice.ts';
-import { InioApiError } from '../../src/inio-client.ts';
+import { createInioClient, InioApiError } from '../../src/inio-client.ts';
 import {
   BAD_DATES,
   GOOD_DATES,
@@ -502,5 +502,62 @@ describe('create_credit_invoice tool-call logging', () => {
       ],
     ]);
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('secret-description');
+  });
+});
+
+describe('create_credit_invoice through the real client', () => {
+  const NOTE = 'The credit invoice was created, but the API answer could not be read.';
+  const run = async (res: Response) => {
+    const real = createInioClient({
+      apiUrl: 'https://api.example/v1',
+      tokens: { getToken: () => Promise.resolve('tok'), invalidate: () => undefined },
+      fetch: vi.fn<typeof globalThis.fetch>(() => Promise.resolve(res)),
+      logger: { debug: () => undefined, warn: () => undefined },
+      sleep: () => Promise.resolve(),
+    });
+    const { call } = await setup({ post: (path, body, options) => real.post(path, body, options) });
+    return call(ARGS);
+  };
+
+  it('reports success with a note when a 201 body is not JSON', async () => {
+    const result = await run(new Response('<html>created</html>', { status: 201 }));
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(textOf(result))).toEqual({
+      created: true,
+      creditInvoiceNo: 'CN-1',
+      note: NOTE,
+    });
+  });
+
+  it('reports success with a note when a 201 JSON body lacks the result envelope', async () => {
+    const result = await run(
+      new Response(JSON.stringify({ id: 'x' }), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(textOf(result))).toEqual({
+      created: true,
+      creditInvoiceNo: 'CN-1',
+      note: NOTE,
+    });
+  });
+
+  it('still fails on a 400 error envelope', async () => {
+    const result = await run(
+      new Response(
+        JSON.stringify({
+          success: false,
+          status: 400,
+          code: 'VALIDATION_ERROR',
+          message: 'Bad input',
+          correlationId: 'c-9',
+        }),
+        { status: 400, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('VALIDATION_ERROR: Bad input (correlationId c-9)');
   });
 });

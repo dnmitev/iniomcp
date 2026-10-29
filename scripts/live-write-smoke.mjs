@@ -78,11 +78,12 @@ try {
     // Never rename what cannot be restored exactly (missing, or no room for the suffix).
     console.log('skip update_customer (original name cannot be restored)');
   } else if (customerId) {
+    // Any rename error may hide an applied change, so restore unless a restore is confirmed.
+    nameChanged = true;
     const renamed = await call('update_customer', {
       id: customerId,
       customerName: `${originalName} (smoke)`,
     });
-    nameChanged = !renamed.isError || maybeApplied(renamed);
     check(
       'update_customer',
       !renamed.isError && renamed.json?.customerName === `${originalName} (smoke)`,
