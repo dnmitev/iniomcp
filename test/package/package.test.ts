@@ -106,11 +106,14 @@ describe('installed package.json', () => {
     return InstalledPackage.parse(JSON.parse(raw));
   }
 
-  it('is named @dnmitev/inio-mcp at version 0.1.0', async () => {
+  it('is named @dnmitev/inio-mcp at the repo root package.json version', async () => {
     const pkg = await installed();
+    const root = InstalledPackage.parse(
+      JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8')),
+    );
     expect({ name: pkg.name, version: pkg.version }).toEqual({
       name: '@dnmitev/inio-mcp',
-      version: '0.1.0',
+      version: root.version,
     });
   });
 

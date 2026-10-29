@@ -91,8 +91,8 @@ jobs:
           INIO_LIVE: '1'
           INIO_CLIENT_ID: ${{ secrets.INIO_CLIENT_ID }}
           INIO_CLIENT_SECRET: ${{ secrets.INIO_CLIENT_SECRET }}
-          INIO_AUTH_URL: ${{ secrets.INIO_AUTH_URL }}
-          INIO_URL: ${{ secrets.INIO_URL }}
+          INIO_AUTH_URL: ${{ vars.INIO_AUTH_URL }}
+          INIO_URL: ${{ vars.INIO_URL }}
 
   npm:
     needs: [verify, live]
