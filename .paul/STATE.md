@@ -17,8 +17,8 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 4 of 5 (Write tools, opt-in) — In progress
-Plan: 04-02 created, awaiting approval
-Status: PLAN created, ready for APPLY
+Plan: 04-02 approved
+Status: Applying 04-02
 Last activity: 2026-10-29 — PR #27 merged; created .paul/phases/04-write-tools/04-02-PLAN.md
 
 Progress:
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ✓        ◉        ○     [Applying]
 ```
 
 ## Accumulated Context
@@ -92,7 +92,7 @@ Releases: v0.1.2 (npm latest); 04-01 merged as #27, unreleased
 
 Last session: 2026-10-28
 Stopped at: Plan 04-02 created
-Next action: Review and approve plan, then /paul:apply .paul/phases/04-write-tools/04-02-PLAN.md
+Next action: Continue /paul:apply .paul/phases/04-write-tools/04-02-PLAN.md
 Resume file: .paul/phases/04-write-tools/04-02-PLAN.md
 
 ---
