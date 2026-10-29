@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — Not started; patch plan 03-03 in progress
-Plan: 03-03 (request timeout, release 0.1.2) approved
-Status: Applying 03-03
-Last activity: 2026-10-29 — 0.1.2-rc.1 released; created .paul/phases/03-packaging-release/03-03-PLAN.md
+Phase: 4 of 5 (Write tools, opt-in) — Not started
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-29 — 0.1.2 released (request timeout, Node 26 image); 03-03 unified
 
 Progress:
 - Milestone: [██████░░░░] 60%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◉        ○     [Applying 03-03]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -57,6 +57,8 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: Release live gate via protected 'release' environment; user adds secrets | Phase 3 | Human-action checkpoint in 03-02 |
 | 2026-10-29: pdfURL and digitalInvoiceURL redacted by default (bearer links, verified public) | Phase 3 | Revealed only with INIO_REVEAL_PII=true |
 | 2026-10-29: devops-reviewer agent (Sonnet) reviews all CI/CD and release changes | Phase 3 | Also for lead-written workflows |
+| 2026-10-29: Image on Node 26 LTS; npm engines >=24; CI on 24 and 26 | Phase 3 | Dependabot skips node/@types/node majors |
+| 2026-10-29: Request timeout 30 s default (INIO_REQUEST_TIMEOUT_MS) | Phase 3 | MCP clients time out at ~60 s |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -68,7 +70,6 @@ See PROJECT.md Key Decisions.
 | Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 | Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
-| Dependabot PRs #9-#15 (major bumps); ignore majors for node image and @types/node | 03-02 | S | After 0.1.1 |
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 
@@ -79,16 +80,15 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: docs/phase-3-complete
-Releases: v0.1.1-rc.1, v0.1.1 (npm latest 0.1.1, GHCR 0.1.1/0.1/latest)
-Feature branches merged: PRs #3-#8, #16, #17
+Branch: docs/03-03-unify
+Releases: v0.1.1, v0.1.2 (npm latest 0.1.2, GHCR 0.1.2/0.1/latest)
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 03-03 created and approved
-Next action: /tdd for 03-03 Task 1
-Resume file: .paul/phases/03-packaging-release/03-03-PLAN.md
+Stopped at: 03-03 loop closed, 0.1.2 released
+Next action: Merge docs/03-03-unify PR, then /paul:plan for Phase 4
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*

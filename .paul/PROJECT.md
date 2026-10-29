@@ -19,8 +19,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.1.1 |
-| Status | Phase 3 complete; 0.1.1 released |
+| Version | 0.1.2 |
+| Status | Phase 3 complete; 0.1.2 released |
 | Last Updated | 2026-10-29 |
 
 ## Requirements
@@ -45,6 +45,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ npm `@dnmitev/inio-mcp` (stdio) with provenance; `npx -y @dnmitev/inio-mcp` works on a clean machine — Phase 3
 - ✓ Docker image `ghcr.io/dnmitev/inio-mcp` (stdio, non-root, amd64 + arm64) — Phase 3
 - ✓ Tag-driven release with live gate, trusted publishing, GitHub Releases — Phase 3
+- ✓ Request timeout (30 s default) with a clear TIMEOUT result — Phase 3 (0.1.2)
 
 ### Active (In Progress)
 - [ ] Phase 4: Write tools (opt-in)
