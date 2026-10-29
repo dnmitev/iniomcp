@@ -16,16 +16,17 @@ export INIO_URL=...             # Inio API gateway base URL, including /v1
 npx -y @dnmitev/inio-mcp
 ```
 
-| Variable             | Required | Default | Purpose                                                  |
-| -------------------- | -------- | ------- | -------------------------------------------------------- |
-| `INIO_CLIENT_ID`     | yes      |         | API client id (OAuth2 client credentials)                |
-| `INIO_CLIENT_SECRET` | yes      |         | API client secret                                        |
-| `INIO_AUTH_URL`      | yes      |         | Token endpoint (or realm issuer URL)                     |
-| `INIO_URL`           | yes      |         | API base URL incl. `/v1`, must be `https`                |
-| `INIO_REVEAL_PII`    | no       | `false` | `true` disables redaction of personal data               |
-| `INIO_LOG_LEVEL`     | no       | `info`  | `fatal` … `trace`, or `silent`                           |
-| `MCP_TRANSPORT`      | no       | `stdio` | Only `stdio` is supported; HTTP comes in a later release |
-| `INIO_ALLOW_WRITES`  | no       | `false` | Reserved for write tools (none yet)                      |
+| Variable                  | Required | Default | Purpose                                                                                                                                                                                                                                   |
+| ------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INIO_CLIENT_ID`          | yes      |         | API client id (OAuth2 client credentials)                                                                                                                                                                                                 |
+| `INIO_CLIENT_SECRET`      | yes      |         | API client secret                                                                                                                                                                                                                         |
+| `INIO_AUTH_URL`           | yes      |         | Token endpoint (or realm issuer URL)                                                                                                                                                                                                      |
+| `INIO_URL`                | yes      |         | API base URL incl. `/v1`, must be `https`                                                                                                                                                                                                 |
+| `INIO_REVEAL_PII`         | no       | `false` | `true` disables redaction of personal data                                                                                                                                                                                                |
+| `INIO_LOG_LEVEL`          | no       | `info`  | `fatal` … `trace`, or `silent`                                                                                                                                                                                                            |
+| `INIO_REQUEST_TIMEOUT_MS` | no       | `30000` | Timeout per Inio API or token request, 1000–600000 ms. A timeout returns `TIMEOUT` (reported in whole seconds, rounded up). One tool call can take up to about 5 × this value + 5 s if a token refresh and a rate-limit retry both happen |
+| `MCP_TRANSPORT`           | no       | `stdio` | Only `stdio` is supported; HTTP comes in a later release                                                                                                                                                                                  |
+| `INIO_ALLOW_WRITES`       | no       | `false` | Reserved for write tools (none yet)                                                                                                                                                                                                       |
 
 ### Claude Desktop
 

@@ -28,8 +28,15 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
     clientSecret: config.clientSecret,
     fetch,
     logger,
+    timeoutMs: config.requestTimeoutMs,
   });
-  const client = createInioClient({ apiUrl: config.apiUrl, tokens, fetch, logger });
+  const client = createInioClient({
+    apiUrl: config.apiUrl,
+    tokens,
+    fetch,
+    logger,
+    timeoutMs: config.requestTimeoutMs,
+  });
   const deps = { client, revealPii: config.revealPii, logger };
   registerGetInvoice(server, deps);
   registerGetInvoiceRetryAttempts(server, deps);

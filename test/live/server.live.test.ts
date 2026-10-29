@@ -7,6 +7,8 @@ import { createTokenProvider } from '../../src/auth.ts';
 import { loadConfig } from '../../src/config.ts';
 
 // Never log payloads or env here: test output must not contain credentials or invoice data.
+// The MCP client's default request timeout is 60 s; stay above the server's request timeout.
+const CALL_OPTIONS = { timeout: 120_000 };
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
 const Item = z.object({ invoiceNo: z.string().min(1) });
@@ -41,13 +43,13 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
   let invoiceNo: string;
 
   async function call(args: Record<string, string>) {
-    const result = await client.callTool({ name: 'get_invoice', arguments: args });
+    const result = await client.callTool({ name: 'get_invoice', arguments: args }, CALL_OPTIONS);
     const content = z.array(z.object({ type: z.string(), text: z.string() })).parse(result.content);
     return { isError: result.isError === true, count: content.length, text: content[0]?.text };
   }
 
   async function callTool(name: string, args: Record<string, unknown>) {
-    const result = await client.callTool({ name, arguments: args });
+    const result = await client.callTool({ name, arguments: args }, CALL_OPTIONS);
     const content = z.array(z.object({ type: z.string(), text: z.string() })).parse(result.content);
     return { isError: result.isError === true, count: content.length, text: content[0]?.text };
   }
@@ -90,7 +92,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
         stderr: 'pipe',
       }),
     );
-  }, 30_000);
+  }, 120_000);
 
   afterAll(async () => {
     await client?.close();
@@ -105,13 +107,13 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     // Compare booleans, not values, so a mismatch never prints invoice data.
     expect(inv.invoiceNo === invoiceNo).toBe(true);
     expect('IBAN' in inv ? inv.IBAN === '[redacted]' : true).toBe(true);
-  }, 30_000);
+  }, 120_000);
 
   it('returns NOT_FOUND for an unknown invoice number', async () => {
     const { isError, count, text } = await call({ number: `no-such-invoice-${Date.now()}` });
     expect({ isError, count }).toEqual({ isError: true, count: 1 });
     expect(text?.startsWith('NOT_FOUND: ')).toBe(true);
-  }, 30_000);
+  }, 120_000);
 
   const SUMMARY_KEYS = [
     'id',
@@ -133,7 +135,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
       .flatMap((i) => Object.keys(i))
       .filter((k) => !SUMMARY_KEYS.includes(k));
     expect(extraKeys).toEqual([]);
-  }, 30_000);
+  }, 120_000);
 
   it('gets the first listed customer by id, compact and redacted', async () => {
     const [first] = (await listTwoCustomers()).items;
@@ -148,7 +150,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(text?.includes(':null')).toBe(false);
     expect(text?.includes('@')).toBe(false);
     expect(piiRedacted(body.customer)).toBe(true);
-  }, 30_000);
+  }, 120_000);
 
   it('gets the first listed customer by number', async () => {
     const [first] = (await listTwoCustomers()).items;
@@ -162,7 +164,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(body.customer.id === id).toBe(true);
     expect(text?.includes('@')).toBe(false);
     expect(piiRedacted(body.customer)).toBe(true);
-  }, 30_000);
+  }, 120_000);
 
   const INVOICE_SUMMARY_KEYS = [
     'id',
@@ -195,17 +197,17 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
 
   it('lists closed invoices as summaries only', async () => {
     expect((await firstClosedInvoiceNo()).length > 0).toBe(true);
-  }, 30_000);
+  }, 120_000);
 
   it('lists open invoices without an error (single-status workaround)', async () => {
     const { isError } = await callTool('list_invoices', { status: ['open'], limit: 1 });
     expect(isError).toBe(false);
-  }, 30_000);
+  }, 120_000);
 
   it('lists paid invoices without an error', async () => {
     const { isError } = await callTool('list_invoices', { paymentStatus: ['paid'], limit: 1 });
     expect(isError).toBe(false);
-  }, 30_000);
+  }, 120_000);
 
   it('gets an invoice by number with inherited values, redacted', async () => {
     const number = await firstClosedInvoiceNo();
@@ -218,7 +220,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(inv.invoiceNo === number).toBe(true);
     expect('IBAN' in inv ? inv.IBAN === '[redacted]' : true).toBe(true);
     expect(text?.includes('@')).toBe(false);
-  }, 30_000);
+  }, 120_000);
 
   it('gets retry attempts by invoice number', async () => {
     const number = await firstClosedInvoiceNo();
@@ -228,7 +230,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
       .object({ attempts: z.array(z.unknown()), directDebitEligible: z.boolean() })
       .safeParse(JSON.parse(text ?? ''));
     expect(body.success).toBe(true);
-  }, 30_000);
+  }, 120_000);
 
   it('lists pauses for the customer of an invoice without temporalWorkflowId', async () => {
     const number = await firstClosedInvoiceNo();
@@ -241,7 +243,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     const body = z.object({ pauses: z.array(z.unknown()) }).safeParse(JSON.parse(text ?? ''));
     expect(body.success).toBe(true);
     expect(text?.includes('temporalWorkflowId')).toBe(false);
-  }, 30_000);
+  }, 120_000);
 
   it('gets an invoice without workflowsSettings by default and with it on request', async () => {
     const number = await firstClosedInvoiceNo();
@@ -250,7 +252,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect([plain.isError, flagged.isError]).toEqual([false, false]);
     expect(plain.text?.includes('"workflowsSettings"')).toBe(false);
     expect(flagged.text?.includes('"workflowsSettings"')).toBe(true);
-  }, 30_000);
+  }, 120_000);
 
   it('gets a customer without workflowsSettings by default and with it on request', async () => {
     const [first] = (await listTwoCustomers()).items;
@@ -260,5 +262,5 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect([plain.isError, flagged.isError]).toEqual([false, false]);
     expect(plain.text?.includes('"workflowsSettings"')).toBe(false);
     expect(flagged.text?.includes('"workflowsSettings"')).toBe(true);
-  }, 30_000);
+  }, 120_000);
 });
