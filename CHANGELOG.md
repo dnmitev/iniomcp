@@ -4,9 +4,20 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-## [0.1.0] - Unreleased
+## [0.1.1] - Unreleased
 
-First public release. Read-only, stdio only.
+First release built and published by the release workflow.
+
+### Added
+
+- npm provenance: the package is published from GitHub Actions through npm trusted publishing.
+- Docker image `ghcr.io/dnmitev/inio-mcp` for linux/amd64 and linux/arm64, with provenance and SBOM attestations.
+
+No changes to the tools since 0.1.0.
+
+## [0.1.0] - 2026-10-29
+
+First public release. Read-only, stdio only. Published manually, without npm provenance.
 
 ### Added
 

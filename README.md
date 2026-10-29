@@ -103,7 +103,7 @@ The image runs the same stdio server as a non-root user. Pass the variables with
         "INIO_AUTH_URL",
         "-e",
         "INIO_URL",
-        "ghcr.io/dnmitev/inio-mcp:0.1.0"
+        "ghcr.io/dnmitev/inio-mcp:0.1"
       ],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
