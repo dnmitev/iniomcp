@@ -14,7 +14,7 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 
 **v0.1 Initial Release** (v0.1.0)
 Status: In progress
-Phases: 2 of 5 complete
+Phases: 3 of 5 complete
 
 ## Phases
 
@@ -22,8 +22,8 @@ Phases: 2 of 5 complete
 |-------|------|-------|--------|-----------|
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
-| 3 | Packaging and release | 1/2 | In progress | - |
-| 4 | Write tools (opt-in) | TBD | Not started | - |
+| 3 | Packaging and release | 2/2 | ✅ Complete | 2026-10-29 |
+| 4 | Write tools (opt-in) | TBD | 🔵 Next | - |
 | 5 | HTTP hardening | TBD | Not started | - |
 
 ## Phase Details
@@ -66,7 +66,7 @@ Phases: 2 of 5 complete
 
 **Plans:**
 - [x] 03-01: Package metadata, transport guard, package and Docker smoke tests, README snippets, CHANGELOG, security review
-- [ ] 03-02: release.yml (live gate, npm trusted publishing with provenance, multi-arch GHCR, GitHub Release), first release
+- [x] 03-02: release.yml (live gate, npm trusted publishing with provenance, multi-arch GHCR, GitHub Release), first release
 
 ### Phase 4: Write tools (opt-in)
 
@@ -82,4 +82,4 @@ Phases: 2 of 5 complete
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-10-29 after Phase 2*
+*Last updated: 2026-10-29 after Phase 3*

@@ -19,8 +19,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.0.0 |
-| Status | Phase 2 complete |
+| Version | 0.1.1 |
+| Status | Phase 3 complete; 0.1.1 released |
 | Last Updated | 2026-10-29 |
 
 ## Requirements
@@ -42,12 +42,14 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Pagination (limit/offset, nextOffset), summary fields in lists, compact detail results — Phase 2
 - ✓ 429 handling: one retry honoring Retry-After (≤5 s), then RATE_LIMITED — Phase 2
 - ✓ Clients explore customers, invoices, pauses and retry attempts in Claude Desktop — Phase 2
+- ✓ npm `@dnmitev/inio-mcp` (stdio) with provenance; `npx -y @dnmitev/inio-mcp` works on a clean machine — Phase 3
+- ✓ Docker image `ghcr.io/dnmitev/inio-mcp` (stdio, non-root, amd64 + arm64) — Phase 3
+- ✓ Tag-driven release with live gate, trusted publishing, GitHub Releases — Phase 3
 
 ### Active (In Progress)
-- [ ] Phase 3: Packaging and release
+- [ ] Phase 4: Write tools (opt-in)
 
 ### Planned (Next)
-- Phase 4: Write tools (opt-in)
 - Phase 5: HTTP hardening
 
 ### Out of Scope
@@ -97,6 +99,11 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Upstream bug workarounds in code (invoice status sent as repeated key; retry attempts limit only) | API 500s on single status; page ignored | 2026-10-28 | Active — report upstream |
 | workflowsSettings opt-in via includeWorkflowSettings | Large, but answers stage distribution/fee questions | 2026-10-28 | Active |
 | QA and mutation-tester agents on Sonnet | Token cost; reviewer and mutation gate keep quality | 2026-10-28 | Active |
+| npm `@dnmitev/inio-mcp` (personal scope) until `@inio` exists | No company npm org yet | 2026-10-29 | Active |
+| 0.1.x stdio only; HTTP with auth in Phase 5 | Never expose an unauthenticated HTTP endpoint | 2026-10-29 | Active |
+| Invoice links (pdfURL, digitalInvoiceURL) and error-message emails redacted by default | Bearer links bypass field redaction | 2026-10-29 | Active |
+| Releases by tag via release.yml: live gate, npm trusted publishing, multi-arch GHCR | No long-lived tokens; provenance | 2026-10-29 | Active |
+| devops-reviewer agent (Sonnet) for all CI/CD and release changes | Supply-chain and release safety | 2026-10-29 | Active |
 
 ## Success Metrics
 
@@ -105,7 +112,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Mutation score | ≥ 80 break, 90 target | 99.1% | On track |
 | Unit + integration tests | all green in CI | 749 unit + 20 integration green | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
-| Public install | `npx -y @inio/mcp` works on a clean machine | - | Not started |
+| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.1.1 verified 2026-10-29 | Met |
 
 ## Tech Stack / Tools
 
@@ -131,4 +138,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-29 after Phase 2*
+*Last updated: 2026-10-29 after Phase 3*
