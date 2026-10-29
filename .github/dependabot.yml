@@ -10,7 +10,7 @@ updates:
     schedule:
       interval: weekly
     ignore:
-      # The runtime stays on the Node 24 LTS line; a major Node upgrade is a deliberate change.
+      # The image runs Node 26 LTS; moving to a new Node major is a deliberate change.
       - dependency-name: node
         update-types: [version-update:semver-major]
 
@@ -22,6 +22,6 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # Types follow the runtime (Node 24, engines >=24).
+      # Types track the lowest supported Node (engines >=24).
       - dependency-name: '@types/node'
         update-types: [version-update:semver-major]
