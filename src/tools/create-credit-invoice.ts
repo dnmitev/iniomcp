@@ -1,9 +1,17 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { InioApiError, type InioClient } from '../inio-client.ts';
+import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
 import { CreditFields, InvoiceRef, invoicePath, pastPaidDateRule } from './invoice-ref.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
+import {
+  errorText,
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  fail,
+  isUnreadableSuccess,
+  ok,
+  present,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = {
@@ -111,8 +119,7 @@ export function registerCreateCreditInvoice(
           return ok(present({ created: true, ...invoice, items: creditInvoiceItems }, revealPii));
         } catch (err) {
           // A 2xx the client could not parse (no result envelope) also means the credit invoice exists.
-          if (err instanceof InioApiError && err.status >= 200 && err.status < 300)
-            return unreadable();
+          if (isUnreadableSuccess(err)) return unreadable();
           return fail(errorText(err));
         }
       },

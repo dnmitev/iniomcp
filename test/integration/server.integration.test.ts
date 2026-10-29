@@ -16,6 +16,7 @@ import {
   customer,
   INHERITED_BANK,
   INHERITED_FEE_DATE,
+  PAYMENT_ID,
   invoice,
   pauses,
   RATE_ALWAYS,
@@ -401,6 +402,7 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       'reset_invoice_stage',
       'create_credit_invoice',
       'match_credit_invoice',
+      'create_payment',
     ];
     const READ_TOOLS = [
       'get_customer',
@@ -443,10 +445,10 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       expect(tools.map((t) => t.name).sort()).toEqual(READ_TOOLS);
     });
 
-    it('lists 16 tools when INIO_ALLOW_WRITES=true', async () => {
+    it('lists 17 tools when INIO_ALLOW_WRITES=true', async () => {
       const { client } = await spawnServer(WRITES);
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(16);
+      expect(tools).toHaveLength(17);
       expect(tools.map((t) => t.name).sort()).toEqual([...READ_TOOLS, ...WRITE_TOOLS].sort());
     });
 
@@ -838,6 +840,57 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
           url: `/v1/invoices/by-number/${encodeURIComponent(NO)}/match-credit-invoice`,
         },
         { method: 'GET', url: `/v1/invoices/by-number/${encodeURIComponent(NO)}` },
+      ]);
+    });
+
+    const TEST_TOKEN_CLIENT_ID = '00000000-0000-4000-8000-00000000c11e';
+
+    it('create_payment posts a partial payment with the token clientId and reads back', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { number: NO, transactionType: 'direct_payment', amount: 10.5 },
+        'create_payment',
+      );
+      expect(result.isError).toBe(false);
+      const [post, ...rest] = sent(before);
+      expect(post).toMatchObject({ method: 'POST', url: '/v1/payments', userRealName: 'inio-mcp' });
+      expect(JSON.parse(post?.body ?? '')).toEqual([
+        {
+          clientId: TEST_TOKEN_CLIENT_ID,
+          invoiceNo: NO,
+          transactionType: 'direct_payment',
+          amount: 10.5,
+        },
+      ]);
+      expect(rest).toEqual([
+        {
+          method: 'GET',
+          url: `/v1/invoices/by-number/${encodeURIComponent(NO)}`,
+          body: '',
+          userRealName: undefined,
+        },
+      ]);
+      expect(JSON.parse(result.text)).toMatchObject({
+        paid: true,
+        paymentId: PAYMENT_ID,
+        remainingAmount: invoice.remainingAmount,
+        paymentStatus: invoice.paymentStatus,
+      });
+    });
+
+    it('create_payment with fullPayment sends no amount key', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { number: NO, transactionType: 'direct_payment', fullPayment: true },
+        'create_payment',
+      );
+      expect(result.isError).toBe(false);
+      const [post] = sent(before);
+      expect(post).toMatchObject({ method: 'POST', url: '/v1/payments', userRealName: 'inio-mcp' });
+      expect(JSON.parse(post?.body ?? '')).toEqual([
+        { clientId: TEST_TOKEN_CLIENT_ID, invoiceNo: NO, transactionType: 'direct_payment' },
       ]);
     });
 

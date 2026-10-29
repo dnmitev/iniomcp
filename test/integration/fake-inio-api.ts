@@ -37,6 +37,7 @@ export const CONFLICT_MESSAGE = 'Pause overlaps an existing pause';
 export const CREDIT_INVOICE_ID = '00000000-0000-4000-8000-000000000040';
 export const CREDIT_INVOICE_NO = 'CR-1001';
 export const CREDIT_PAYMENT_REFERENCE = '1234567';
+export const PAYMENT_ID = '00000000-0000-4000-8000-000000000060';
 export const RESET_WORKFLOW_ID = 'wf-reset-example';
 
 export interface RecordedRequest {
@@ -158,6 +159,14 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
         if (a === customerId && c === pause.id && path[6] === 'cancel' && method === 'POST') {
           return ok({ ...pause, status: 'cancelled', updatedAt: '2026-10-29T00:00:00.000Z' });
         }
+      }
+      if (v1 === 'v1' && root === 'payments' && a === undefined && method === 'POST') {
+        return send(201, {
+          success: true,
+          status: 201,
+          correlationId: 'it-ok',
+          result: [PAYMENT_ID],
+        });
       }
       if (v1 === 'v1' && root === 'invoices' && method === 'POST') {
         const byNo = a === 'by-number';
