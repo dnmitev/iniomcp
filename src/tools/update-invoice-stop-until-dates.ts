@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import type { InioClient } from '../inio-client.ts';
+import { InioApiError, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
 import {
   EXACTLY_ONE_REF,
@@ -96,6 +96,12 @@ export function registerUpdateInvoiceStopUntilDates(
         const invoice = args.id ?? args.number;
         return ok(present({ updated: true, invoice, ...stored }, revealPii));
       } catch (err) {
+        // With the feature flag off the API answers a bare 404 without an envelope
+        // (requireFeatureFlag middleware), which the client reports as UPSTREAM_ERROR.
+        // Read-back failures never reach here, so this is always the POST.
+        if (err instanceof InioApiError && err.status === 404 && err.code === 'UPSTREAM_ERROR') {
+          return fail('FEATURE_DISABLED: Stop-until dates are not enabled for this tenant.');
+        }
         return fail(errorText(err));
       }
     }),

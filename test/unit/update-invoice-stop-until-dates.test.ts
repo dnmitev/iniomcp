@@ -314,6 +314,47 @@ describe('update_invoice_stop_until_dates errors', () => {
     expect(inio.get).not.toHaveBeenCalled();
   });
 
+  it('reports FEATURE_DISABLED for a 404 without an API error envelope', async () => {
+    const { inio, call } = await setup({
+      post: () =>
+        Promise.reject(
+          new InioApiError(
+            404,
+            'UPSTREAM_ERROR',
+            'Unexpected response from the Inio API (HTTP 404).',
+          ),
+        ),
+      get: () => Promise.resolve(INVOICE),
+    });
+    const result = await call({ id: ID, reason: 'r', invoicing1: '2026-12-01' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(
+      'FEATURE_DISABLED: Stop-until dates are not enabled for this tenant.',
+    );
+    expect(inio.get).not.toHaveBeenCalled();
+  });
+
+  it('keeps the normal NOT_FOUND text for a 404 with an API error envelope', async () => {
+    const { call } = await setup({
+      post: () => Promise.reject(new InioApiError(404, 'NOT_FOUND', 'Invoice not found', 'c-1')),
+    });
+    const result = await call({ id: ID, reason: 'r', invoicing1: '2026-12-01' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('NOT_FOUND: Invoice not found (correlationId c-1)');
+  });
+
+  it.each([
+    [500, 'UPSTREAM_ERROR', 'Unexpected response from the Inio API (HTTP 500).'],
+    [403, 'UPSTREAM_ERROR', 'Unexpected response from the Inio API (HTTP 403).'],
+    [404, 'SOMETHING_ELSE', 'Odd'],
+  ])('keeps the normal error text for status %i with code %s', async (status, code, message) => {
+    const { call } = await setup({
+      post: () => Promise.reject(new InioApiError(status, code, message)),
+    });
+    const result = await call({ id: ID, reason: 'r', invoicing1: '2026-12-01' });
+    expect(textOf(result)).toBe(`${code}: ${message}`);
+  });
+
   it('returns field errors', async () => {
     const { call } = await setup({
       post: () =>

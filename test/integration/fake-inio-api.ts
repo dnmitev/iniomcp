@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 
@@ -29,10 +29,19 @@ const withInherited = {
 export const RATE_ONCE = 'RATE-ONCE';
 export const RATE_ALWAYS = 'RATE-ALWAYS';
 
+/** Customer whose POST /pauses always answers 409 with field errors. */
+export const CONFLICT_CUSTOMER_ID = '00000000-0000-4000-8000-0000000000c9';
+export const CREATED_PAUSE_ID = '00000000-0000-4000-8000-000000000030';
+export const CONFLICT_MESSAGE = 'Pause overlaps an existing pause';
+
 export interface RecordedRequest {
   method: string;
   url: string;
   authorization: string | undefined;
+  /** Raw request body, empty for GET. */
+  body: string;
+  /** x-user-real-name header, as sent. */
+  userRealName: string | undefined;
 }
 
 export interface FakeInioApi {
@@ -41,6 +50,8 @@ export interface FakeInioApi {
   requests: RecordedRequest[];
   /** Makes RATE-ONCE answer 429 again on its next request. */
   resetRateLimit(): void;
+  /** Forgets invoice changes made by write requests (due date, stop-until dates). */
+  resetWrites(): void;
   close(): Promise<void>;
 }
 
@@ -50,9 +61,25 @@ const JWT = /^Bearer [\w-]+\.[\w-]+\.[\w-]+$/;
 export async function startFakeInioApi(): Promise<FakeInioApi> {
   const requests: RecordedRequest[] = [];
   let rateOnceServed = false;
-  const server: Server = createServer((req, res) => {
+  // Write requests change what the invoice GET returns afterwards.
+  let dueDate: unknown;
+  let stopMetadata: Record<string, unknown> = {};
+  const currentInvoice = () => ({
+    ...invoice,
+    ...(dueDate === undefined ? {} : { dueDate }),
+    metadata: { ...z.record(z.string(), z.unknown()).parse(invoice.metadata), ...stopMetadata },
+  });
+  const handle = (req: IncomingMessage, res: ServerResponse, raw: string): void => {
     const url = req.url ?? '';
-    requests.push({ method: req.method ?? '', url, authorization: req.headers.authorization });
+    const method = req.method ?? '';
+    const header = req.headers['x-user-real-name'];
+    requests.push({
+      method,
+      url,
+      authorization: req.headers.authorization,
+      body: raw,
+      userRealName: typeof header === 'string' ? header : undefined,
+    });
     const send = (status: number, body: unknown) => {
       res.writeHead(status, { 'content-type': 'application/json' });
       res.end(JSON.stringify(body));
@@ -75,7 +102,69 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
     const invoiceNo = String(invoice.invoiceNo);
     const customerId = String(customer.id);
     const customerNo = String(customer.customerNo);
-    if (v1 === 'v1' && root === 'customers') {
+    if (method !== 'GET') {
+      const body = z
+        .record(z.string(), z.unknown())
+        .catch({})
+        .parse(raw === '' ? {} : JSON.parse(raw));
+      const pause = pauses[0] ?? {};
+      if (v1 === 'v1' && root === 'customers' && b === 'pauses') {
+        if (method === 'POST' && c === undefined) {
+          if (a === CONFLICT_CUSTOMER_ID) {
+            return send(409, {
+              success: false,
+              status: 409,
+              code: 'CONFLICT',
+              message: CONFLICT_MESSAGE,
+              correlationId: 'it-409',
+              fieldErrors: [
+                {
+                  fieldName: 'startAt',
+                  errorCode: 'overlap',
+                  message: 'Overlaps pause 2026-11-01',
+                },
+              ],
+            });
+          }
+          const created = {
+            ...body,
+            id: CREATED_PAUSE_ID,
+            customerId: a,
+            status: 'scheduled',
+            createdBy: 'agent@inio.example',
+            temporalWorkflowId: 'wf-created-example',
+            createdAt: '2026-10-29T00:00:00.000Z',
+            updatedAt: '2026-10-29T00:00:00.000Z',
+          };
+          return send(201, { success: true, status: 201, correlationId: 'it-ok', result: created });
+        }
+        if (a === customerId && c === pause.id && method === 'PATCH') {
+          const { reason: _reason, ...changes } = body;
+          return ok({ ...pause, ...changes, updatedAt: '2026-10-29T00:00:00.000Z' });
+        }
+        if (a === customerId && c === pause.id && path[6] === 'cancel' && method === 'POST') {
+          return ok({ ...pause, status: 'cancelled', updatedAt: '2026-10-29T00:00:00.000Z' });
+        }
+      }
+      if (v1 === 'v1' && root === 'invoices' && method === 'POST') {
+        const byNo = a === 'by-number';
+        const key = byNo ? b : a;
+        const action = byNo ? c : b;
+        if (key === (byNo ? invoiceNo : invoiceId)) {
+          if (action === 'update-due-date') {
+            dueDate = body.dueDate;
+            return ok('Success');
+          }
+          if (action === 'update-stop-until-dates') {
+            stopMetadata = {
+              ...stopMetadata,
+              ...z.record(z.string(), z.unknown()).catch({}).parse(body.metadata),
+            };
+            return ok('Success');
+          }
+        }
+      }
+    } else if (v1 === 'v1' && root === 'customers') {
       if (a === undefined) return list([customer]);
       if (a === 'by-number' && b === customerNo && c === undefined) {
         return ok({ externalCustomer: customer, serviceLine, effectivePause: { isPaused: false } });
@@ -86,14 +175,14 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
       if (a === customerId && b === 'pauses' && c === undefined) return ok(pauses);
       if (a === customerId && b === 'pauses' && c === pauses[0]?.id) return ok(pauses[0]);
     }
-    if (v1 === 'v1' && root === 'invoices') {
+    if (method === 'GET' && v1 === 'v1' && root === 'invoices') {
       if (a === undefined) return list([invoice]);
       const suffix = a === 'by-number' ? path[5] : b;
       const key = a === 'by-number' ? b : a;
       if (a === 'by-number' && (b === RATE_ALWAYS || (b === RATE_ONCE && !rateOnceServed))) {
         if (b === RATE_ONCE) rateOnceServed = true;
         res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '0' });
-        return res.end(
+        res.end(
           JSON.stringify({
             success: false,
             status: 429,
@@ -102,11 +191,12 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
             correlationId: 'it-429',
           }),
         );
+        return;
       }
       const byNumber = a === 'by-number';
       // by-number serves only the invoice number (and RATE-ONCE after its 429); with-inherited is id-only.
       const known = byNumber ? key === invoiceNo || key === RATE_ONCE : key === invoiceId;
-      if (known && suffix === undefined) return ok(invoice);
+      if (known && suffix === undefined) return ok(currentInvoice());
       if (known && !byNumber && suffix === 'with-inherited') return ok(withInherited);
       if (known && suffix === 'retry-attempts') return ok(retryAttempts);
     }
@@ -119,6 +209,11 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
       correlationId: 'it-404',
       i18nKey: 'errors.invoices.not_found',
     });
+  };
+  const server: Server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => handle(req, res, Buffer.concat(chunks).toString('utf8')));
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
@@ -129,6 +224,10 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
     requests,
     resetRateLimit: () => {
       rateOnceServed = false;
+    },
+    resetWrites: () => {
+      dueDate = undefined;
+      stopMetadata = {};
     },
     close: () => new Promise((resolve) => server.close(() => resolve())),
   };

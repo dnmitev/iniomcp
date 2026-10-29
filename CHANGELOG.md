@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in write tools, registered only with `INIO_ALLOW_WRITES=true` and annotated as destructive: `create_customer_pause`, `update_customer_pause`, `cancel_customer_pause`, `update_invoice_due_date` (postpone only) and `update_invoice_stop_until_dates`. Writes are attributed to `inio-mcp` in Inio's audit fields.
+- API validation errors list the affected fields; values of personal-data fields are redacted.
+
 ## [0.1.2] - 2026-10-29
 
 ### Added

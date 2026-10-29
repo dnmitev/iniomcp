@@ -61,7 +61,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: Request timeout 30 s default (INIO_REQUEST_TIMEOUT_MS) | Phase 3 | MCP clients time out at ~60 s |
 | 2026-10-29: Phase 4 order low-risk first (pauses, dates → customer/reset/credit → create/payments) | Phase 4 | 3 plans |
 | 2026-10-29: Write safety = INIO_ALLOW_WRITES + annotations + echo; no confirm flag | Phase 4 | Clients confirm via destructiveHint |
-| 2026-10-29: Live write tests opt-in (INIO_LIVE_WRITES=1), never in release gate | Phase 4 | Self-cleaning where reversible |
+| 2026-10-29: Live write checks via `npm run smoke:writes -- <customerNo> [invoiceNo]`; identifiers from the conversation, not env | Phase 4 | Never in release gate; self-cleaning |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
