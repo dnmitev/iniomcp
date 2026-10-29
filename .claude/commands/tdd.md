@@ -12,11 +12,12 @@ Use the project subagents in `.claude/agents/`. Pass each one the story, the acc
 1. **senior-qa-automation (red)**: write failing tests for every acceptance criterion. Confirm they fail for the right reason.
 2. **senior-developer (green + refactor)**: make them pass with minimum code; `npm run lint && npm run typecheck && npm test` green.
 3. **reviewer**: review the diff. If it returns blocker or major findings, send them to the agent that owns the fix (test findings to senior-qa-automation, code findings to senior-developer), then review again.
+   - If the diff touches CI/CD or release files (`.github/workflows/**`, `Dockerfile`, `.dockerignore`, publish fields or npm lifecycle scripts in `package.json`, release or changelog steps), also run **devops-reviewer** on those files, in parallel with reviewer. Its blockers and majors go back the same way.
 4. **mutation-tester**: run Stryker on the changed source files.
    - `CHALLENGE` or `FAIL`: send the challenges to senior-qa-automation to write killing tests, then senior-developer only if a new test fails because behavior is actually missing. Then run mutation-tester again.
    - Stop after 3 mutation rounds; report any remaining survivors.
 
-Agents must stay in their lanes: QA edits only `test/`, the developer only `src/`, the reviewer and mutation-tester edit nothing.
+Agents must stay in their lanes: QA edits only `test/`, the developer only `src/`, the reviewer, devops-reviewer and mutation-tester edit nothing.
 
 ## Finish
 

@@ -5,6 +5,7 @@ const SENSITIVE_KEYS = new Set([
   'accountnumber',
   'digitalinvoiceurl',
   'zipcode',
+  'pdfurl',
 ]);
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 
@@ -18,9 +19,14 @@ function isSensitiveKey(key: string): boolean {
   );
 }
 
+/** Replaces email addresses in a string with "[redacted-email]". */
+export function redactText(value: string): string {
+  return value.replace(EMAIL, '[redacted-email]');
+}
+
 /** Deep copy of a JSON value with PII keys (any depth, case-insensitive) replaced by "[redacted]" and email addresses in strings by "[redacted-email]". */
 export function redact(value: unknown): unknown {
-  if (typeof value === 'string') return value.replace(EMAIL, '[redacted-email]');
+  if (typeof value === 'string') return redactText(value);
   if (Array.isArray(value)) return value.map(redact);
   if (value === null || typeof value !== 'object') return value;
   return Object.fromEntries(

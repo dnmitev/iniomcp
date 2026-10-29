@@ -16,14 +16,14 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 3 of 5 (Packaging and release) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-29 — Phase 2 complete (02-03 unified), transitioned to Phase 3
+Phase: 3 of 5 (Packaging and release) — In progress
+Plan: 03-01 complete (1 of 2)
+Status: Ready for next PLAN (03-02)
+Last activity: 2026-10-29 — 03-01 unified, SUMMARY created
 
 Progress:
-- Milestone: [████░░░░░░] 40%
-- Phase 3: [░░░░░░░░░░] 0%
+- Milestone: [█████░░░░░] 50%
+- Phase 3: [█████░░░░░] 50%
 
 ## Loop Position
 
@@ -52,6 +52,11 @@ See PROJECT.md Key Decisions.
 | 2026-10-28: Single invoice status sent twice (upstream 500 workaround) | Phase 2 | Remove when API is fixed |
 | 2026-10-28: QA and mutation-tester agents on Sonnet | Phase 2 | Token cost; reviewer/developer stay on Opus |
 | 2026-10-28: workflowsSettings opt-in (includeWorkflowSettings) on get_invoice/get_customer | Phase 2 | Stage distribution details stay one flag away |
+| 2026-10-29: 0.1.0 published as @dnmitev/inio-mcp (personal scope; @inio later) | Phase 3 | Package name changes for users when moved |
+| 2026-10-29: 0.1.0 stdio only (npm and Docker); HTTP with auth in Phase 5 | Phase 3 | MCP_TRANSPORT=http rejected for now |
+| 2026-10-29: Release live gate via protected 'release' environment; user adds secrets | Phase 3 | Human-action checkpoint in 03-02 |
+| 2026-10-29: pdfURL and digitalInvoiceURL redacted by default (bearer links, verified public) | Phase 3 | Revealed only with INIO_REVEAL_PII=true |
+| 2026-10-29: devops-reviewer agent (Sonnet) reviews all CI/CD and release changes | Phase 3 | Also for lead-written workflows |
 
 ### Deferred Issues
 
@@ -60,6 +65,8 @@ See PROJECT.md Key Decisions.
 | Stryker TS checker / tsconfig handling disabled (no TS 7 JS API) | 01-01 | S | Stryker supports TS 7 |
 | Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 | Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
+| INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
+| Dependabot (actions, docker) + base image digest pin | 03-01 | S | 03-02 |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 
 ### Blockers/Concerns
@@ -69,15 +76,15 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: feat/02-03-hardening (PR pending)
-Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80), PR #5 (fa88562)
+Branch: feat/03-01-packaging
+Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80), PR #5 (fa88562), PR #6 (f56ec05)
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Phase 2 complete, ready to plan Phase 3
-Next action: Push feat/02-03-hardening and open PR, then /paul:plan for Phase 3
-Resume file: .paul/ROADMAP.md
+Stopped at: 03-01 loop closed
+Next action: Push feat/03-01-packaging and open PR, then /paul:plan for 03-02
+Resume file: .paul/phases/03-packaging-release/03-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*

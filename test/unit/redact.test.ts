@@ -79,6 +79,34 @@ describe('redact', () => {
     expect(redact(['IBAN', 1, null])).toEqual(['IBAN', 1, null]);
   });
 
+  describe('pdf link keys', () => {
+    it.each(['pdfURL', 'pdfUrl', 'PDFURL', 'pdfurl'])('redacts the %s key', (key) => {
+      expect(redact({ [key]: 'https://files.example/a.pdf', keep: 1 })).toEqual({
+        [key]: '[redacted]',
+        keep: 1,
+      });
+    });
+
+    it('redacts pdfUrl nested in histories[].messageData', () => {
+      const input = {
+        histories: [{ messageData: { pdfUrl: 'https://files.example/a.pdf', subject: 's' } }],
+      };
+      expect(redact(input)).toEqual({
+        histories: [{ messageData: { pdfUrl: '[redacted]', subject: 's' } }],
+      });
+    });
+
+    it('still redacts digitalInvoiceURL', () => {
+      expect(redact({ digitalInvoiceURL: 'https://x.example/v' })).toEqual({
+        digitalInvoiceURL: '[redacted]',
+      });
+    });
+
+    it.each(['pdfURLs', 'mypdfUrl', 'pdf'])('does not redact %s', (key) => {
+      expect(redact({ [key]: 'v' })).toEqual({ [key]: 'v' });
+    });
+  });
+
   describe('widened PII keys', () => {
     it.each([
       'digitalInvoiceURL',
