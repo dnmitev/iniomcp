@@ -357,6 +357,7 @@ describe('write gate', () => {
     'cancel_customer_pause',
     'create_credit_invoice',
     'create_customer_pause',
+    'create_payment',
     'match_credit_invoice',
     'reset_invoice_stage',
     'update_customer',
@@ -368,16 +369,18 @@ describe('write gate', () => {
   // Their exact text is pinned in the per-tool unit tests; here only the gate wording.
   const CREDIT_TOOLS = ['create_credit_invoice', 'match_credit_invoice'];
 
-  it.each(['create_credit_invoice', 'match_credit_invoice', 'reset_invoice_stage'])(
-    'says in the %s description that it cannot be undone with these tools',
-    async (name) => {
-      const { client } = await connect({ ...CONFIG, allowWrites: true });
-      const { tools } = await client.listTools();
-      expect(tools.find((t) => t.name === name)?.description).toContain(
-        'cannot be undone with these tools',
-      );
-    },
-  );
+  it.each([
+    'create_credit_invoice',
+    'create_payment',
+    'match_credit_invoice',
+    'reset_invoice_stage',
+  ])('says in the %s description that it cannot be undone with these tools', async (name) => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true });
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === name)?.description).toContain(
+      'cannot be undone with these tools',
+    );
+  });
 
   it('lists exactly the 7 read tools when allowWrites is false', async () => {
     const { client } = await connect({ ...CONFIG, allowWrites: false });
@@ -396,7 +399,7 @@ describe('write gate', () => {
   it('lists the write tools besides the 7 read tools when allowWrites is true', async () => {
     const { client } = await connect({ ...CONFIG, allowWrites: true });
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(16);
+    expect(tools).toHaveLength(17);
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...WRITE_TOOLS].sort());
   });
 
@@ -414,12 +417,28 @@ describe('write gate', () => {
     },
   );
 
+  it.each([
+    'records a new payment',
+    'never retry without checking the invoice',
+    'fullPayment',
+    'remaining amount',
+  ])('says in the create_payment description: %s', async (fragment) => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true });
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === 'create_payment')?.description).toContain(fragment);
+  });
+
   it('advertises each write tool with its title, description and input descriptions', async () => {
     const { client } = await connect({ ...CONFIG, allowWrites: true });
     const { tools } = await client.listTools();
     const meta = Object.fromEntries(
       tools
-        .filter((t) => WRITE_TOOLS.includes(t.name) && !CREDIT_TOOLS.includes(t.name))
+        .filter(
+          (t) =>
+            WRITE_TOOLS.includes(t.name) &&
+            !CREDIT_TOOLS.includes(t.name) &&
+            t.name !== 'create_payment',
+        )
         .map((t) => [
           t.name,
           {

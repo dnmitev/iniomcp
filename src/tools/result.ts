@@ -111,3 +111,7 @@ export function presentPage(
   // Compact items, not the page: present() would drop an empty items array.
   return presentRaw(page, revealPii);
 }
+
+/** True for an API error whose HTTP status is 2xx: the write went through but the client could not parse the answer. */
+export const isUnreadableSuccess = (err: unknown): boolean =>
+  err instanceof InioApiError && err.status >= 200 && err.status < 300;

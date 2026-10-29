@@ -440,6 +440,32 @@ describe('create_credit_invoice output', () => {
 });
 
 describe('create_credit_invoice errors', () => {
+  it.each([200, 299])(
+    'still reports success with a note for an InioApiError with status %s',
+    async (status) => {
+      const { call } = await setup({
+        post: () =>
+          Promise.reject(new InioApiError(status, 'UPSTREAM_ERROR', 'Unexpected response')),
+      });
+      const result = await call(ARGS);
+      expect(result.isError).not.toBe(true);
+      expect(JSON.parse(textOf(result))).toStrictEqual({
+        created: true,
+        creditInvoiceNo: 'CN-1',
+        note: 'The credit invoice was created, but the API answer could not be read.',
+      });
+    },
+  );
+
+  it('treats an InioApiError with status 300 as a plain error, without a note', async () => {
+    const { call } = await setup({
+      post: () => Promise.reject(new InioApiError(300, 'UPSTREAM_ERROR', 'Multiple choices')),
+    });
+    const result = await call(ARGS);
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('UPSTREAM_ERROR: Multiple choices');
+  });
+
   it.each([
     [
       'a duplicate invoice number',

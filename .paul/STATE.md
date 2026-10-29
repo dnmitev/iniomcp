@@ -16,21 +16,21 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — Planning
-Plan: 04-03 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-10-29 — Created .paul/phases/04-write-tools/04-03-PLAN.md
+Phase: 4 of 5 (Write tools, opt-in) — In progress
+Plan: 04-03 complete
+Status: Ready for next PLAN (04-04)
+Last activity: 2026-10-29 — 04-03 unified; SUMMARY created
 
 Progress:
-- Milestone: [███████░░░] 73%
-- Phase 4: [█████░░░░░] 50%
+- Milestone: [████████░░] 77%
+- Phase 4: [████████░░] 75%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -68,6 +68,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: Phase 4 gets a 4th plan: 04-03 create_payment only; 04-04 create_customer (+ reverse_payment if probe works, create_invoice reconsidered) | Phase 4 | Smaller money-path plan |
 | 2026-10-29: Payment types curated (direct_payment, good_will, bank, reminder_fee_waiver); full payment must be explicit | Phase 4 | No credit_loss/cancelled until asked |
 | 2026-10-29: clientId for payments from token claim inio_client_id | Phase 4 | No config var |
+| 2026-10-29: Non-idempotent writes: status 0 or >= 500 = uncertain, hint to check before retry | Phase 4 | create_payment; reuse in 04-04 |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -91,15 +92,15 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: main
-Releases: v0.1.2 (npm latest); 04-01 merged as #27, 04-02 merged as #28; both unreleased
+Branch: feat/04-03-plan
+Releases: v0.1.2 (npm latest); 04-01 #27, 04-02 #28 merged; 04-03 on branch; all unreleased
 
 ## Session Continuity
 
 Last session: 2026-10-29
-Stopped at: Plan 04-03 created
-Next action: Review and approve plan, then run /paul:apply .paul/phases/04-write-tools/04-03-PLAN.md
-Resume file: .paul/phases/04-write-tools/04-03-PLAN.md
+Stopped at: 04-03 loop closed
+Next action: commit and PR 04-03, then /paul:plan for 04-04
+Resume file: .paul/phases/04-write-tools/04-03-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*
