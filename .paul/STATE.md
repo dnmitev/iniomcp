@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-29 — 0.1.1 released; Phase 3 complete, transitioned to Phase 4
+Phase: 4 of 5 (Write tools, opt-in) — Not started; patch plan 03-03 in progress
+Plan: 03-03 (request timeout, release 0.1.2) approved
+Status: Applying 03-03
+Last activity: 2026-10-29 — 0.1.2-rc.1 released; created .paul/phases/03-packaging-release/03-03-PLAN.md
 
 Progress:
 - Milestone: [██████░░░░] 60%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ◉        ○     [Applying 03-03]
 ```
 
 ## Accumulated Context
@@ -68,7 +68,6 @@ See PROJECT.md Key Decisions.
 | Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
 | Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
-| API request timeout: default 60 s (INIO_REQUEST_TIMEOUT_MS), TIMEOUT tool error; live test timeout above it | 03-02 (v0.1.2-rc.1 live gate hit 30 s test timeouts) | S | Before Phase 4 |
 | Dependabot PRs #9-#15 (major bumps); ignore majors for node image and @types/node | 03-02 | S | After 0.1.1 |
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
@@ -87,9 +86,9 @@ Feature branches merged: PRs #3-#8, #16, #17
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Phase 3 complete (0.1.1 released)
-Next action: Merge docs/phase-3-complete PR; triage Dependabot PRs #9-#15; then /paul:plan for Phase 4
-Resume file: .paul/ROADMAP.md
+Stopped at: Plan 03-03 created and approved
+Next action: /tdd for 03-03 Task 1
+Resume file: .paul/phases/03-packaging-release/03-03-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*
