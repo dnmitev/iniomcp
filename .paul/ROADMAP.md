@@ -22,7 +22,7 @@ Phases: 3 of 5 complete
 |-------|------|-------|--------|-----------|
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
-| 3 | Packaging and release | 2/2 | ✅ Complete | 2026-10-29 |
+| 3 | Packaging and release | 3/3 | ✅ Complete | 2026-10-29 |
 | 4 | Write tools (opt-in) | TBD | 🔵 Next | - |
 | 5 | HTTP hardening | TBD | Not started | - |
 
@@ -67,7 +67,7 @@ Phases: 3 of 5 complete
 **Plans:**
 - [x] 03-01: Package metadata, transport guard, package and Docker smoke tests, README snippets, CHANGELOG, security review
 - [x] 03-02: release.yml (live gate, npm trusted publishing with provenance, multi-arch GHCR, GitHub Release), first release
-- [ ] 03-03: Request timeout (60 s default), release 0.1.2
+- [x] 03-03: Request timeout (60 s default), release 0.1.2
 
 ### Phase 4: Write tools (opt-in)
 
