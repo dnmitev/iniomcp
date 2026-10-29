@@ -4,14 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-## [0.1.2] - Unreleased
+## [0.1.2] - 2026-10-29
+
+### Added
+
+- Request timeout for every Inio API and token request: 30 s by default, set with `INIO_REQUEST_TIMEOUT_MS` (1000–600000). A timeout returns `TIMEOUT: The Inio API did not respond within <n> s.` instead of leaving the tool call waiting.
 
 ### Changed
 
 - Docker image runs on Node 26 LTS (`node:26.12-alpine`). The npm package still supports Node 24 and later; CI tests both.
 - Release workflow on current versions of the GitHub and Docker actions; no npm cache in release jobs.
-
-No changes to the tools.
 
 ## [0.1.1] - 2026-10-29
 

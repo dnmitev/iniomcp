@@ -40,6 +40,7 @@ describe('loadConfig', () => {
         revealPii: false,
         transport: 'stdio',
         logLevel: 'info',
+        requestTimeoutMs: 30000,
       });
     });
 
@@ -55,6 +56,7 @@ describe('loadConfig', () => {
         'clientId',
         'clientSecret',
         'logLevel',
+        'requestTimeoutMs',
         'revealPii',
         'transport',
       ]);
@@ -287,6 +289,39 @@ describe('loadConfig', () => {
 
     it.each(['sse', 'HTTP', 'websocket'])('rejects %j', (value) => {
       expect(errorOf(env({ MCP_TRANSPORT: value })).message).toContain('MCP_TRANSPORT');
+    });
+  });
+
+  describe('INIO_REQUEST_TIMEOUT_MS', () => {
+    const MESSAGE = 'INIO_REQUEST_TIMEOUT_MS must be an integer from 1000 to 600000';
+
+    it('defaults to 30000 when unset', () => {
+      expect(loadConfig(env({ INIO_REQUEST_TIMEOUT_MS: undefined })).requestTimeoutMs).toBe(30000);
+    });
+
+    it('treats an empty string as unset', () => {
+      expect(loadConfig(env({ INIO_REQUEST_TIMEOUT_MS: '' })).requestTimeoutMs).toBe(30000);
+    });
+
+    it.each([
+      ['1000', 1000],
+      ['600000', 600000],
+      ['90000', 90000],
+    ])('accepts %s', (value, expected) => {
+      expect(loadConfig(env({ INIO_REQUEST_TIMEOUT_MS: value })).requestTimeoutMs).toBe(expected);
+    });
+
+    it.each(['999', '600001', '1.5', 'abc', '-1', '0', '1e4', ' 5000', '5000ms'])(
+      'rejects %j',
+      (value) => {
+        expect(errorOf(env({ INIO_REQUEST_TIMEOUT_MS: value })).message).toContain(MESSAGE);
+      },
+    );
+
+    it('reports the problem in the standard config error format', () => {
+      expect(errorOf(env({ INIO_REQUEST_TIMEOUT_MS: 'abc' })).message).toBe(
+        `Invalid Inio MCP configuration:\n- ${MESSAGE}`,
+      );
     });
   });
 

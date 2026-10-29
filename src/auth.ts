@@ -16,6 +16,7 @@ type Options = {
   fetch?: typeof globalThis.fetch;
   now?: () => number;
   logger?: Pick<Logger, 'debug'>;
+  timeoutMs?: number;
 };
 
 const EXPIRY_MARGIN_MS = 60_000;
@@ -30,9 +31,15 @@ export function createTokenProvider({
   fetch = globalThis.fetch,
   now = Date.now,
   logger = noopLogger,
+  timeoutMs = 30_000,
 }: Options): TokenProvider {
   let cached: { token: string; expiresAt: number } | undefined;
   let inFlight: Promise<string> | undefined;
+
+  function timedOut(): Error {
+    const seconds = Math.ceil(timeoutMs / 1000);
+    return new Error(`The Inio auth server did not respond within ${seconds} s (INIO_AUTH_URL).`);
+  }
 
   async function fetchToken(): Promise<string> {
     let res: Response;
@@ -45,11 +52,18 @@ export function createTokenProvider({
           client_id: clientId,
           client_secret: clientSecret,
         }),
+        signal: AbortSignal.timeout(timeoutMs),
       });
-    } catch {
+    } catch (err) {
+      if (isTimeout(err)) throw timedOut();
+      // oxlint-disable-next-line preserve-caught-error -- the cause may carry host/network details; keep it off the error.
       throw new Error('Cannot reach the Inio auth server (INIO_AUTH_URL).');
     }
-    const body: unknown = await res.json().catch(() => undefined);
+    // The timeout also covers a body that stalls; other read failures mean an unparseable body.
+    const body: unknown = await res.json().catch((err: unknown) => {
+      if (isTimeout(err)) throw timedOut();
+      return undefined;
+    });
     if (!res.ok) {
       const code = OAuthError.safeParse(body).data?.error;
       throw authError(code ? `${res.status}: ${code}` : `${res.status}`);
@@ -78,6 +92,11 @@ export function createTokenProvider({
       cached = undefined;
     },
   };
+}
+
+/** True for the rejection AbortSignal.timeout causes, whether on headers or body. */
+function isTimeout(err: unknown): boolean {
+  return err instanceof Error && err.name === 'TimeoutError';
 }
 
 function authError(detail: string): Error {

@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-29 — 0.1.1 released; Phase 3 complete, transitioned to Phase 4
+Phase: 4 of 5 (Write tools, opt-in) — Not started; patch plan 03-03 in progress
+Plan: 03-03 (request timeout, release 0.1.2) approved
+Status: Applying 03-03
+Last activity: 2026-10-29 — 0.1.2-rc.1 released; created .paul/phases/03-packaging-release/03-03-PLAN.md
 
 Progress:
 - Milestone: [██████░░░░] 60%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ◉        ○     [Applying 03-03]
 ```
 
 ## Accumulated Context
@@ -86,9 +86,9 @@ Feature branches merged: PRs #3-#8, #16, #17
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Phase 3 complete (0.1.1 released)
-Next action: Merge docs/phase-3-complete PR; triage Dependabot PRs #9-#15; then /paul:plan for Phase 4
-Resume file: .paul/ROADMAP.md
+Stopped at: Plan 03-03 created and approved
+Next action: /tdd for 03-03 Task 1
+Resume file: .paul/phases/03-packaging-release/03-03-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*

@@ -242,3 +242,97 @@ describe('createTokenProvider', () => {
     });
   });
 });
+
+describe('createTokenProvider request timeout', () => {
+  function build(fetch: typeof globalThis.fetch, timeoutMs?: number) {
+    return createTokenProvider({
+      authUrl: AUTH_URL,
+      clientId: CLIENT_ID,
+      clientSecret: SECRET,
+      fetch,
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    });
+  }
+
+  function timeoutError(): DOMException {
+    return new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+  }
+
+  it('aborts a token request that does not answer and rejects with the timeout message', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          if (!signal) {
+            reject(new Error('no signal passed'));
+            return;
+          }
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+        }),
+    );
+    const err = await errorOf(build(fetch, 20).getToken());
+    expect(err.message).toBe('The Inio auth server did not respond within 1 s (INIO_AUTH_URL).');
+  });
+
+  it.each([
+    [1000, 1],
+    [1500, 2],
+    [60000, 60],
+    [90000, 90],
+  ])('reports a timeout of %i ms as %i s', async (timeoutMs, seconds) => {
+    const err = await errorOf(build(() => Promise.reject(timeoutError()), timeoutMs).getToken());
+    expect(err.message).toBe(
+      `The Inio auth server did not respond within ${seconds} s (INIO_AUTH_URL).`,
+    );
+  });
+
+  it('defaults the timeout to 30 s', async () => {
+    const err = await errorOf(build(() => Promise.reject(timeoutError())).getToken());
+    expect(err.message).toBe('The Inio auth server did not respond within 30 s (INIO_AUTH_URL).');
+  });
+
+  it('passes an AbortSignal that is not yet aborted to the token request', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(tokenResponse()));
+    await build(fetch, 5000).getToken();
+    const signal = fetch.mock.calls[0]?.[1]?.signal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+  });
+
+  it('never puts the client secret in the timeout message', async () => {
+    const err = await errorOf(build(() => Promise.reject(timeoutError()), 1000).getToken());
+    expect(err.message).not.toContain(SECRET);
+  });
+
+  it('keeps the unreachable message for other network failures', async () => {
+    const err = await errorOf(
+      build(() => Promise.reject(new TypeError('fetch failed'))).getToken(),
+    );
+    expect(err.message).toBe('Cannot reach the Inio auth server (INIO_AUTH_URL).');
+  });
+
+  it('lets a later call retry after a timeout', async () => {
+    const queue: Array<Response | DOMException> = [timeoutError(), tokenResponse()];
+    const fetch = vi.fn<typeof globalThis.fetch>(() => {
+      const next = queue.shift();
+      return next instanceof Response ? Promise.resolve(next) : Promise.reject(next);
+    });
+    const provider = build(fetch, 5000);
+    await errorOf(provider.getToken());
+    await expect(provider.getToken()).resolves.toBe(TOKEN);
+  });
+
+  it('reports a stalled token response body as the auth timeout', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>((_url, init) => {
+      const signal = init?.signal;
+      const body = new ReadableStream({
+        start(controller) {
+          signal?.addEventListener('abort', () => controller.error(signal.reason), { once: true });
+        },
+      });
+      return Promise.resolve(new Response(body, { status: 200 }));
+    });
+    const err = await errorOf(build(fetch, 20).getToken());
+    expect(err.message).toBe('The Inio auth server did not respond within 1 s (INIO_AUTH_URL).');
+  });
+});

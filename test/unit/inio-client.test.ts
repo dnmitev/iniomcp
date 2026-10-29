@@ -169,7 +169,7 @@ describe('createInioClient', () => {
       const [first, second] = fetch.mock.calls;
       expect(second?.[0]).toBe('https://api.example/v1/invoices?status=open&status=open&limit=2');
       expect(second?.[0]).toBe(first?.[0]);
-      expect(second?.[1]).toEqual(first?.[1]);
+      expect(second?.[1]).toEqual({ ...first?.[1], signal: expect.any(AbortSignal) });
       expect(new Headers(second?.[1]?.headers).get('x-extra')).toBe('v');
     });
 
@@ -753,5 +753,165 @@ describe('createInioClient query and headers', () => {
     const page = { data: [], total: 0, limit: 25, offset: 0 };
     const { client } = setup([ok(page)]);
     await expect(client.get('/customers', { query: { limit: 25 } })).resolves.toEqual(page);
+  });
+});
+
+describe('createInioClient request timeout', () => {
+  /** A fetch that never answers until its signal aborts, then rejects with the signal's reason. */
+  function hangingFetch() {
+    return vi.fn<typeof globalThis.fetch>(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          if (!signal) {
+            reject(new Error('no signal passed'));
+            return;
+          }
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+        }),
+    );
+  }
+
+  function timeoutError(): DOMException {
+    return new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+  }
+
+  function build(fetch: typeof globalThis.fetch, timeoutMs?: number) {
+    const tokens = {
+      getToken: vi.fn<() => Promise<string>>(() => Promise.resolve(TOKEN)),
+      invalidate: vi.fn<() => void>(),
+    };
+    const logger = {
+      debug: vi.fn<(obj: object, msg?: string) => void>(),
+      warn: vi.fn<(obj: object, msg?: string) => void>(),
+    };
+    const client = createInioClient({
+      apiUrl: API_URL,
+      tokens,
+      fetch,
+      logger,
+      sleep: () => Promise.resolve(),
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    });
+    return { client, logger };
+  }
+
+  it('aborts a request that does not answer and throws TIMEOUT', async () => {
+    const { client } = build(hangingFetch(), 20);
+    const err = await apiErrorOf(client.get('/invoices/abc'));
+    expect(err.status).toBe(0);
+    expect(err.code).toBe('TIMEOUT');
+    expect(err.message).toBe('The Inio API did not respond within 1 s.');
+  });
+
+  it.each([
+    [1000, 1],
+    [1500, 2],
+    [20, 1],
+    [60000, 60],
+    [90000, 90],
+  ])('reports a timeout of %i ms as %i s', async (timeoutMs, seconds) => {
+    const { client } = build(() => Promise.reject(timeoutError()), timeoutMs);
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.message).toBe(`The Inio API did not respond within ${seconds} s.`);
+  });
+
+  it('defaults the timeout to 30 s', async () => {
+    const { client } = build(() => Promise.reject(timeoutError()));
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.message).toBe('The Inio API did not respond within 30 s.');
+  });
+
+  it('passes an AbortSignal that is not yet aborted to fetch', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(ok({})));
+    const { client } = build(fetch, 5000);
+    await client.get('/x');
+    const signal = fetch.mock.calls[0]?.[1]?.signal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+  });
+
+  it('logs a warn line with method, path without query, status 0 and code TIMEOUT', async () => {
+    const { client, logger } = build(hangingFetch(), 20);
+    await apiErrorOf(client.get('/invoices', { query: { customerNo: 'SECRET-Q' } }));
+    expect(logger.warn.mock.calls).toContainEqual([
+      expect.objectContaining({ method: 'GET', path: '/invoices', status: 0, code: 'TIMEOUT' }),
+      'upstream error',
+    ]);
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('SECRET-Q');
+  });
+
+  it('still maps other network errors to NETWORK_ERROR', async () => {
+    const { client } = build(() => Promise.reject(new TypeError('fetch failed')), 5000);
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.code).toBe('NETWORK_ERROR');
+    expect(err.message).toBe('Cannot reach the Inio API (INIO_URL).');
+  });
+
+  it('does not treat a plain abort error as a timeout', async () => {
+    const { client } = build(() => Promise.reject(new DOMException('aborted', 'AbortError')), 5000);
+    expect((await apiErrorOf(client.get('/x'))).code).toBe('NETWORK_ERROR');
+  });
+
+  it('gives the 401 retry its own fresh signal', async () => {
+    const queue = [json(unauthorized, 401), ok({ id: 'abc' })];
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(queue.shift() ?? ok({})));
+    const { client } = build(fetch, 5000);
+    await client.get('/x');
+    const [first, second] = fetch.mock.calls.map(([, init]) => init?.signal);
+    expect(second).toBeInstanceOf(AbortSignal);
+    expect(second).not.toBe(first);
+    expect(second?.aborted).toBe(false);
+  });
+
+  it('gives the 429 retry its own fresh signal', async () => {
+    const queue = [tooMany('0'), ok({ id: 'abc' })];
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(queue.shift() ?? ok({})));
+    const { client } = build(fetch, 5000);
+    await client.get('/x');
+    const [first, second] = fetch.mock.calls.map(([, init]) => init?.signal);
+    expect(second).toBeInstanceOf(AbortSignal);
+    expect(second).not.toBe(first);
+    expect(second?.aborted).toBe(false);
+  });
+
+  it('times out a retry attempt independently of the first attempt', async () => {
+    let calls = 0;
+    const hanging = hangingFetch();
+    const fetch = vi.fn<typeof globalThis.fetch>((url, init) => {
+      calls += 1;
+      return calls === 1 ? Promise.resolve(json(unauthorized, 401)) : hanging(url, init);
+    });
+    const { client } = build(fetch, 20);
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.code).toBe('TIMEOUT');
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  /** A response whose body never completes; it errors with the signal's reason on abort. */
+  function stalledResponse(init: RequestInit | undefined, status: number): Response {
+    const signal = init?.signal;
+    const body = new ReadableStream({
+      start(controller) {
+        signal?.addEventListener('abort', () => controller.error(signal.reason), { once: true });
+      },
+    });
+    return new Response(body, { status, headers: { 'content-type': 'application/json' } });
+  }
+
+  it.each([
+    ['a 200', 200],
+    ['a 500', 500],
+  ])('throws TIMEOUT when the body of %s response stalls', async (_label, status) => {
+    const { client } = build(
+      vi.fn<typeof globalThis.fetch>((_url, init) =>
+        Promise.resolve(stalledResponse(init, status)),
+      ),
+      20,
+    );
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.status).toBe(0);
+    expect(err.code).toBe('TIMEOUT');
+    expect(err.message).toBe('The Inio API did not respond within 1 s.');
   });
 });

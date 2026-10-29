@@ -29,6 +29,7 @@ const CONFIG: Config = {
   revealPii: false,
   transport: 'stdio',
   logLevel: 'info',
+  requestTimeoutMs: 30000,
 };
 
 const INVOICE = { id: ID, number: 'INV-1', total: 10, IBAN: 'BG80BNBG96611020345678' };
@@ -348,6 +349,51 @@ describe('createServer', () => {
     ]);
     expect(logged).not.toContain(SECRET);
     expect(logged).not.toContain(TOKEN);
+  });
+});
+
+describe('createServer request timeout wiring', () => {
+  /** Rejects with a TimeoutError, but only when a real AbortSignal was passed. */
+  function timingOutFetch(hangOn: (url: string) => boolean) {
+    return vi.fn<typeof globalThis.fetch>((input, init) => {
+      const url = urlOf(input);
+      if (url === AUTH_URL && !hangOn(url)) {
+        return Promise.resolve(json({ access_token: TOKEN, expires_in: 300 }));
+      }
+      if (!(init?.signal instanceof AbortSignal)) {
+        return Promise.reject(new Error('no signal passed'));
+      }
+      return Promise.reject(new DOMException('timeout', 'TimeoutError'));
+    });
+  }
+
+  async function callInvoice(config: Config, fetch: typeof globalThis.fetch) {
+    const server = createServer(config, { fetch, logger: fakeLogger() });
+    const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    mcpClient = client;
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    const result = await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    const content = z.array(z.object({ text: z.string() })).parse(result.content);
+    return { isError: result.isError === true, text: content[0]?.text };
+  }
+
+  it('uses config.requestTimeoutMs for API requests', async () => {
+    const fetch = timingOutFetch((url) => url !== AUTH_URL);
+    const result = await callInvoice({ ...CONFIG, requestTimeoutMs: 1500 }, fetch);
+    expect(result).toEqual({
+      isError: true,
+      text: 'TIMEOUT: The Inio API did not respond within 2 s.',
+    });
+  });
+
+  it('uses config.requestTimeoutMs for token requests', async () => {
+    const fetch = timingOutFetch((url) => url === AUTH_URL);
+    const result = await callInvoice({ ...CONFIG, requestTimeoutMs: 90000 }, fetch);
+    expect(result).toEqual({
+      isError: true,
+      text: 'The Inio auth server did not respond within 90 s (INIO_AUTH_URL).',
+    });
   });
 });
 

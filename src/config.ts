@@ -7,6 +7,7 @@ export type Config = {
   revealPii: boolean;
   transport: 'stdio';
   logLevel: LogLevel;
+  requestTimeoutMs: number;
 };
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
@@ -51,6 +52,15 @@ export function loadConfig(env: Env): Config {
     oneOf('MCP_TRANSPORT', ['stdio'], 'stdio');
   }
 
+  const timeoutMs = (name: string): number => {
+    const raw = env[name];
+    if (!raw) return 30_000;
+    const value = /^\d+$/.test(raw) ? Number(raw) : NaN;
+    if (value >= 1000 && value <= 600_000) return value;
+    problems.push(`${name} must be an integer from 1000 to 600000`);
+    return 30_000;
+  };
+
   const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
 
   const config: Config = {
@@ -62,6 +72,7 @@ export function loadConfig(env: Env): Config {
     revealPii: flag('INIO_REVEAL_PII'),
     transport: 'stdio',
     logLevel: oneOf('INIO_LOG_LEVEL', LOG_LEVELS, 'info'),
+    requestTimeoutMs: timeoutMs('INIO_REQUEST_TIMEOUT_MS'),
   };
 
   if (problems.length > 0) {

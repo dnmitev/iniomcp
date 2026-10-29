@@ -30,6 +30,7 @@ type Options = {
   logger?: Pick<Logger, 'debug' | 'warn'>;
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
+  timeoutMs?: number;
 };
 
 const SuccessEnvelope = z.object({ result: z.unknown() }).refine((b) => 'result' in b);
@@ -43,6 +44,11 @@ const ErrorEnvelope = z.object({
 export function pathSegment(value: string): string {
   if (value === '.' || value === '..') throw new Error(`Invalid path segment: ${value}`);
   return encodeURIComponent(value);
+}
+
+/** True for the rejection AbortSignal.timeout causes, whether on headers or body. */
+function isTimeout(err: unknown): boolean {
+  return err instanceof Error && err.name === 'TimeoutError';
 }
 
 /** Retry-After as seconds (delta or HTTP date); undefined when missing, invalid or negative. */
@@ -62,12 +68,22 @@ export function createInioClient({
   logger = noopLogger,
   sleep = delay,
   now = Date.now,
+  timeoutMs = 30_000,
 }: Options): InioClient {
   /** Logs a failed upstream call at warn and returns the error to throw. */
   function fail(path: string, err: InioApiError): InioApiError {
     const { status, code, correlationId } = err;
     logger.warn({ method: 'GET', path, status, code, correlationId }, 'upstream error');
     return err;
+  }
+
+  /** Logs and returns the TIMEOUT error for a request whose signal fired. */
+  function timedOut(path: string): InioApiError {
+    const seconds = Math.ceil(timeoutMs / 1000);
+    return fail(
+      path,
+      new InioApiError(0, 'TIMEOUT', `The Inio API did not respond within ${seconds} s.`),
+    );
   }
 
   /** Sends one GET; `path` (never the query) is what gets logged. */
@@ -83,8 +99,11 @@ export function createInioClient({
       res = await fetch(url, {
         method: 'GET',
         headers: { ...extraHeaders, authorization: `Bearer ${token}`, accept: 'application/json' },
+        // Fresh per attempt, so each retry gets the full timeout.
+        signal: AbortSignal.timeout(timeoutMs),
       });
-    } catch {
+    } catch (err) {
+      if (isTimeout(err)) throw timedOut(path);
       // The cause may carry host/network details; keep it out of messages and logs.
       throw fail(
         path,
@@ -151,7 +170,11 @@ export function createInioClient({
           ),
         );
       }
-      const body: unknown = await res.json().catch(() => undefined);
+      // The timeout also covers a body that stalls; other read failures mean an unparseable body.
+      const body: unknown = await res.json().catch((err: unknown) => {
+        if (isTimeout(err)) throw timedOut(path);
+        return undefined;
+      });
       if (res.ok) {
         const ok = SuccessEnvelope.safeParse(body);
         if (ok.success) return ok.data.result;
