@@ -1,12 +1,23 @@
 import { z } from 'zod';
 import { InioApiError } from '../inio-client.ts';
-import { redact, redactText } from '../redact.ts';
+import { isSensitiveKey, redact, redactText } from '../redact.ts';
+
+const MAX_FIELD_ERRORS = 10;
 
 /** Formats an error as the tool's error text: "<code>: <message> (correlationId <id>)" for API errors; emails in messages are redacted. */
 export function errorText(err: unknown): string {
   if (err instanceof InioApiError) {
     const suffix = err.correlationId ? ` (correlationId ${err.correlationId})` : '';
-    return `${err.code}: ${redactText(err.message)}${suffix}`;
+    const fieldErrors = err.fieldErrors ?? [];
+    const shown = fieldErrors.slice(0, MAX_FIELD_ERRORS).map(({ fieldName, message }) => {
+      // The message may echo the rejected value, so hide it for PII fields ("0.iban" → iban).
+      const sensitive = isSensitiveKey(fieldName.split('.').at(-1) ?? fieldName);
+      return `${fieldName}: ${sensitive ? '[redacted]' : message}`;
+    });
+    const more = fieldErrors.length - shown.length;
+    if (more > 0) shown.push(`… and ${more} more`);
+    const fields = shown.length > 0 ? ` Fields: ${shown.join('; ')}` : '';
+    return `${err.code}: ${redactText(err.message)}${suffix}${redactText(fields)}`;
   }
   return redactText(err instanceof Error ? err.message : String(err));
 }
@@ -46,6 +57,9 @@ export function presentRaw(value: unknown, revealPii: boolean): string {
 export function present(value: unknown, revealPii: boolean): string {
   return presentRaw(compact(value), revealPii);
 }
+
+/** A real calendar date as YYYY-MM-DD (zod's ISO date checks month lengths and leap years). */
+export const IsoDate = z.iso.date();
 
 /** Paging fields to spread into a list tool's input schema. */
 export const PageInput = {

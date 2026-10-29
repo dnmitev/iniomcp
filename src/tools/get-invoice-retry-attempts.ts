@@ -1,28 +1,20 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { pathSegment, type InioClient } from '../inio-client.ts';
+import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
+import { EXACTLY_ONE_REF, exactlyOneRef, InvoiceRef, invoicePath } from './invoice-ref.ts';
 import { compact, errorText, fail, ok, presentRaw } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
 
 const Input = z
   .strictObject({
-    id: z.uuid().optional().describe('Invoice UUID'),
-    number: z
-      .string()
-      .min(1)
-      .max(100)
-      .regex(/^[^\p{Cc}]+$/u)
-      .optional()
-      .describe('Business invoice number, e.g. INV-1001'),
+    ...InvoiceRef,
     // The API ignores `page` (same items on every page), so only limit is exposed.
     limit: z.int().min(1).max(50).default(10).describe('Maximum attempts to return, 1-50'),
   })
-  .refine((a) => (a.id === undefined) !== (a.number === undefined), {
-    message: 'Provide exactly one of id or number.',
-  });
+  .refine(exactlyOneRef, EXACTLY_ONE_REF);
 
 const Payload = z.object({
   data: z.array(z.unknown()),
@@ -46,12 +38,8 @@ export function registerGetInvoiceRetryAttempts(
     },
     withToolLogging(logger, 'get_invoice_retry_attempts', async ({ id, number, limit }) => {
       try {
-        const invoice =
-          id !== undefined
-            ? `/invoices/${pathSegment(id)}`
-            : `/invoices/by-number/${pathSegment(number ?? '')}`;
         const parsed = Payload.safeParse(
-          await client.get(`${invoice}/retry-attempts`, { query: { limit } }),
+          await client.get(`${invoicePath({ id, number })}/retry-attempts`, { query: { limit } }),
         );
         if (!parsed.success) {
           return fail('UPSTREAM_ERROR: Unexpected retry attempts payload from the Inio API.');

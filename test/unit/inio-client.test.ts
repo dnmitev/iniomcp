@@ -915,3 +915,319 @@ describe('createInioClient request timeout', () => {
     expect(err.message).toBe('The Inio API did not respond within 1 s.');
   });
 });
+
+describe('createInioClient writes', () => {
+  const BODY = { reason: 'BODY-SECRET-77', nested: { n: 1 } };
+
+  function build(responses: Array<Response | Error>, timeoutMs?: number) {
+    const queue = [...responses];
+    const fetch = vi.fn<typeof globalThis.fetch>(() => {
+      const next = queue.shift();
+      if (!next) return Promise.reject(new Error('unexpected extra fetch'));
+      return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
+    });
+    const tokenQueue = [TOKEN, TOKEN2];
+    const tokens = {
+      getToken: vi.fn<() => Promise<string>>(() =>
+        Promise.resolve(tokenQueue.shift() ?? 'tok-extra'),
+      ),
+      invalidate: vi.fn<() => void>(),
+    };
+    const logger = {
+      debug: vi.fn<(obj: object, msg?: string) => void>(),
+      warn: vi.fn<(obj: object, msg?: string) => void>(),
+    };
+    const sleep = vi.fn<(ms: number) => Promise<void>>(() => Promise.resolve());
+    const client = createInioClient({
+      apiUrl: API_URL,
+      tokens,
+      fetch,
+      logger,
+      sleep,
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    });
+    return { client, fetch, tokens, logger, sleep };
+  }
+
+  const verbs = [
+    ['POST', (c: ReturnType<typeof build>['client']) => c.post.bind(c)],
+    ['PATCH', (c: ReturnType<typeof build>['client']) => c.patch.bind(c)],
+  ] as const;
+
+  describe.each(verbs)('%s', (method, pick) => {
+    it('sends the method, JSON body and JSON headers to apiUrl + path', async () => {
+      const { client, fetch } = build([ok({ done: true })]);
+      await pick(client)('/customers/c-1/pauses', BODY);
+      const [url, init] = fetch.mock.calls[0] ?? [];
+      expect(url).toBe('https://api.example/v1/customers/c-1/pauses');
+      expect(init?.method).toBe(method);
+      expect(init?.body).toBe(JSON.stringify(BODY));
+      const headers = new Headers(init?.headers);
+      expect(headers.get('content-type')).toBe('application/json');
+      expect(headers.get('accept')).toBe('application/json');
+      expect(headers.get('authorization')).toBe(`Bearer ${TOKEN}`);
+    });
+
+    it('sends x-user-real-name: inio-mcp', async () => {
+      const { client, fetch } = build([ok({})]);
+      await pick(client)('/x', {});
+      expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get('x-user-real-name')).toBe(
+        'inio-mcp',
+      );
+    });
+
+    it('returns the envelope result', async () => {
+      const { client } = build([ok({ id: 'p-1' })]);
+      await expect(pick(client)('/x', {})).resolves.toEqual({ id: 'p-1' });
+    });
+
+    it('appends the query and passes caller headers, but never overrides auth or accept', async () => {
+      const { client, fetch } = build([ok({})]);
+      await pick(client)(
+        '/x',
+        {},
+        {
+          query: { a: '1' },
+          headers: { 'x-extra': 'v', Authorization: 'Bearer evil', ACCEPT: 'text/plain' },
+        },
+      );
+      const [url, init] = fetch.mock.calls[0] ?? [];
+      expect(url).toBe('https://api.example/v1/x?a=1');
+      const headers = new Headers(init?.headers);
+      expect(headers.get('x-extra')).toBe('v');
+      expect(headers.get('authorization')).toBe(`Bearer ${TOKEN}`);
+      expect(headers.get('accept')).toBe('application/json');
+    });
+
+    it('replaces caller content-type and x-user-real-name instead of merging them', async () => {
+      const { client, fetch } = build([ok({})]);
+      await pick(client)(
+        '/x',
+        {},
+        {
+          headers: { 'Content-Type': 'text/plain', 'X-User-Real-Name': 'evil' },
+        },
+      );
+      const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
+      expect(headers.get('content-type')).toBe('application/json');
+      expect(headers.get('x-user-real-name')).toBe('inio-mcp');
+    });
+
+    it('retries once on 401 with a fresh token and resends the body', async () => {
+      const { client, fetch, tokens } = build([json(unauthorized, 401), ok({ ok: 1 })]);
+      await expect(pick(client)('/x', BODY)).resolves.toEqual({ ok: 1 });
+      expect(tokens.invalidate).toHaveBeenCalledTimes(1);
+      const second = fetch.mock.calls[1]?.[1];
+      expect(second?.method).toBe(method);
+      expect(second?.body).toBe(JSON.stringify(BODY));
+      expect(new Headers(second?.headers).get('authorization')).toBe(`Bearer ${TOKEN2}`);
+      expect(new Headers(second?.headers).get('x-user-real-name')).toBe('inio-mcp');
+    });
+
+    it('retries once on 429 after the Retry-After wait and resends the body', async () => {
+      const { client, fetch, sleep } = build([tooMany('2'), ok({ ok: 1 })]);
+      await expect(pick(client)('/x', BODY)).resolves.toEqual({ ok: 1 });
+      expect(sleep.mock.calls).toEqual([[2000]]);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(fetch.mock.calls[1]?.[1]?.body).toBe(JSON.stringify(BODY));
+    });
+
+    it('throws RATE_LIMITED when the retry is also 429', async () => {
+      const { client, fetch } = build([tooMany('1'), tooMany('3')]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.code).toBe('RATE_LIMITED');
+      expect(err.message).toBe('The Inio API rate limit was reached. Try again in 3 s.');
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('maps an error envelope to InioApiError', async () => {
+      const { client } = build([json(notFound, 404)]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.status).toBe(404);
+      expect(err.code).toBe('NOT_FOUND');
+      expect(err.correlationId).toBe('c-1');
+    });
+
+    it('maps a network failure to NETWORK_ERROR', async () => {
+      const { client } = build([new TypeError('fetch failed')]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.code).toBe('NETWORK_ERROR');
+    });
+
+    it('gives each attempt its own fresh signal', async () => {
+      const { client, fetch } = build([json(unauthorized, 401), ok({})]);
+      await pick(client)('/x', BODY);
+      const [first, second] = fetch.mock.calls.map(([, init]) => init?.signal);
+      expect(second).toBeInstanceOf(AbortSignal);
+      expect(second).not.toBe(first);
+      expect(second?.aborted).toBe(false);
+    });
+
+    it('throws TIMEOUT with the uncertain-outcome message when the request does not answer', async () => {
+      const hanging = vi.fn<typeof globalThis.fetch>(
+        (_url, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+          }),
+      );
+      const client = createInioClient({
+        apiUrl: API_URL,
+        tokens: { getToken: () => Promise.resolve(TOKEN), invalidate: () => {} },
+        fetch: hanging,
+        timeoutMs: 20,
+      });
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.status).toBe(0);
+      expect(err.code).toBe('TIMEOUT');
+      expect(err.message).toBe(
+        'The Inio API did not respond within 1 s. The change may or may not have been applied; check before retrying.',
+      );
+    });
+
+    it.each([
+      [1500, 2],
+      [30000, 30],
+    ])('rounds a %i ms write timeout up to %i s', async (timeoutMs, seconds) => {
+      const { client } = build([new DOMException('timeout', 'TimeoutError')], timeoutMs);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.message).toBe(
+        `The Inio API did not respond within ${seconds} s. The change may or may not have been applied; check before retrying.`,
+      );
+    });
+
+    it('reports a stalled response body as the uncertain-outcome TIMEOUT', async () => {
+      const stalled = vi.fn<typeof globalThis.fetch>((_url, init) => {
+        const signal = init?.signal;
+        const body = new ReadableStream({
+          start(controller) {
+            signal?.addEventListener('abort', () => controller.error(signal.reason), {
+              once: true,
+            });
+          },
+        });
+        return Promise.resolve(new Response(body, { status: 200 }));
+      });
+      const client = createInioClient({
+        apiUrl: API_URL,
+        tokens: { getToken: () => Promise.resolve(TOKEN), invalidate: () => {} },
+        fetch: stalled,
+        timeoutMs: 20,
+      });
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.code).toBe('TIMEOUT');
+      expect(err.message).toContain('The change may or may not have been applied');
+    });
+
+    it('logs the method and path only, never the query or the body', async () => {
+      const { client, logger } = build([ok({})]);
+      await pick(client)('/customers/c-1/pauses', BODY, { query: { q: 'SECRET-Q' } });
+      expect(logger.debug.mock.calls).toContainEqual([
+        expect.objectContaining({ method, path: '/customers/c-1/pauses', status: 200 }),
+        'upstream request',
+      ]);
+      const logged = JSON.stringify([logger.debug.mock.calls, logger.warn.mock.calls]);
+      expect(logged).not.toContain('SECRET-Q');
+      expect(logged).not.toContain('BODY-SECRET-77');
+    });
+
+    it('logs the method and path in the warn line of a failed write, without the body', async () => {
+      const { client, logger } = build([json(notFound, 404)]);
+      await apiErrorOf(pick(client)('/x', BODY, { query: { q: 'SECRET-Q' } }));
+      expect(logger.warn.mock.calls).toContainEqual([
+        expect.objectContaining({ method, path: '/x', status: 404, code: 'NOT_FOUND' }),
+        'upstream error',
+      ]);
+      const logged = JSON.stringify([logger.debug.mock.calls, logger.warn.mock.calls]);
+      expect(logged).not.toContain('SECRET-Q');
+      expect(logged).not.toContain('BODY-SECRET-77');
+    });
+
+    it('logs the method and path in the rate limited line, without the body', async () => {
+      const { client, logger } = build([tooMany('1'), ok({})]);
+      await pick(client)('/x', BODY);
+      expect(logger.warn.mock.calls).toContainEqual([
+        { method, path: '/x', status: 429, waitMs: 1000 },
+        'rate limited',
+      ]);
+      expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('BODY-SECRET-77');
+    });
+  });
+
+  it('does not send x-user-real-name or a content-type on GET', async () => {
+    const { client, fetch } = build([ok({})]);
+    await client.get('/x');
+    const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
+    expect(headers.has('x-user-real-name')).toBe(false);
+    expect(headers.has('content-type')).toBe(false);
+    expect(fetch.mock.calls[0]?.[1]?.body).toBeUndefined();
+  });
+
+  it('drops caller content-type and x-user-real-name headers on GET', async () => {
+    const { client, fetch } = build([ok({})]);
+    await client.get('/x', {
+      headers: { 'Content-Type': 'text/plain', 'x-user-real-name': 'evil' },
+    });
+    const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
+    expect(headers.has('content-type')).toBe(false);
+    expect(headers.has('x-user-real-name')).toBe(false);
+  });
+
+  it('keeps the plain timeout message for GET', async () => {
+    const { client } = build([new DOMException('timeout', 'TimeoutError')], 1000);
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.message).toBe('The Inio API did not respond within 1 s.');
+  });
+});
+
+describe('InioApiError fieldErrors from the error envelope', () => {
+  function failing(body: unknown, status = 400) {
+    return setup([json(body, status)]).client;
+  }
+  const base = { success: false, status: 400, code: 'VALIDATION_ERROR', message: 'Bad input' };
+
+  it('parses fieldName and message from each field error', async () => {
+    const client = failing({
+      ...base,
+      fieldErrors: [
+        { fieldName: '0.reason', errorCode: 'too_small', message: 'Too short' },
+        { fieldName: 'startAt', errorCode: 'invalid', message: 'Must be tomorrow or later' },
+      ],
+    });
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.fieldErrors).toEqual([
+      { fieldName: '0.reason', message: 'Too short' },
+      { fieldName: 'startAt', message: 'Must be tomorrow or later' },
+    ]);
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toBe('Bad input');
+  });
+
+  it('ignores malformed entries and keeps the valid ones', async () => {
+    const client = failing({
+      ...base,
+      fieldErrors: [
+        { fieldName: 'a' },
+        'junk',
+        null,
+        { message: 'no name' },
+        { fieldName: 5, message: 'bad name' },
+        { fieldName: 'b', message: 'ok' },
+      ],
+    });
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.fieldErrors).toEqual([{ fieldName: 'b', message: 'ok' }]);
+  });
+
+  it.each([
+    ['absent', undefined],
+    ['not an array', 'nope'],
+    ['empty', []],
+    ['only malformed entries', [{ fieldName: 'a' }]],
+  ])('has no fieldErrors when the field is %s', async (_label, fieldErrors) => {
+    const client = failing({ ...base, fieldErrors });
+    const err = await apiErrorOf(client.get('/x'));
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.fieldErrors === undefined || err.fieldErrors.length === 0).toBe(true);
+  });
+});

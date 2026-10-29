@@ -32,6 +32,102 @@ describe('errorText', () => {
     expect(errorText(err)).toBe('NOT_FOUND: No invoice for [redacted-email] (correlationId c-1)');
   });
 
+  it('appends the field errors after the correlation id', () => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', 'c-3', [
+      { fieldName: 'startAt', message: 'Must be tomorrow or later' },
+      { fieldName: '0.reason', message: 'Too short' },
+    ]);
+    expect(errorText(err)).toBe(
+      'VALIDATION_ERROR: Bad input (correlationId c-3) Fields: startAt: Must be tomorrow or later; 0.reason: Too short',
+    );
+  });
+
+  it('appends a single field error without a trailing separator', () => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', 'c-3', [
+      { fieldName: 'reason', message: 'Required' },
+    ]);
+    expect(errorText(err)).toBe(
+      'VALIDATION_ERROR: Bad input (correlationId c-3) Fields: reason: Required',
+    );
+  });
+
+  it('appends the field errors when there is no correlation id', () => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', undefined, [
+      { fieldName: 'reason', message: 'Required' },
+    ]);
+    expect(errorText(err)).toBe('VALIDATION_ERROR: Bad input Fields: reason: Required');
+  });
+
+  it('redacts an email inside a field error message', () => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', 'c-3', [
+      { fieldName: 'note', message: 'jane@home.example is not allowed' },
+    ]);
+    const text = errorText(err);
+    expect(text).toContain('Fields: note: [redacted-email] is not allowed');
+    expect(text).not.toContain('jane@home.example');
+  });
+
+  it.each([
+    '0.iban',
+    'SSN',
+    'customerAddress.zipCode',
+    'distributionEmailAddress',
+    'addressLine1',
+    'a.b.mobilePhoneNo',
+    'IBAN',
+  ])('replaces the message of the sensitive field %s with [redacted]', (fieldName) => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', 'c-3', [
+      { fieldName, message: 'SE1234567890 is not valid' },
+    ]);
+    const text = errorText(err);
+    expect(text).toBe(
+      `VALIDATION_ERROR: Bad input (correlationId c-3) Fields: ${fieldName}: [redacted]`,
+    );
+    expect(text).not.toContain('SE1234567890');
+  });
+
+  it('judges a field by its last segment only', () => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', 'c-3', [
+      { fieldName: 'iban.format', message: 'Wrong format' },
+    ]);
+    expect(errorText(err)).toContain('Fields: iban.format: Wrong format');
+  });
+
+  it('keeps the message of non-sensitive fields', () => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', 'c-3', [
+      { fieldName: '0.startAt', message: 'Must be tomorrow or later' },
+      { fieldName: 'iban', message: 'secret' },
+    ]);
+    expect(errorText(err)).toBe(
+      'VALIDATION_ERROR: Bad input (correlationId c-3) Fields: 0.startAt: Must be tomorrow or later; iban: [redacted]',
+    );
+  });
+
+  const manyFields = (n: number) =>
+    Array.from({ length: n }, (_v, i) => ({ fieldName: `f${i + 1}`, message: `m${i + 1}` }));
+  const shown = (n: number) =>
+    Array.from({ length: n }, (_v, i) => `f${i + 1}: m${i + 1}`).join('; ');
+
+  it('shows exactly 10 field errors without a suffix', () => {
+    const err = new InioApiError(400, 'V', 'Bad', 'c-3', manyFields(10));
+    expect(errorText(err)).toBe(`V: Bad (correlationId c-3) Fields: ${shown(10)}`);
+  });
+
+  it('caps at 10 field errors and says how many more there are', () => {
+    const err = new InioApiError(400, 'V', 'Bad', 'c-3', manyFields(12));
+    expect(errorText(err)).toBe(`V: Bad (correlationId c-3) Fields: ${shown(10)}; … and 2 more`);
+  });
+
+  it('says "and 1 more" for 11 field errors', () => {
+    const err = new InioApiError(400, 'V', 'Bad', 'c-3', manyFields(11));
+    expect(errorText(err)).toBe(`V: Bad (correlationId c-3) Fields: ${shown(10)}; … and 1 more`);
+  });
+
+  it('leaves the text unchanged for an empty fieldErrors array', () => {
+    const err = new InioApiError(400, 'VALIDATION_ERROR', 'Bad input', 'c-3', []);
+    expect(errorText(err)).toBe('VALIDATION_ERROR: Bad input (correlationId c-3)');
+  });
+
   it('redacts an email in a thrown non-Error string', () => {
     expect(errorText('failed for a.b@x.example')).toBe('failed for [redacted-email]');
   });

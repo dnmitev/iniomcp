@@ -352,6 +352,146 @@ describe('createServer', () => {
   });
 });
 
+describe('write gate', () => {
+  const WRITE_TOOLS = [
+    'cancel_customer_pause',
+    'create_customer_pause',
+    'update_customer_pause',
+    'update_invoice_due_date',
+    'update_invoice_stop_until_dates',
+  ];
+
+  it('lists exactly the 7 read tools when allowWrites is false', async () => {
+    const { client } = await connect({ ...CONFIG, allowWrites: false });
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+  });
+
+  it('lists exactly the 7 read tools when allowWrites is not set', async () => {
+    const unset = { ...CONFIG };
+    Reflect.deleteProperty(unset, 'allowWrites');
+    const { client } = await connect(unset);
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+  });
+
+  it('lists the 5 write tools besides the 7 read tools when allowWrites is true', async () => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true });
+    const { tools } = await client.listTools();
+    expect(tools).toHaveLength(12);
+    expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...WRITE_TOOLS].sort());
+  });
+
+  it.each(WRITE_TOOLS)(
+    'annotates %s as a non-read-only, destructive, non-idempotent tool',
+    async (name) => {
+      const { client } = await connect({ ...CONFIG, allowWrites: true });
+      const { tools } = await client.listTools();
+      expect(tools.find((t) => t.name === name)?.annotations).toMatchObject({
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      });
+    },
+  );
+
+  it('advertises each write tool with its title, description and input descriptions', async () => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true });
+    const { tools } = await client.listTools();
+    const meta = Object.fromEntries(
+      tools
+        .filter((t) => WRITE_TOOLS.includes(t.name))
+        .map((t) => [
+          t.name,
+          {
+            title: t.title,
+            description: t.description,
+            inputs: Object.fromEntries(
+              Object.entries(t.inputSchema.properties ?? {}).map(([k, v]) => [
+                k,
+                z.object({ description: z.string().optional() }).parse(v).description,
+              ]),
+            ),
+          },
+        ]),
+    );
+    const stopInputs = Object.fromEntries(
+      [
+        ...['invoicing1', 'invoicing2', 'invoicing3', 'invoicing4'],
+        ...['collection1', 'collection2', 'collection3', 'collection4', 'collection5'],
+      ].map((step) => [step, `Stop-until date for ${step}, YYYY-MM-DD, or null to clear`]),
+    );
+    expect(meta).toStrictEqual({
+      create_customer_pause: {
+        title: 'Create customer pause',
+        description:
+          'Create a pause for one customer that suspends reminders, debt-collection transfers or both (scope) from startAt, which must be tomorrow or later (UTC), until endAt; leave endAt out for an indefinite pause. Overlapping pauses of the same scope are rejected. Returns the created pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          customerId: 'Customer UUID',
+          scope: 'What to pause: reminders, dcTransfers (debt-collection transfers) or both',
+          startAt: 'First day of the pause, YYYY-MM-DD, tomorrow or later (UTC)',
+          endAt: 'Last day of the pause, YYYY-MM-DD, after startAt; omit for an indefinite pause',
+          reason: 'Why the pause is created, 1-255 characters',
+        },
+      },
+      update_customer_pause: {
+        title: 'Update customer pause',
+        description:
+          'Change a customer pause: scheduled pauses can change startAt, endAt and scope; active pauses can change only endAt (null makes it indefinite). Completed or cancelled pauses cannot be changed. Changes that overlap another pause of the same scope are rejected. Returns the updated pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          customerId: 'Customer UUID',
+          pauseId: 'Pause UUID',
+          startAt: 'New first day, YYYY-MM-DD (scheduled pauses only)',
+          endAt: 'New last day, YYYY-MM-DD, or null for an indefinite pause',
+          scope: 'New scope: reminders, dcTransfers or both (scheduled pauses only)',
+          reason: 'Why the pause is changed, 1-255 characters',
+        },
+      },
+      cancel_customer_pause: {
+        title: 'Cancel customer pause',
+        description:
+          'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          customerId: 'Customer UUID',
+          pauseId: 'Pause UUID',
+          reason: 'Why the pause is cancelled, 1-255 characters',
+        },
+      },
+      update_invoice_due_date: {
+        title: 'Postpone invoice due date',
+        description:
+          'Postpone an invoice due date, by UUID (id) or invoice number (number); pass exactly one. The new date must be later than the current due date and after today, so this cannot be undone with these tools. Rejected for closed, cancelled or paid invoices, invoices in debt collection, invoices that have already escalated, invoices whose first or second reminder waiting period has passed, or with an outstanding fee. Triggers the client webhook invoiceDueDatePostponed. Returns whether it was updated, plus the invoice number, due date, stage and status read back after the change. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          id: 'Invoice UUID',
+          number: 'Business invoice number, e.g. INV-1001',
+          dueDate: 'New due date, YYYY-MM-DD, later than the current due date',
+          reason: 'Why the due date is postponed, 1-100 characters',
+        },
+      },
+      update_invoice_stop_until_dates: {
+        title: 'Update invoice stop-until dates',
+        description:
+          'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          id: 'Invoice UUID',
+          number: 'Business invoice number, e.g. INV-1001',
+          reason: 'Why escalation is held back, 1-255 characters',
+          ...stopInputs,
+        },
+      },
+    });
+  });
+
+  it('keeps every read tool read-only when writes are enabled', async () => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true });
+    const { tools } = await client.listTools();
+    for (const tool of tools.filter((t) => TOOLS.includes(t.name))) {
+      expect(tool.annotations?.readOnlyHint).toBe(true);
+    }
+  });
+});
+
 describe('createServer request timeout wiring', () => {
   /** Rejects with a TimeoutError, but only when a real AbortSignal was passed. */
   function timingOutFetch(hangOn: (url: string) => boolean) {
