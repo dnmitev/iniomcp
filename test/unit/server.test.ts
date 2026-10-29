@@ -355,11 +355,29 @@ describe('createServer', () => {
 describe('write gate', () => {
   const WRITE_TOOLS = [
     'cancel_customer_pause',
+    'create_credit_invoice',
     'create_customer_pause',
+    'match_credit_invoice',
+    'reset_invoice_stage',
+    'update_customer',
     'update_customer_pause',
     'update_invoice_due_date',
     'update_invoice_stop_until_dates',
   ];
+
+  // Their exact text is pinned in the per-tool unit tests; here only the gate wording.
+  const CREDIT_TOOLS = ['create_credit_invoice', 'match_credit_invoice'];
+
+  it.each(['create_credit_invoice', 'match_credit_invoice', 'reset_invoice_stage'])(
+    'says in the %s description that it cannot be undone with these tools',
+    async (name) => {
+      const { client } = await connect({ ...CONFIG, allowWrites: true });
+      const { tools } = await client.listTools();
+      expect(tools.find((t) => t.name === name)?.description).toContain(
+        'cannot be undone with these tools',
+      );
+    },
+  );
 
   it('lists exactly the 7 read tools when allowWrites is false', async () => {
     const { client } = await connect({ ...CONFIG, allowWrites: false });
@@ -375,10 +393,10 @@ describe('write gate', () => {
     expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
   });
 
-  it('lists the 5 write tools besides the 7 read tools when allowWrites is true', async () => {
+  it('lists the write tools besides the 7 read tools when allowWrites is true', async () => {
     const { client } = await connect({ ...CONFIG, allowWrites: true });
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(12);
+    expect(tools).toHaveLength(16);
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...WRITE_TOOLS].sort());
   });
 
@@ -401,7 +419,7 @@ describe('write gate', () => {
     const { tools } = await client.listTools();
     const meta = Object.fromEntries(
       tools
-        .filter((t) => WRITE_TOOLS.includes(t.name))
+        .filter((t) => WRITE_TOOLS.includes(t.name) && !CREDIT_TOOLS.includes(t.name))
         .map((t) => [
           t.name,
           {
@@ -467,6 +485,41 @@ describe('write gate', () => {
           number: 'Business invoice number, e.g. INV-1001',
           dueDate: 'New due date, YYYY-MM-DD, later than the current due date',
           reason: 'Why the due date is postponed, 1-100 characters',
+        },
+      },
+      update_customer: {
+        title: 'Update customer',
+        description:
+          'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          id: 'Customer UUID',
+          number: 'Business customer number, e.g. C-1001',
+          customerName: 'New customer name, 2-100 characters',
+          distributionEmailAddress: 'Primary distribution email address, or null to clear',
+          distributionEmailAddress2: 'Second distribution email address, or null to clear',
+          distributionEmailAddress3: 'Third distribution email address, or null to clear',
+          mobilePhoneNo:
+            'Mobile phone number in international format, e.g. +46701234567, or null to clear',
+          languageCode: 'Language: EN, SV, BG or DE, or null to clear',
+          customerAddress:
+            'Address fields to change, the rest is kept: countryCode, city, zipCode, addressLine1, addressLine2-5 (null clears addressLine2-5)',
+          shippingAddress:
+            'Shipping address fields to change, same shape as customerAddress, or null to remove the shipping address',
+        },
+      },
+      reset_invoice_stage: {
+        title: 'Reset invoice stage',
+        description:
+          'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        inputs: {
+          id: 'Invoice UUID',
+          number:
+            'Business invoice number, e.g. INV-1001; looked up first, so this makes two API calls',
+          targetStage: 'Stage to return to: invoiced (needs dueDate) or reminded',
+          reason: 'Why the stage is reset, 1-100 characters',
+          redistribute: 'true re-sends the invoice or reminder to the end customer; default false',
+          dueDate:
+            'New due date, YYYY-MM-DD, after today; required for invoiced, not allowed for reminded',
         },
       },
       update_invoice_stop_until_dates: {

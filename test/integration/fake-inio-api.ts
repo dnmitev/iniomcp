@@ -34,6 +34,11 @@ export const CONFLICT_CUSTOMER_ID = '00000000-0000-4000-8000-0000000000c9';
 export const CREATED_PAUSE_ID = '00000000-0000-4000-8000-000000000030';
 export const CONFLICT_MESSAGE = 'Pause overlaps an existing pause';
 
+export const CREDIT_INVOICE_ID = '00000000-0000-4000-8000-000000000040';
+export const CREDIT_INVOICE_NO = 'CR-1001';
+export const CREDIT_PAYMENT_REFERENCE = '1234567';
+export const RESET_WORKFLOW_ID = 'wf-reset-example';
+
 export interface RecordedRequest {
   method: string;
   url: string;
@@ -108,6 +113,14 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
         .catch({})
         .parse(raw === '' ? {} : JSON.parse(raw));
       const pause = pauses[0] ?? {};
+      if (v1 === 'v1' && root === 'customers' && method === 'PATCH') {
+        const byNo = a === 'by-number';
+        const key = byNo ? b : a;
+        const rest = byNo ? c : b;
+        if (rest === undefined && key === (byNo ? customerNo : customerId)) {
+          return ok([{ ...customer, ...body }]);
+        }
+      }
       if (v1 === 'v1' && root === 'customers' && b === 'pauses') {
         if (method === 'POST' && c === undefined) {
           if (a === CONFLICT_CUSTOMER_ID) {
@@ -155,6 +168,40 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
             dueDate = body.dueDate;
             return ok('Success');
           }
+          if (action === 'reset-stage' && !byNo) {
+            return ok({
+              targetStage: body.targetStage,
+              dueDate: body.dueDate ?? null,
+              plannedSteps: ['waive-fees', 'restart-workflow'],
+              feeWaiveAmount: 0,
+              feePaidKept: 0,
+              willWaiveOutstandingFee: false,
+              willRedistribute: body.redistribute,
+              willReRunSetup: true,
+              workflowId: RESET_WORKFLOW_ID,
+            });
+          }
+          if (action === 'credit-invoice') {
+            return send(201, {
+              success: true,
+              status: 201,
+              correlationId: 'it-ok',
+              result: {
+                id: CREDIT_INVOICE_ID,
+                invoiceNo: body.invoiceNo,
+                paymentReference: CREDIT_PAYMENT_REFERENCE,
+                creditInvoiceItems: z
+                  .array(z.record(z.string(), z.unknown()))
+                  .catch([])
+                  .parse(body.invoiceItems)
+                  .map((item, i) => ({
+                    id: `00000000-0000-4000-8000-00000000005${i}`,
+                    ...item,
+                  })),
+              },
+            });
+          }
+          if (action === 'match-credit-invoice') return ok(CREDIT_INVOICE_ID);
           if (action === 'update-stop-until-dates') {
             stopMetadata = {
               ...stopMetadata,

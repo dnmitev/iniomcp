@@ -3,9 +3,10 @@
 //
 //   npm run smoke:writes -- <customerNo> [invoiceNo]
 //
-// Changes data in the Inio environment from .env: creates, updates and cancels a reminders pause
-// 30-45 days ahead for the customer, and, with an invoice, sets and clears a stop-until date.
-// Never postpones a due date (irreversible). Prints statuses and error codes only, no personal data.
+// Changes data in the Inio environment from .env: renames the customer and restores the name,
+// creates, updates and cancels a reminders pause 30-45 days ahead for the customer, and, with an
+// invoice, sets and clears a stop-until date. Never postpones a due date, resets a stage or
+// creates credits (irreversible, or reaching the end customer). Prints statuses and error codes only, no personal data.
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
@@ -51,6 +52,8 @@ const maybeApplied = (r) => r.isError && r.text.includes('may or may not have be
 
 await client.connect(transport);
 let customerId;
+let originalName;
+let nameChanged = false;
 let pauseId;
 let pauseCancelled = false;
 let stopUntilSet = false;
@@ -69,6 +72,37 @@ try {
     !customer.isError && typeof customerId === 'string',
     customer.isError ? errorOf(customer) : '',
   );
+
+  originalName = customer.json?.customer?.customerName;
+  if (customerId && (typeof originalName !== 'string' || originalName.length > 90)) {
+    // Never rename what cannot be restored exactly (missing, or no room for the suffix).
+    console.log('skip update_customer (original name cannot be restored)');
+  } else if (customerId) {
+    // Any rename error may hide an applied change, so restore unless a restore is confirmed.
+    nameChanged = true;
+    const renamed = await call('update_customer', {
+      id: customerId,
+      customerName: `${originalName} (smoke)`,
+    });
+    check(
+      'update_customer',
+      !renamed.isError && renamed.json?.customerName === `${originalName} (smoke)`,
+      renamed.isError ? errorOf(renamed) : '',
+    );
+    if (!renamed.isError) {
+      const restored = await call('update_customer', {
+        id: customerId,
+        customerName: originalName,
+      });
+      // Any failed restore leaves the name possibly changed, so the finally block retries it.
+      nameChanged = restored.isError;
+      check(
+        'update_customer restored',
+        !restored.isError && restored.json?.customerName === originalName,
+        restored.isError ? errorOf(restored) : '',
+      );
+    }
+  }
 
   if (customerId) {
     const created = await call('create_customer_pause', {
@@ -162,6 +196,10 @@ try {
     }
   }
 } finally {
+  if (customerId && nameChanged) {
+    const cleanup = await call('update_customer', { id: customerId, customerName: originalName });
+    check('cleanup update_customer', !cleanup.isError, cleanup.isError ? errorOf(cleanup) : '');
+  }
   if (invoiceNo && stopUntilSet) {
     const cleanup = await call('update_invoice_stop_until_dates', {
       number: invoiceNo,

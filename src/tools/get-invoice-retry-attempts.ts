@@ -2,8 +2,16 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../auth.ts';
-import { EXACTLY_ONE_REF, exactlyOneRef, InvoiceRef, invoicePath } from './invoice-ref.ts';
-import { compact, errorText, fail, ok, presentRaw } from './result.ts';
+import { InvoiceRef, invoicePath } from './invoice-ref.ts';
+import {
+  compact,
+  errorText,
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  fail,
+  ok,
+  presentRaw,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };

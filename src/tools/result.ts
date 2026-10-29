@@ -58,6 +58,13 @@ export function present(value: unknown, revealPii: boolean): string {
   return presentRaw(compact(value), revealPii);
 }
 
+/** Refine check and message for tools addressed by id or number: exactly one of the two. */
+export const exactlyOneRef = (a: {
+  id?: string | undefined;
+  number?: string | undefined;
+}): boolean => (a.id === undefined) !== (a.number === undefined);
+export const EXACTLY_ONE_REF = { message: 'Provide exactly one of id or number.' };
+
 /** A real calendar date as YYYY-MM-DD (zod's ISO date checks month lengths and leap years). */
 export const IsoDate = z.iso.date();
 
