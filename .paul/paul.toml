@@ -17,11 +17,13 @@ phases = 5
 [phase]
 number = 4
 name = "Write tools (opt-in)"
-status = "not_started"
+status = "in_progress"
 plans_completed = 0
 
 [loop]
-position = "IDLE"
+position = "PLAN"
+plan = "04-01"
+plan_path = "phases/04-write-tools/04-01-PLAN.md"
 
 [satellite]
 groom = true
