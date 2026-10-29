@@ -17,20 +17,20 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 
 Milestone: v0.1 Initial Release
 Phase: 4 of 5 (Write tools, opt-in) — In progress
-Plan: 04-01 approved
-Status: Applying 04-01
-Last activity: 2026-10-29 — created .paul/phases/04-write-tools/04-01-PLAN.md (+ 04-API-NOTES.md)
+Plan: 04-01 complete (1 of 3)
+Status: Ready for next PLAN (04-02)
+Last activity: 2026-10-29 — 04-01 unified (5 write tools, verified live and in Claude Desktop)
 
 Progress:
-- Milestone: [██████░░░░] 60%
-- Phase 4: [░░░░░░░░░░] 0%
+- Milestone: [██████▒░░░] 67%
+- Phase 4: [███░░░░░░░] 33%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◉        ○     [Applying]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -80,6 +80,7 @@ See PROJECT.md Key Decisions.
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
 - Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
+- Phase 4: Public API has no role checks; anything enabled is allowed. Reset stage / credit invoices can re-send to end customers and waive fees (04-02).
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
@@ -89,9 +90,9 @@ Releases: v0.1.1, v0.1.2 (npm latest 0.1.2)
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 04-01 created
-Next action: Continue /paul:apply .paul/phases/04-write-tools/04-01-PLAN.md
-Resume file: .paul/phases/04-write-tools/04-01-PLAN.md
+Stopped at: 04-01 loop closed
+Next action: Push feat/phase-4-plan and open PR, then /paul:plan for 04-02
+Resume file: .paul/phases/04-write-tools/04-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*
