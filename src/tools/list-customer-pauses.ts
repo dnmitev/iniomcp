@@ -5,7 +5,7 @@ import { noopLogger, type Logger } from '../auth.ts';
 import { compact, errorText, fail, ok, presentRaw } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
 
 const Input = z.strictObject({
   customerId: z.uuid().describe('Customer UUID'),

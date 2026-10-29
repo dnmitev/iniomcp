@@ -26,7 +26,7 @@ npx -y @dnmitev/inio-mcp
 | `INIO_LOG_LEVEL`          | no       | `info`  | `fatal` … `trace`, or `silent`                                                                                                                                                                                                            |
 | `INIO_REQUEST_TIMEOUT_MS` | no       | `30000` | Timeout per Inio API or token request, 1000–600000 ms. A timeout returns `TIMEOUT` (reported in whole seconds, rounded up). One tool call can take up to about 5 × this value + 5 s if a token refresh and a rate-limit retry both happen |
 | `MCP_TRANSPORT`           | no       | `stdio` | Only `stdio` is supported; HTTP comes in a later release                                                                                                                                                                                  |
-| `INIO_ALLOW_WRITES`       | no       | `false` | Reserved for write tools (none yet)                                                                                                                                                                                                       |
+| `INIO_ALLOW_WRITES`       | no       | `false` | `true` registers the write tools (see below); off by default                                                                                                                                                                              |
 
 ### Claude Desktop
 
@@ -140,6 +140,20 @@ Options on the detail tools:
 
 If the Inio API rate-limits a request (HTTP 429), the server waits for `Retry-After` (at most 5 s) and retries once; a second 429 is returned as `RATE_LIMITED`.
 
+## Write tools (opt-in)
+
+Write tools are registered only when the server runs with `INIO_ALLOW_WRITES=true`. They are marked as destructive, so MCP clients can ask you to confirm each call (Claude Desktop does unless you allow the tool permanently). Every write is recorded in Inio's audit fields as `inio-mcp`. The Inio API has no roles for API clients: with writes enabled, anything these tools can do is allowed for your credentials.
+
+| Tool                              | What it changes                                                                                                       | Undo                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `create_customer_pause`           | Pauses reminders and/or debt-collection transfers for a customer from a future date                                   | Cancel the pause                                               |
+| `update_customer_pause`           | Changes a pause's dates or scope (active pauses: end date only)                                                       | Update it again                                                |
+| `cancel_customer_pause`           | Cancels a scheduled or active pause                                                                                   | **Cannot be undone**; create a new one                         |
+| `update_invoice_due_date`         | Postpones an invoice's due date; sends the `invoiceDueDatePostponed` webhook to your systems                          | **Cannot be undone** (postpone only)                           |
+| `update_invoice_stop_until_dates` | Sets or clears the dates until which reminders and debt-collection steps are held back (needs the stop-until feature) | Set it again or clear it (null); the previous date is not kept |
+
+If a write times out, the change may or may not have been applied: check the customer or invoice before trying again.
+
 ## Logs
 
 The server writes JSON log lines to stderr (stdout carries the MCP protocol). Claude Desktop saves them to `~/Library/Logs/Claude/mcp-server-inio.log`. Each tool call logs its duration, outcome and approximate token cost (`approxTokens`); set `INIO_LOG_LEVEL=debug` to also see every API call and token refresh. Secrets and tokens are never logged.
@@ -148,16 +162,17 @@ The server writes JSON log lines to stderr (stdout carries the MCP protocol). Cl
 
 To run from source, clone the repository, run `npm ci && npm run build`, and point your client at `node /absolute/path/to/iniomcp/dist/index.js`.
 
-| Command                              | Purpose                                                                                                        |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`                        | Run the server from source with Node's watch mode                                                              |
-| `npm run inspect`                    | Open the server in the MCP Inspector                                                                           |
-| `npm test`                           | Unit tests                                                                                                     |
-| `npm run test:integration`           | Builds, then tests the built server against a Keycloak container and a fake Inio API (needs Docker)            |
-| `npm run test:package`               | Packs the npm package, installs it into a temp project and checks the installed server                         |
-| `npm run test:live`                  | Opt-in tests against a real Inio environment: set `INIO_LIVE=1` and the `INIO_*` variables (or a local `.env`) |
-| `npm run mutation`                   | Mutation testing (Stryker)                                                                                     |
-| `npm run lint` / `npm run typecheck` | oxlint (type-aware) + Prettier / TypeScript 7                                                                  |
+| Command                                            | Purpose                                                                                                                                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                                      | Run the server from source with Node's watch mode                                                                                                                                                       |
+| `npm run inspect`                                  | Open the server in the MCP Inspector                                                                                                                                                                    |
+| `npm test`                                         | Unit tests                                                                                                                                                                                              |
+| `npm run test:integration`                         | Builds, then tests the built server against a Keycloak container and a fake Inio API (needs Docker)                                                                                                     |
+| `npm run test:package`                             | Packs the npm package, installs it into a temp project and checks the installed server                                                                                                                  |
+| `npm run test:live`                                | Opt-in tests against a real Inio environment: set `INIO_LIVE=1` and the `INIO_*` variables (or a local `.env`)                                                                                          |
+| `npm run smoke:writes -- <customerNo> [invoiceNo]` | Live check of the write tools for a customer (and invoice) you name: creates, updates and cancels a pause 30–45 days ahead, sets and clears a stop-until date. Changes data; never postpones a due date |
+| `npm run mutation`                                 | Mutation testing (Stryker)                                                                                                                                                                              |
+| `npm run lint` / `npm run typecheck`               | oxlint (type-aware) + Prettier / TypeScript 7                                                                                                                                                           |
 
 ## License
 

@@ -1,12 +1,15 @@
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { present } from '../../src/tools/result.ts';
 import {
+  CONFLICT_CUSTOMER_ID,
+  CONFLICT_MESSAGE,
+  CREATED_PAUSE_ID,
   customer,
   INHERITED_BANK,
   INHERITED_FEE_DATE,
@@ -90,7 +93,7 @@ async function spawnServer(env: Partial<Record<string, string>> = {}) {
     expect(content).toHaveLength(1);
     return { isError: result.isError === true, text: content[0]?.text ?? '' };
   };
-  return { call, stderr: () => stderrs[index] ?? '' };
+  return { call, client, stderr: () => stderrs[index] ?? '' };
 }
 
 const Jwt = z.object({ iss: z.string(), azp: z.string() });
@@ -381,6 +384,236 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       'RATE_LIMITED: The Inio API rate limit was reached. Try again in 1 s.',
     );
     expect(urlsSince(before)).toHaveLength(2);
+  });
+
+  describe('write tools', () => {
+    const WRITE_TOOLS = [
+      'cancel_customer_pause',
+      'create_customer_pause',
+      'update_customer_pause',
+      'update_invoice_due_date',
+      'update_invoice_stop_until_dates',
+    ];
+    const READ_TOOLS = [
+      'get_customer',
+      'get_customer_pause',
+      'get_invoice',
+      'get_invoice_retry_attempts',
+      'list_customer_pauses',
+      'list_customers',
+      'list_invoices',
+    ];
+    const WRITES = { INIO_ALLOW_WRITES: 'true' };
+    const NO = String(invoice.invoiceNo);
+
+    afterEach(() => {
+      api.resetWrites();
+    });
+
+    function sent(before: number) {
+      return api.requests
+        .slice(before)
+        .map(({ method, url, body, userRealName }) => ({ method, url, body, userRealName }));
+    }
+
+    const Pause = z.object({
+      id: z.string(),
+      status: z.string(),
+      endAt: z.string().optional(),
+      createdBy: z.string().optional(),
+    });
+
+    it('lists the 7 read tools only when INIO_ALLOW_WRITES is not set', async () => {
+      const { client } = await spawnServer();
+      const { tools } = await client.listTools();
+      expect(tools.map((t) => t.name).sort()).toEqual(READ_TOOLS);
+    });
+
+    it('lists the 7 read tools only when INIO_ALLOW_WRITES is false', async () => {
+      const { client } = await spawnServer({ INIO_ALLOW_WRITES: 'false' });
+      const { tools } = await client.listTools();
+      expect(tools.map((t) => t.name).sort()).toEqual(READ_TOOLS);
+    });
+
+    it('lists 12 tools when INIO_ALLOW_WRITES=true', async () => {
+      const { client } = await spawnServer(WRITES);
+      const { tools } = await client.listTools();
+      expect(tools).toHaveLength(12);
+      expect(tools.map((t) => t.name).sort()).toEqual([...READ_TOOLS, ...WRITE_TOOLS].sort());
+    });
+
+    it('create_customer_pause posts the pause and returns it without temporalWorkflowId', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const args = {
+        customerId: CUSTOMER_ID,
+        scope: 'reminders',
+        startAt: '2026-12-01',
+        endAt: '2026-12-31',
+        reason: 'Payment plan',
+      };
+      const result = await call(args, 'create_customer_pause');
+      expect(result.isError).toBe(false);
+      const { customerId: _c, ...body } = args;
+      expect(sent(before)).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/customers/${CUSTOMER_ID}/pauses`,
+          body: JSON.stringify(body),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      const pause = Pause.parse(JSON.parse(result.text));
+      expect(pause).toMatchObject({ id: CREATED_PAUSE_ID, status: 'scheduled' });
+      expect(result.text).not.toContain('temporalWorkflowId');
+      expect(result.text).not.toContain('agent@inio.example');
+      expect(pause.createdBy).toBe('[redacted-email]');
+    });
+
+    it('create_customer_pause shows API field errors end to end', async () => {
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        {
+          customerId: CONFLICT_CUSTOMER_ID,
+          scope: 'both',
+          startAt: '2026-12-01',
+          reason: 'Overlap',
+        },
+        'create_customer_pause',
+      );
+      expect(result).toEqual({
+        isError: true,
+        text: `CONFLICT: ${CONFLICT_MESSAGE} (correlationId it-409) Fields: startAt: Overlaps pause 2026-11-01`,
+      });
+    });
+
+    it('update_customer_pause patches only the given fields and returns the pause', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { customerId: CUSTOMER_ID, pauseId: PAUSE_ID, endAt: '2027-01-15', reason: 'Extended' },
+        'update_customer_pause',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before)).toEqual([
+        {
+          method: 'PATCH',
+          url: `/v1/customers/${CUSTOMER_ID}/pauses/${PAUSE_ID}`,
+          body: JSON.stringify({ endAt: '2027-01-15', reason: 'Extended' }),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      expect(Pause.parse(JSON.parse(result.text))).toMatchObject({
+        id: PAUSE_ID,
+        endAt: '2027-01-15',
+      });
+      expect(result.text).not.toContain('temporalWorkflowId');
+    });
+
+    it('cancel_customer_pause posts the reason and returns the cancelled pause', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { customerId: CUSTOMER_ID, pauseId: PAUSE_ID, reason: 'No longer needed' },
+        'cancel_customer_pause',
+      );
+      expect(result.isError).toBe(false);
+      expect(sent(before)).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/customers/${CUSTOMER_ID}/pauses/${PAUSE_ID}/cancel`,
+          body: JSON.stringify({ reason: 'No longer needed' }),
+          userRealName: 'inio-mcp',
+        },
+      ]);
+      expect(Pause.parse(JSON.parse(result.text))).toMatchObject({
+        id: PAUSE_ID,
+        status: 'cancelled',
+      });
+    });
+
+    it('update_invoice_due_date posts by number, reads back, and reports the new date', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { number: NO, dueDate: '2026-12-15', reason: 'Customer request' },
+        'update_invoice_due_date',
+      );
+      expect(result).toEqual({
+        isError: false,
+        text: present(
+          {
+            updated: true,
+            invoice: NO,
+            requestedDueDate: '2026-12-15',
+            invoiceNo: NO,
+            dueDate: '2026-12-15',
+            stage: invoice.stage,
+            status: invoice.status,
+          },
+          false,
+        ),
+      });
+      expect(sent(before)).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/invoices/by-number/${encodeURIComponent(NO)}/update-due-date`,
+          body: JSON.stringify({ dueDate: '2026-12-15', updateReason: 'Customer request' }),
+          userRealName: 'inio-mcp',
+        },
+        {
+          method: 'GET',
+          url: `/v1/invoices/by-number/${encodeURIComponent(NO)}`,
+          body: '',
+          userRealName: undefined,
+        },
+      ]);
+    });
+
+    it('update_invoice_stop_until_dates posts by id, reads back, and reports the dates', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      const result = await call(
+        { id: String(invoice.id), reason: 'Dispute', invoicing1: '2027-03-01' },
+        'update_invoice_stop_until_dates',
+      );
+      expect(result).toEqual({
+        isError: false,
+        text: present(
+          {
+            updated: true,
+            invoice: String(invoice.id),
+            invoiceNo: NO,
+            stopUntilDates: { invoicing1StopUntilDate: '2027-03-01' },
+          },
+          false,
+        ),
+      });
+      expect(sent(before)).toEqual([
+        {
+          method: 'POST',
+          url: `/v1/invoices/${String(invoice.id)}/update-stop-until-dates`,
+          body: JSON.stringify({
+            metadata: { invoicing1StopUntilDate: '2027-03-01' },
+            escalationStopReason: 'Dispute',
+          }),
+          userRealName: 'inio-mcp',
+        },
+        {
+          method: 'GET',
+          url: `/v1/invoices/${String(invoice.id)}`,
+          body: '',
+          userRealName: undefined,
+        },
+      ]);
+    });
+
+    it('does not send the audit header on read requests', async () => {
+      const before = api.requests.length;
+      const { call } = await spawnServer(WRITES);
+      await call({ id: String(invoice.id) }, 'get_invoice');
+      expect(sent(before).map((r) => r.userRealName)).toEqual([undefined]);
+    });
   });
 
   // Runs last: inspects stderr of every server spawned above.

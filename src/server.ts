@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { createTokenProvider, noopLogger, type Logger } from './auth.ts';
 import type { Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
+import { registerCancelCustomerPause } from './tools/cancel-customer-pause.ts';
+import { registerCreateCustomerPause } from './tools/create-customer-pause.ts';
 import { registerGetCustomer } from './tools/get-customer.ts';
 import { registerGetCustomerPause } from './tools/get-customer-pause.ts';
 import { registerGetInvoice } from './tools/get-invoice.ts';
@@ -11,6 +13,9 @@ import { registerGetInvoiceRetryAttempts } from './tools/get-invoice-retry-attem
 import { registerListCustomerPauses } from './tools/list-customer-pauses.ts';
 import { registerListCustomers } from './tools/list-customers.ts';
 import { registerListInvoices } from './tools/list-invoices.ts';
+import { registerUpdateCustomerPause } from './tools/update-customer-pause.ts';
+import { registerUpdateInvoiceDueDate } from './tools/update-invoice-due-date.ts';
+import { registerUpdateInvoiceStopUntilDates } from './tools/update-invoice-stop-until-dates.ts';
 
 // Read at runtime: a JSON import would sit outside rootDir and break the dist layout.
 export const { version } = z
@@ -45,5 +50,13 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
   registerGetCustomer(server, deps);
   registerListCustomerPauses(server, deps);
   registerGetCustomerPause(server, deps);
+  // Write tools exist only when explicitly enabled (INIO_ALLOW_WRITES=true).
+  if (config.allowWrites) {
+    registerCreateCustomerPause(server, deps);
+    registerUpdateCustomerPause(server, deps);
+    registerCancelCustomerPause(server, deps);
+    registerUpdateInvoiceDueDate(server, deps);
+    registerUpdateInvoiceStopUntilDates(server, deps);
+  }
   return server;
 }

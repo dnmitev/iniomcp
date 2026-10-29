@@ -17,8 +17,8 @@ phases = 5
 [phase]
 number = 4
 name = "Write tools (opt-in)"
-status = "not_started"
-plans_completed = 0
+status = "in_progress"
+plans_completed = 1
 
 [loop]
 position = "IDLE"
@@ -27,6 +27,6 @@ position = "IDLE"
 groom = true
 
 [stats]
-total_plans = 9
+total_plans = 10
 total_phases = 5
-last_activity = "2026-10-29T11:00:00Z"
+last_activity = "2026-10-29T17:00:00Z"

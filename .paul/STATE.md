@@ -16,14 +16,14 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 of 5 (Write tools, opt-in) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-29 — 0.1.2 released (request timeout, Node 26 image); 03-03 unified
+Phase: 4 of 5 (Write tools, opt-in) — In progress
+Plan: 04-01 complete (1 of 3)
+Status: Ready for next PLAN (04-02)
+Last activity: 2026-10-29 — 04-01 unified (5 write tools, verified live and in Claude Desktop)
 
 Progress:
-- Milestone: [██████░░░░] 60%
-- Phase 4: [░░░░░░░░░░] 0%
+- Milestone: [██████▒░░░] 67%
+- Phase 4: [███░░░░░░░] 33%
 
 ## Loop Position
 
@@ -59,6 +59,9 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: devops-reviewer agent (Sonnet) reviews all CI/CD and release changes | Phase 3 | Also for lead-written workflows |
 | 2026-10-29: Image on Node 26 LTS; npm engines >=24; CI on 24 and 26 | Phase 3 | Dependabot skips node/@types/node majors |
 | 2026-10-29: Request timeout 30 s default (INIO_REQUEST_TIMEOUT_MS) | Phase 3 | MCP clients time out at ~60 s |
+| 2026-10-29: Phase 4 order low-risk first (pauses, dates → customer/reset/credit → create/payments) | Phase 4 | 3 plans |
+| 2026-10-29: Write safety = INIO_ALLOW_WRITES + annotations + echo; no confirm flag | Phase 4 | Clients confirm via destructiveHint |
+| 2026-10-29: Live write checks via `npm run smoke:writes -- <customerNo> [invoiceNo]`; identifiers from the conversation, not env | Phase 4 | Never in release gate; self-cleaning |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -77,18 +80,19 @@ See PROJECT.md Key Decisions.
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
 - Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
+- Phase 4: Public API has no role checks; anything enabled is allowed. Reset stage / credit invoices can re-send to end customers and waive fees (04-02).
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: docs/03-03-unify
-Releases: v0.1.1, v0.1.2 (npm latest 0.1.2, GHCR 0.1.2/0.1/latest)
+Branch: feat/phase-4-plan
+Releases: v0.1.1, v0.1.2 (npm latest 0.1.2)
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: 03-03 loop closed, 0.1.2 released
-Next action: Merge docs/03-03-unify PR, then /paul:plan for Phase 4
-Resume file: .paul/ROADMAP.md
+Stopped at: 04-01 loop closed
+Next action: Push feat/phase-4-plan and open PR, then /paul:plan for 04-02
+Resume file: .paul/phases/04-write-tools/04-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*

@@ -23,7 +23,7 @@ Phases: 3 of 5 complete
 | 1 | Foundation and walking skeleton | 3/3 | ✅ Complete | 2026-10-28 |
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
 | 3 | Packaging and release | 3/3 | ✅ Complete | 2026-10-29 |
-| 4 | Write tools (opt-in) | TBD | 🔵 Next | - |
+| 4 | Write tools (opt-in) | 1/3 | In progress | - |
 | 5 | HTTP hardening | TBD | Not started | - |
 
 ## Phase Details
@@ -73,7 +73,12 @@ Phases: 3 of 5 complete
 
 **Goal:** Clients who opt in can act on their data from the assistant.
 **Depends on:** Phase 3
-**Research:** Unlikely
+**Research:** Done (04-API-NOTES.md)
+
+**Plans:**
+- [x] 04-01: Write plumbing + customer pauses + invoice due date / stop-until dates
+- [ ] 04-02: Update customer, reset invoice stage, credit invoices
+- [ ] 04-03: Create customers/invoices, payments and reversal
 
 ### Phase 5: HTTP hardening
 

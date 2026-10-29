@@ -9,7 +9,8 @@ const SENSITIVE_KEYS = new Set([
 ]);
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 
-function isSensitiveKey(key: string): boolean {
+/** True for keys whose values are personal data, matched case-insensitively. */
+export function isSensitiveKey(key: string): boolean {
   const k = key.toLowerCase();
   return (
     SENSITIVE_KEYS.has(k) ||
