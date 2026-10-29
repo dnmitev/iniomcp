@@ -11,26 +11,26 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-28)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.1 — Phase 3 Packaging and release
+**Current focus:** v0.1 — Phase 4 Write tools (opt-in)
 
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 3 of 5 (Packaging and release) — In progress
-Plan: 03-02 approved
-Status: Applying 03-02
-Last activity: 2026-10-29 — 0.1.1-rc.1 released by CI (npm next with provenance, GHCR amd64/arm64, GitHub pre-release)
+Phase: 4 of 5 (Write tools, opt-in) — Not started
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-29 — 0.1.1 released; Phase 3 complete, transitioned to Phase 4
 
 Progress:
-- Milestone: [█████░░░░░] 50%
-- Phase 3: [█████░░░░░] 50%
+- Milestone: [██████░░░░] 60%
+- Phase 4: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◉        ○     [Applying]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -79,15 +79,16 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: feat/03-02-release
-Feature branches merged: PR #3 (d6af7bf), PR #4 (e8acb80), PR #5 (fa88562), PR #6 (f56ec05), PR #7 (efffde8)
+Branch: docs/phase-3-complete
+Releases: v0.1.1-rc.1, v0.1.1 (npm latest 0.1.1, GHCR 0.1.1/0.1/latest)
+Feature branches merged: PRs #3-#8, #16, #17
 
 ## Session Continuity
 
 Last session: 2026-10-28
-Stopped at: Plan 03-02 created
-Next action: Continue /paul:apply .paul/phases/03-packaging-release/03-02-PLAN.md
-Resume file: .paul/phases/03-packaging-release/03-02-PLAN.md
+Stopped at: Phase 3 complete (0.1.1 released)
+Next action: Merge docs/phase-3-complete PR; triage Dependabot PRs #9-#15; then /paul:plan for Phase 4
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*
