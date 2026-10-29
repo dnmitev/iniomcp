@@ -9,6 +9,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # The runtime stays on the Node 24 LTS line; a major Node upgrade is a deliberate change.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /
@@ -17,3 +21,7 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Types follow the runtime (Node 24, engines >=24).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
