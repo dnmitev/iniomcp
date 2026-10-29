@@ -79,7 +79,7 @@ Phases: 3 of 5 complete
 - [x] 04-01: Write plumbing + customer pauses + invoice due date / stop-until dates
 - [x] 04-02: Update customer, reset invoice stage, credit invoices
 - [x] 04-03: create_payment (curated types, explicit full payment)
-- [ ] 04-04: create_customer; reverse_payment if the allocation-id probe works; create_invoice reconsidered
+- [ ] 04-04: create_customer (reverse_payment and create_invoice out of v0.1)
 
 ### Phase 5: HTTP hardening
 
