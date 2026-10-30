@@ -11,26 +11,25 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.1 milestone complete (0.3.1) — ready to close the milestone
+**Current focus:** Awaiting next milestone (v0.1 complete, 0.3.1)
 
 ## Current Position
 
-Milestone: v0.1 Initial Release
-Phase: 5 of 5 (HTTP hardening) — Complete
-Plan: 05-03 complete
-Status: Milestone complete; ready for /paul:complete-milestone
-Last activity: 2026-10-30 — 05-03 unified; v0.3.1 released
+Milestone: Awaiting next milestone
+Phase: None active
+Plan: None
+Status: Milestone v0.1 Initial Release complete — ready for next
+Last activity: 2026-10-30 — Milestone completed
 
 Progress:
-- Milestone: [██████████] 100%
-- Phase 5: [██████████] 100%
+- v0.1 Initial Release: [██████████] 100% ✓
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - milestone complete]
+  ○        ○        ○     [Milestone complete - ready for next]
 ```
 
 ## Accumulated Context
@@ -105,15 +104,15 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/05-03-unify (main 9738aca; tags v0.3.0, v0.3.1)
+Branch: paul/milestone-v0.1 (main 736b6a0); milestone tag milestone-v0.1 (local, not pushed)
 Releases: v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
 
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Phase 5 complete (3 plans), v0.1 milestone complete; v0.3.1 released and verified
-Next action: /paul:complete-milestone (v0.1)
-Resume file: .paul/phases/05-http-hardening/05-03-SUMMARY.md
+Stopped at: Milestone v0.1 Initial Release complete
+Next action: /paul:discuss-milestone or /paul:milestone
+Resume file: .paul/MILESTONES.md
 Resume context:
 - 0.3.1 on npm latest + GHCR + GitHub Release (stdio and shared HTTP server, 18 tools with writes on)
 

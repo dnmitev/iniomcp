@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.3.1 |
-| Status | v0.1 milestone complete; 0.3.1 released |
+| Status | v0.1 complete (0.3.1); next milestone not defined |
 | Last Updated | 2026-10-30 |
 
 ## Requirements
@@ -58,7 +58,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - None (v0.1 milestone complete)
 
 ### Planned (Next)
-- Close the v0.1 milestone; move to the `@inio` npm scope when the org exists
+- Move to the `@inio` npm scope and the company GitHub org when they exist
 - Per-user tokens or MCP OAuth for the HTTP server, only if teams ask
 
 ### Out of Scope
@@ -66,7 +66,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - Bulk `PATCH /customers` and `PUT` variants — PATCH covers updates; bulk LLM updates too risky
 - Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard
 - `reverse_payment` — the public API exposes no paymentAllocationId (payment id is not one; live probe 2026-10-29)
-- `create_invoice` in v0.1 — sends to the end customer at once and needs full calcInput
+- `create_invoice` in v0.1 — sends to the end customer at once and needs full calcInput (revisit after usage)
+- Health endpoint for HTTP mode — would be the only unauthenticated route; discovered during v0.1 (add if an orchestrator needs it)
 - `credit_loss`/`cancelled` payments and other non-curated transaction types — until asked for
 
 ## Target Users
@@ -130,7 +131,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Mutation score | ≥ 80 break, 90 target | 99.1% | On track |
+| Mutation score | ≥ 80 break, 90 target | ≥ 90 on every changed file through v0.1 | Met |
 | Unit + integration tests | all green in CI | 1788 unit + 47 integration + 11 Docker green | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
 | Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); 0.3.1 published with provenance | Met |
@@ -159,4 +160,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-30 after Phase 5*
+*Last updated: 2026-10-30 after v0.1 Initial Release*
