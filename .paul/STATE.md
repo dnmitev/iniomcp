@@ -110,10 +110,12 @@ Releases: v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Milestone v0.1 Initial Release complete
-Next action: /paul:discuss-milestone or /paul:milestone
-Resume file: .paul/MILESTONES.md
+Stopped at: Milestone v0.1 complete; AEGIS targeted audit (domains 00/01/04/05) paused after Phase 4
+Next action: /aegis:resume (resolve D-001..D-007, Phase 5 report), then /paul:discuss-milestone with audit findings as input
+Resume file: .aegis/STATE.md (local, git-ignored)
 Resume context:
+- AEGIS so far: 29 findings (high 2, medium 9, low 14, info 2, + 2 P0 medium); key: F-05-001 redaction gap (names/orgNr reach LLM), F-04-001 injection into writes, F-04-007 unauthenticated 4 MB body buffering before auth (HTTP DoS), F-00-003 8/11 write tools report false failures
+- Next milestone scope ideas: per-user tokens, INIO_REVEAL_LINKS, get_invoice opt-in, MCP OAuth (separate Keycloak realm OK), business one-pager, audit remediations
 - 0.3.1 on npm latest + GHCR + GitHub Release (stdio and shared HTTP server, 18 tools with writes on)
 
 ---
