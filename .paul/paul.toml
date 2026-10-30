@@ -21,7 +21,9 @@ status = "in_progress"
 plans_completed = 1
 
 [loop]
-position = "IDLE"
+position = "PLAN"
+plan = "05-02"
+plan_path = "phases/05-http-hardening/05-02-PLAN.md"
 
 [satellite]
 groom = true
@@ -29,4 +31,4 @@ groom = true
 [stats]
 total_plans = 14
 total_phases = 5
-last_activity = "2026-10-30T15:10:00Z"
+last_activity = "2026-10-30T15:40:00Z"
