@@ -19,9 +19,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.2.0 |
-| Status | Phase 4 complete; 0.2.0 released (write tools) |
-| Last Updated | 2026-10-29 |
+| Version | 0.3.0 |
+| Status | 0.3.0 released (shared HTTP server); 05-03 cleanup before milestone close |
+| Last Updated | 2026-10-30 |
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - Read tools: customers, customer pauses, invoices, invoice retry attempts (by id or number)
 - Opt-in write tools behind `INIO_ALLOW_WRITES` (customers, pauses, invoices, credit invoices, payments)
 - PII redaction by default (`INIO_REVEAL_PII` to disable)
-- Distributed as npm `@inio/mcp` (stdio) and a GHCR Docker image (stdio + Streamable HTTP)
+- Distributed as npm `@dnmitev/inio-mcp` (`@inio` later) and a GHCR Docker image, over stdio or Streamable HTTP
 
 ### Validated (Shipped)
 - ✓ `client_credentials` auth with token cache and refresh (tested against real Keycloak) — Phase 1
@@ -49,11 +49,15 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Opt-in write tools behind INIO_ALLOW_WRITES (10): customer pauses (create/update/cancel), invoice due date and stop-until dates, update_customer, reset_invoice_stage, create/match credit invoices, create_payment, create_customer — Phase 4
 - ✓ Writes attributed to `inio-mcp` in audit fields; accepted writes never reported as failed; uncertain outcomes tell the model to check before retrying — Phase 4
 
+- ✓ Shared HTTP server: `MCP_TRANSPORT=http` on `/mcp` behind a static bearer token (`MCP_AUTH_TOKEN`), Origin check, one Inio token shared across requests — Phase 5
+- ✓ Docker HTTP mode with graceful shutdown; README setup for Claude Code, Cursor and VS Code; 0.3.0 released — Phase 5
+
 ### Active (In Progress)
-- [ ] Phase 5: HTTP hardening
+- [ ] 05-03: deferred cleanup and release 0.3.1
 
 ### Planned (Next)
-- v0.1 milestone close after Phase 5; move to the `@inio` npm scope when the org exists
+- Close the v0.1 milestone; move to the `@inio` npm scope when the org exists
+- Per-user tokens or MCP OAuth for the HTTP server, only if teams ask
 
 ### Out of Scope
 - Internal MCP for dev/QA/business (DB access, internal services) — separate future project
@@ -106,7 +110,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | workflowsSettings opt-in via includeWorkflowSettings | Large, but answers stage distribution/fee questions | 2026-10-28 | Active |
 | QA and mutation-tester agents on Sonnet | Token cost; reviewer and mutation gate keep quality | 2026-10-28 | Active |
 | npm `@dnmitev/inio-mcp` (personal scope) until `@inio` exists | No company npm org yet | 2026-10-29 | Active |
-| 0.1.x stdio only; HTTP with auth in Phase 5 | Never expose an unauthenticated HTTP endpoint | 2026-10-29 | Active |
+| 0.1.x stdio only; HTTP with auth in Phase 5 | Never expose an unauthenticated HTTP endpoint | 2026-10-29 | Done (0.3.0) |
 | Invoice links (pdfURL, digitalInvoiceURL) and error-message emails redacted by default | Bearer links bypass field redaction | 2026-10-29 | Active |
 | Releases by tag via release.yml: live gate, npm trusted publishing, multi-arch GHCR | No long-lived tokens; provenance | 2026-10-29 | Active |
 | devops-reviewer agent (Sonnet) for all CI/CD and release changes | Supply-chain and release safety | 2026-10-29 | Active |
@@ -115,22 +119,26 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Safe defaults: no redistribution, no credit-note distribution, curated payment types, explicit full payment | Nothing reaches end customers or moves money unless asked | 2026-10-29 | Active |
 | Tenant clientId from the token's inio_client_id claim | No extra config | 2026-10-29 | Active |
 | senior-developer agent on Sonnet (medium effort) | Patterns settled; reviewer stays on Opus | 2026-10-29 | Active |
+| HTTP auth = one static bearer token (≥32 printable-ASCII chars), constant-time compare; one instance = one tenant; no OAuth in v0.1 | All common clients accept a fixed header; spec makes auth optional; no token passthrough | 2026-10-30 | Active |
+| Origin allowlist by hostname (SDK helper); auth before Origin | Bearer is the barrier; Origin is the DNS-rebinding layer | 2026-10-30 | Active |
+| @modelcontextprotocol/node (toNodeHandler) for the Node bridge | Official adapter; streaming handled | 2026-10-30 | Active |
+| Docker image binds 0.0.0.0, stdio default; no health endpoint; SDK body limit 4 MB | Token still required; no unauthenticated route | 2026-10-30 | Active |
 
 ## Success Metrics
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
 | Mutation score | ≥ 80 break, 90 target | 99.1% | On track |
-| Unit + integration tests | all green in CI | 1707 unit + 44 integration green | Met |
+| Unit + integration tests | all green in CI | 1776 unit + 47 integration + 11 Docker green | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
-| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.2.0 verified 2026-10-29 (7 tools, 18 with writes) | Met |
+| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP) | Met |
 
 ## Tech Stack / Tools
 
 | Layer | Technology | Notes |
 |-------|------------|-------|
 | Runtime | Node 24, TypeScript 7 | ESM, NodeNext; Node runs .ts directly in dev |
-| MCP | `@modelcontextprotocol/server` 2.x | stdio now; Streamable HTTP later |
+| MCP | `@modelcontextprotocol/server` 2.x, `@modelcontextprotocol/node` | stdio and Streamable HTTP |
 | Validation | zod | strict schemas |
 | API types | zod schemas per tool | no codegen (TS 7) |
 | Tests | Vitest, Testcontainers | Keycloak + node:http fake API; opt-in live suite |
@@ -149,4 +157,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-29 after Phase 4*
+*Last updated: 2026-10-30 after Phase 5*
