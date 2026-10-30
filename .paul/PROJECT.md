@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.3.0 |
-| Status | v0.1 milestone complete; 0.3.0 released (shared HTTP server) |
+| Status | 0.3.0 released (shared HTTP server); 05-03 cleanup before milestone close |
 | Last Updated | 2026-10-30 |
 
 ## Requirements
@@ -53,7 +53,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Docker HTTP mode with graceful shutdown; README setup for Claude Code, Cursor and VS Code; 0.3.0 released — Phase 5
 
 ### Active (In Progress)
-- None (v0.1 milestone complete)
+- [ ] 05-03: deferred cleanup and release 0.3.1
 
 ### Planned (Next)
 - Close the v0.1 milestone; move to the `@inio` npm scope when the org exists

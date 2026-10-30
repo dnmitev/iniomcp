@@ -11,17 +11,19 @@ source = "https://chrisai.cv/skool"
 [milestone]
 name = "v0.1 Initial Release"
 version = "0.1.0"
-status = "complete"
+status = "in_progress"
 phases = 5
 
 [phase]
 number = 5
 name = "HTTP hardening"
-status = "complete"
+status = "in_progress"
 plans_completed = 2
 
 [loop]
-position = "IDLE"
+position = "PLAN"
+plan = "05-03"
+plan_path = "phases/05-http-hardening/05-03-PLAN.md"
 
 [satellite]
 groom = true
@@ -29,4 +31,4 @@ groom = true
 [stats]
 total_plans = 15
 total_phases = 5
-last_activity = "2026-10-30T18:20:00Z"
+last_activity = "2026-10-30T18:45:00Z"

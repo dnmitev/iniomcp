@@ -11,26 +11,26 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.1 milestone complete (0.3.0) — ready to close the milestone
+**Current focus:** v0.1 — Plan 05-03 (deferred-item cleanup, release 0.3.1) before milestone close
 
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 5 of 5 (HTTP hardening) — Complete
-Plan: 05-02 complete
-Status: Milestone complete; ready for /paul:complete-milestone
-Last activity: 2026-10-30 — Phase 5 complete; v0.3.0 released
+Phase: 5 of 5 (HTTP hardening) — Planning
+Plan: 05-03 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-30 — Deferred issues triaged; created .paul/phases/05-http-hardening/05-03-PLAN.md
 
 Progress:
-- Milestone: [██████████] 100%
-- Phase 5: [██████████] 100%
+- Milestone: [█████████░] 95%
+- Phase 5: [██████░░░░] 67%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - milestone complete]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -79,6 +79,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: HttpConfig type narrows config.http (no runtime guard) | Phase 5 | Pattern for HTTP code |
 | 2026-10-30: 05-02: graceful shutdown built; health endpoint skipped (YAGNI, no unauthenticated route); body limit = SDK 413 at 4 MB | Phase 5 | Closes 05-01 deferred items |
 | 2026-10-30: Docker image sets HOST=0.0.0.0 + EXPOSE 3000; stdio stays default | Phase 5 | Token still required for HTTP |
+| 2026-10-30: Deferred triage: ENEEDAUTH closed (no recurrence through 0.3.0); 5 quick items into 05-03 + release 0.3.1 | Phase 5 | Milestone closes with a short deferred list |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -87,13 +88,12 @@ See PROJECT.md Key Decisions.
 | Issue | Origin | Effort | Revisit |
 |-------|--------|--------|---------|
 | Stryker TS checker / tsconfig handling disabled (no TS 7 JS API) | 01-01 | S | Stryker supports TS 7 |
-| Moderate `qs` advisory in Stryker dev deps | 01-01 | S | Stryker upgrade |
-| Move Logger type to src/logger.ts | 01-02 | S | Next touch of logging |
+| Moderate `qs` advisory in Stryker dev deps | 01-01 | S | 05-03 (qs override) |
+| Move Logger type to src/logger.ts | 01-02 | S | 05-03 |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
-| Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
-| Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
-| Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | Next schema change to customers |
-| release.yml OCI image description label still says "(stdio)" | 05-02 | S | Next release.yml touch |
+| Stryker CLI --mutate ignored (full runs) | 01-02 | S | 05-03 (MUTATE env) |
+| Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | 05-03 |
+| release.yml OCI image description label still says "(stdio)" | 05-02 | S | 05-03 |
 | Health endpoint for HTTP mode (skipped: would be unauthenticated) | 05-02 | S | If an orchestrator needs it |
 | Per-user tokens or MCP OAuth for HTTP | 05-01 | M | If teams ask |
 | Double-signal shutdown tests are race-prone smoke tests | 05-02 | S | If shutdown logic changes |
@@ -116,9 +116,9 @@ Releases: v0.3.0 (npm latest, GHCR 0.3.0/0.3/latest, 2026-10-30; shared HTTP ser
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Phase 5 complete, v0.1 milestone complete; v0.3.0 released and verified
-Next action: /paul:complete-milestone (v0.1), then plan the next milestone or the @inio scope move
-Resume file: .paul/phases/05-http-hardening/05-02-SUMMARY.md
+Stopped at: Plan 05-03 created (deferred cleanup); v0.3.0 released
+Next action: Review and approve plan, then run /paul:apply .paul/phases/05-http-hardening/05-03-PLAN.md
+Resume file: .paul/phases/05-http-hardening/05-03-PLAN.md
 Resume context:
 - 0.3.0 on npm latest + GHCR + GitHub Release (stdio and shared HTTP server, 18 tools with writes on)
 
