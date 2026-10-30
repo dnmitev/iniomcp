@@ -11,26 +11,26 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.1 — Plan 05-03 (deferred-item cleanup, release 0.3.1) before milestone close
+**Current focus:** v0.1 milestone complete (0.3.1) — ready to close the milestone
 
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 5 of 5 (HTTP hardening) — Planning
-Plan: 05-03 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-10-30 — Deferred issues triaged; created .paul/phases/05-http-hardening/05-03-PLAN.md
+Phase: 5 of 5 (HTTP hardening) — Complete
+Plan: 05-03 complete
+Status: Milestone complete; ready for /paul:complete-milestone
+Last activity: 2026-10-30 — 05-03 unified; v0.3.1 released
 
 Progress:
-- Milestone: [█████████░] 95%
-- Phase 5: [██████░░░░] 67%
+- Milestone: [██████████] 100%
+- Phase 5: [██████████] 100%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ✓        ✓        ✓     [Loop complete - milestone complete]
 ```
 
 ## Accumulated Context
@@ -88,12 +88,7 @@ See PROJECT.md Key Decisions.
 | Issue | Origin | Effort | Revisit |
 |-------|--------|--------|---------|
 | Stryker TS checker / tsconfig handling disabled (no TS 7 JS API) | 01-01 | S | Stryker supports TS 7 |
-| Moderate `qs` advisory in Stryker dev deps | 01-01 | S | 05-03 (qs override) |
-| Move Logger type to src/logger.ts | 01-02 | S | 05-03 |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
-| Stryker CLI --mutate ignored (full runs) | 01-02 | S | 05-03 (MUTATE env) |
-| Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | 05-03 |
-| release.yml OCI image description label still says "(stdio)" | 05-02 | S | 05-03 |
 | Health endpoint for HTTP mode (skipped: would be unauthenticated) | 05-02 | S | If an orchestrator needs it |
 | Per-user tokens or MCP OAuth for HTTP | 05-01 | M | If teams ask |
 | Double-signal shutdown tests are race-prone smoke tests | 05-02 | S | If shutdown logic changes |
@@ -102,7 +97,7 @@ See PROJECT.md Key Decisions.
 ### Blockers/Concerns
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
 - Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); logged as Jira AS-7100.
-- Stryker incremental cache can report stale survivors; use --force after test changes.
+- Stryker incremental cache can report stale survivors; use --force after test changes. Use MUTATE=src/a.ts for targeted runs; the report still lists cached rows for other files.
 - Release live gate can fail on test-environment latency (0.2.0 attempt 1: list_customers hit the 30 s timeout); re-run the job.
 - Phase 4: Public API has no role checks; anything enabled is allowed. Defaults keep end customers out of it unless asked.
 - Phase 4: Claude declines to send an SSN, so consumer customers cannot be created from Claude (documented).
@@ -110,17 +105,17 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/05-02-unify (main has #32 c0fcda2, #33 b2ce186; tag v0.3.0 on b2ce186)
-Releases: v0.3.0 (npm latest, GHCR 0.3.0/0.3/latest, 2026-10-30; shared HTTP server); v0.2.0 before
+Branch: paul/05-03-unify (main 9738aca; tags v0.3.0, v0.3.1)
+Releases: v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
 
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Plan 05-03 created (deferred cleanup); v0.3.0 released
-Next action: Review and approve plan, then run /paul:apply .paul/phases/05-http-hardening/05-03-PLAN.md
-Resume file: .paul/phases/05-http-hardening/05-03-PLAN.md
+Stopped at: Phase 5 complete (3 plans), v0.1 milestone complete; v0.3.1 released and verified
+Next action: /paul:complete-milestone (v0.1)
+Resume file: .paul/phases/05-http-hardening/05-03-SUMMARY.md
 Resume context:
-- 0.3.0 on npm latest + GHCR + GitHub Release (stdio and shared HTTP server, 18 tools with writes on)
+- 0.3.1 on npm latest + GHCR + GitHub Release (stdio and shared HTTP server, 18 tools with writes on)
 
 ---
 *STATE.md — Updated after every significant action*

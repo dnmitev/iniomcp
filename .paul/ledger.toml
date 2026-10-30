@@ -307,3 +307,20 @@ action = "plan"
 phase = 5
 plan = "05-03"
 at = "2026-10-30T18:45:00Z"
+
+[[entry]]
+action = "apply"
+phase = 5
+plan = "05-03"
+at = "2026-10-30T09:00:00Z"
+
+[[entry]]
+action = "unify"
+phase = 5
+plan = "05-03"
+at = "2026-10-30T09:05:00Z"
+
+[[entry]]
+action = "transition"
+phase = 5
+at = "2026-10-30T09:05:00Z"

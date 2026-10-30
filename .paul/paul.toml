@@ -1,5 +1,5 @@
 name = "inio-mcp"
-version = "0.3.0"
+version = "0.3.1"
 status = "active"
 path = "."
 tags = []
@@ -11,24 +11,22 @@ source = "https://chrisai.cv/skool"
 [milestone]
 name = "v0.1 Initial Release"
 version = "0.1.0"
-status = "in_progress"
+status = "complete"
 phases = 5
 
 [phase]
 number = 5
 name = "HTTP hardening"
-status = "in_progress"
-plans_completed = 2
+status = "complete"
+plans_completed = 3
 
 [loop]
-position = "PLAN"
-plan = "05-03"
-plan_path = "phases/05-http-hardening/05-03-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 15
+total_plans = 16
 total_phases = 5
-last_activity = "2026-10-30T18:45:00Z"
+last_activity = "2026-10-30T09:05:00Z"
