@@ -711,14 +711,28 @@ describe('startup warning and drain (spawned process)', () => {
 });
 
 describe('startHttpServer shutdown timing', () => {
-  const keepAliveGet = (agent: http.Agent, port: number, path: string) =>
-    new Promise<void>((resolve, reject) => {
-      http
-        .get({ host: '127.0.0.1', port, path, agent }, (res) => {
+  const keepAliveInit = (agent: http.Agent, port: number) =>
+    new Promise<http.IncomingMessage>((resolve, reject) => {
+      const req = http.request(
+        {
+          host: '127.0.0.1',
+          port,
+          path: '/mcp',
+          method: 'POST',
+          agent,
+          headers: {
+            authorization: `Bearer ${BEARER}`,
+            'content-type': 'application/json',
+            accept: 'application/json, text/event-stream',
+          },
+        },
+        (res) => {
           res.resume();
-          res.on('end', resolve);
-        })
-        .on('error', reject);
+          res.on('end', () => resolve(res));
+        },
+      );
+      req.on('error', reject);
+      req.end(INIT_BODY);
     });
 
   it('removes the startup error listener once listening', async () => {
@@ -745,7 +759,10 @@ describe('startHttpServer shutdown timing', () => {
   it('close() drops an idle keep-alive connection well before the grace period', async () => {
     const server = await startHttpServer(CONFIG, { fetch: fakeFetch() });
     const agent = new http.Agent({ keepAlive: true });
-    await keepAliveGet(agent, server.port, '/other');
+    const res = await keepAliveInit(agent, server.port);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers.connection).not.toBe('close');
+    expect(Object.values(agent.freeSockets).flat()).toHaveLength(1);
     const started = Date.now();
     await server.close();
     agent.destroy();

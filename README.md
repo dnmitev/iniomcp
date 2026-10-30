@@ -157,6 +157,7 @@ docker run -d --name inio-mcp -p 127.0.0.1:3000:3000 \
 Claude Code:
 
 ```bash
+read -rs INIO_MCP_TOKEN   # paste the token the server admin gave you (MCP_AUTH_TOKEN); not echoed, not in history
 claude mcp add --transport http inio https://mcp.example.com/mcp --header "Authorization: Bearer $INIO_MCP_TOKEN"
 ```
 
