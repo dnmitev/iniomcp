@@ -431,6 +431,22 @@ describe('loadConfig', () => {
       expect(msg).not.toContain(TOKEN);
     });
 
+    it.each([
+      ['32 non-Latin-1 characters', 'Ā'.repeat(32)],
+      ['one accented character among ASCII', 'c'.repeat(31) + 'é'],
+      ['a control character', 'abc\x00' + 'd'.repeat(28)],
+    ])('rejects a token with %s without leaking it', (_n, token) => {
+      const msg = msgOf({ MCP_AUTH_TOKEN: token });
+      expect(msg).toContain('- MCP_AUTH_TOKEN must contain only printable ASCII characters');
+      expect(msg.split('\n').filter((l) => l.includes('MCP_AUTH_TOKEN'))).toHaveLength(1);
+      expect(msg).not.toContain(token);
+    });
+
+    it('accepts a 64 character hex token', () => {
+      const hex = 'a3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90';
+      expect(loadConfig(httpEnv({ MCP_AUTH_TOKEN: hex })).http?.authToken).toBe(hex);
+    });
+
     it('accepts a 32 character token', () => {
       expect(loadConfig(httpEnv({ MCP_AUTH_TOKEN: 'a'.repeat(32) })).http?.authToken).toBe(
         'a'.repeat(32),

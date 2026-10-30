@@ -61,7 +61,9 @@ export function loadConfig(env: Env): Config {
     const value = env.MCP_AUTH_TOKEN ?? '';
     if (!value) problems.push('MCP_AUTH_TOKEN is required when MCP_TRANSPORT=http');
     else if (/\s/.test(value)) problems.push('MCP_AUTH_TOKEN must not contain whitespace');
-    else if (value.length < 32) problems.push('MCP_AUTH_TOKEN must be at least 32 characters');
+    else if (!/^[\x21-\x7e]+$/.test(value)) {
+      problems.push('MCP_AUTH_TOKEN must contain only printable ASCII characters');
+    } else if (value.length < 32) problems.push('MCP_AUTH_TOKEN must be at least 32 characters');
     return value;
   };
 
