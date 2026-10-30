@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { pathSegment, type InioClient } from '../inio-client.ts';
-import { noopLogger, type Logger } from '../auth.ts';
+import { noopLogger, type Logger } from '../logger.ts';
 import { PauseReason, pauseResult } from './pauses.ts';
 import { errorText, fail } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';

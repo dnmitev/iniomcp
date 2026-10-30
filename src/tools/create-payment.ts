@@ -1,7 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
-import { noopLogger, type Logger, type TokenProvider } from '../auth.ts';
+import { type TokenProvider } from '../auth.ts';
+import { noopLogger, type Logger } from '../logger.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
 import {
   clientIdOf,

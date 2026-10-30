@@ -1,11 +1,5 @@
 import { z } from 'zod';
-
-type LogFn = (obj: object, msg?: string) => void;
-
-/** Minimal pino-compatible logger; modules take only the methods they use. */
-export type Logger = { debug: LogFn; info: LogFn; warn: LogFn };
-
-export const noopLogger: Logger = { debug: () => {}, info: () => {}, warn: () => {} };
+import { noopLogger, type Logger } from './logger.ts';
 
 export type TokenProvider = { getToken(): Promise<string>; invalidate(): void };
 

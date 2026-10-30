@@ -743,3 +743,33 @@ describe('create_customer through the real client', () => {
     expect(f).toHaveBeenCalledTimes(1);
   });
 });
+
+const emailOfLength = (n: number) => 'a'.repeat(n - '@x.example'.length) + '@x.example';
+
+describe('create_customer distribution email length', () => {
+  it.each(['distributionEmailAddress', 'distributionEmailAddress2', 'distributionEmailAddress3'])(
+    'rejects a 151 character %s without calling the API',
+    async (field) => {
+      const email = emailOfLength(151);
+      expect(email).toHaveLength(151);
+      const { inio, call } = await setup(impl());
+      const result = await call({ ...ARGS, [field]: email });
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toMatch(/^Input validation error: /);
+      expect(textOf(result)).toContain(field);
+      expect(inio.post).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['distributionEmailAddress', 'distributionEmailAddress2', 'distributionEmailAddress3'])(
+    'accepts a 150 character %s',
+    async (field) => {
+      const email = emailOfLength(150);
+      expect(email).toHaveLength(150);
+      const { inio, call } = await setup(impl());
+      const result = await call({ ...ARGS, [field]: email });
+      expect(result.isError).not.toBe(true);
+      expect(inio.post).toHaveBeenCalledTimes(1);
+    },
+  );
+});

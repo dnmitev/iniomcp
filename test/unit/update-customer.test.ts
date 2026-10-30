@@ -387,3 +387,33 @@ describe('update_customer tool-call logging', () => {
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('Secret Name');
   });
 });
+
+const emailOfLength = (n: number) => 'a'.repeat(n - '@x.example'.length) + '@x.example';
+
+describe('update_customer distribution email length', () => {
+  it.each(['distributionEmailAddress', 'distributionEmailAddress2', 'distributionEmailAddress3'])(
+    'rejects a 151 character %s without calling the API',
+    async (field) => {
+      const email = emailOfLength(151);
+      expect(email).toHaveLength(151);
+      const { inio, call } = await setup({ patch: updated });
+      const result = await call({ id: CID, [field]: email });
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toMatch(/^Input validation error: /);
+      expect(textOf(result)).toContain(field);
+      expect(inio.patch).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['distributionEmailAddress', 'distributionEmailAddress2', 'distributionEmailAddress3'])(
+    'accepts a 150 character %s',
+    async (field) => {
+      const email = emailOfLength(150);
+      expect(email).toHaveLength(150);
+      const { inio, call } = await setup({ patch: updated });
+      const result = await call({ id: CID, [field]: email });
+      expect(result.isError).not.toBe(true);
+      expect(inio.patch).toHaveBeenCalledTimes(1);
+    },
+  );
+});

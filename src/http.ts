@@ -7,8 +7,8 @@ import {
   localhostAllowedOrigins,
   originValidationResponse,
 } from '@modelcontextprotocol/server';
-import type { Logger } from 'pino';
 import type { Config } from './config.ts';
+import type { Logger } from './logger.ts';
 import { createServerFactory } from './server.ts';
 
 type Deps = { fetch?: typeof globalThis.fetch; logger?: Logger };

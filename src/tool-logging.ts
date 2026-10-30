@@ -1,4 +1,4 @@
-import type { Logger } from './auth.ts';
+import type { Logger } from './logger.ts';
 
 type ToolResult = { content: Array<{ type: string; text?: string }>; isError?: boolean };
 

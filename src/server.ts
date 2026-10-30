@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { createTokenProvider, noopLogger, type Logger } from './auth.ts';
+import { createTokenProvider } from './auth.ts';
+import { noopLogger, type Logger } from './logger.ts';
 import type { Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
 import { registerCancelCustomerPause } from './tools/cancel-customer-pause.ts';
