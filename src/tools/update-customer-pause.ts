@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { pathSegment, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { PauseReason, pauseResult, PauseScope } from './pauses.ts';
 import { IsoDate, writeFailure } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
@@ -38,7 +39,8 @@ export function registerUpdateCustomerPause(
     {
       title: 'Update customer pause',
       description:
-        'Change a customer pause: scheduled pauses can change startAt, endAt and scope; active pauses can change only endAt (null makes it indefinite). Completed or cancelled pauses cannot be changed. Changes that overlap another pause of the same scope are rejected. Returns the updated pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Change a customer pause: scheduled pauses can change startAt, endAt and scope; active pauses can change only endAt (null makes it indefinite). Completed or cancelled pauses cannot be changed. Changes that overlap another pause of the same scope are rejected. Returns the updated pause. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,

@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { pathSegment, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { PauseReason, pauseResult } from './pauses.ts';
 import { writeFailure } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
@@ -23,7 +24,8 @@ export function registerCancelCustomerPause(
     {
       title: 'Cancel customer pause',
       description:
-        'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,

@@ -36,7 +36,7 @@
   },
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
-    "inspect": "npx @modelcontextprotocol/inspector node src/index.ts",
+    "inspect": "npx @modelcontextprotocol/inspector@2.11.0 node src/index.ts",
     "lint": "oxlint --type-aware --deny-warnings && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",

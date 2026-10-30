@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { type TokenProvider } from '../auth.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
 import {
   clientIdOf,
@@ -92,7 +93,8 @@ export function registerCreatePayment(
     {
       title: 'Create payment',
       description:
-        'Registers a payment on an invoice, by invoice number (number). This records a new payment each time it is called, so never retry without checking the invoice with get_invoice and comparing remainingAmount. Pass exactly one of amount (more than 0, at most 2 decimals; direct_payment and good_will also accept {capital, fee}) or fullPayment true to pay the whole remaining amount. Nothing is sent to the end customer. This cannot be undone with these tools. Returns the payment id, plus the invoice remaining amount and payment status read back after the payment. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Registers a payment on an invoice, by invoice number (number). This records a new payment each time it is called, so never retry without checking the invoice with get_invoice and comparing remainingAmount. Pass exactly one of amount (more than 0, at most 2 decimals; direct_payment and good_will also accept {capital, fee}) or fullPayment true to pay the whole remaining amount. Nothing is sent to the end customer. This cannot be undone with these tools. Returns the payment id, plus the invoice remaining amount and payment status read back after the payment. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,

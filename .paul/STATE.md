@@ -17,21 +17,21 @@ See: .paul/PROJECT.md (updated 2026-10-30)
 
 Milestone: v0.2 Audit Quick Wins
 Phase: 7 of 7 (Docs and install trust) — milestone phase 2 of 2
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-30 — Phase 6 complete, transitioned to Phase 7
+Plan: 07-02 created, awaiting approval (07-01 complete)
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-30 — Created .paul/phases/07-docs-install-trust/07-02-PLAN.md
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
-- v0.2 Audit Quick Wins: [█████░░░░░] 50% (Phase 6 ✓)
-- Phase 7: [░░░░░░░░░░] 0%
+- v0.2 Audit Quick Wins: [███████░░░] 75% (Phase 6 ✓, 07-01 ✓)
+- Phase 7: [█████░░░░░] 50%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Phase 6 complete - ready to plan Phase 7]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -86,6 +86,8 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: v0.2 = AEGIS quick wins R4, R5, R1, R7; R2 later with consumer-only name redaction | v0.2 | Source: .aegis/report/05-remediation-roadmap.md |
 | 2026-10-30: HTTP auth and path checked before the body is read; body cap 256 KiB (supersedes 05-02 SDK 4 MB) | Phase 6 | F-04-007 closed; raise cap only if a tool needs large input |
 | 2026-10-30: Shutdown drains with DRAIN_GRACE_MS 500, then forces; no req.destroy() on rejection | Phase 6 | Clients mid-upload may see a reset instead of 401 |
+| 2026-10-30: REDACTION_NOTE next to SENSITIVE_KEYS; README field list guarded by test; docs claim npm provenance only (image provenance → R6) | Phase 7 | R2 must update note, keys and README together |
+| 2026-10-30: v0.2 releases as 0.4.0; README pins 0.4.0 before the tag; merge → tag → publish back to back (release.yml requires the tag on main) | Phase 7 | Brief window where main's README pins an unpublished version |
 | 2026-10-30: Client appends check-before-retry to write 5xx; write tools catch via writeFailure, shape failures → acceptedUnreadable (ok + note) | Phase 6 | New write tools inherit it; tools add only a check pointer |
 
 ### Deferred Issues
@@ -98,6 +100,7 @@ See PROJECT.md Key Decisions.
 | Per-user tokens or MCP OAuth for HTTP | 05-01 | M | If teams ask |
 | Double-signal shutdown tests are race-prone smoke tests; spawned SIGTERM test accepts finished-or-closed (drain proven via close()) | 05-02, 06-01 | S | If shutdown logic changes |
 | 5xx hint punctuation for API messages ending !/?/whitespace/empty | 06-02 | S | Cosmetic; any client touch |
+| Image build provenance (attest-build-provenance) and npm-shrinkwrap for transitive pins | 07-01 | M | R6 |
 | acceptedUnreadable() echoes no identifier (create_customer_pause gives no pause id to check) | 06-02 | S | With R8 write attribution |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
@@ -119,9 +122,9 @@ Releases: v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Phase 6 complete (06-01 R4, 06-02 R5), committed on paul/milestone-v0.2; ready to plan Phase 7
-Next action: /paul:plan for Phase 7 (Docs and install trust: R1, R7, then release)
-Resume file: .paul/ROADMAP.md
+Stopped at: 07-01 unified (uncommitted on paul/milestone-v0.2; phase commit at transition). README pins 0.4.0 — merge, tag and publish back to back
+Next action: Review and approve plan, then run /paul:apply .paul/phases/07-docs-install-trust/07-02-PLAN.md
+Resume file: .paul/phases/07-docs-install-trust/07-02-PLAN.md
 Resume context:
 - AEGIS final: 29 raised, 27 after dedup (high 2, medium 8 incl. accepted F-00-002, low 15, info 2); 7 root causes, 10 roadmap items R1..R10
 - Roadmap top: R1 PII claim fix (S), R2 redaction of orgNr/names/free text (M), R3 write allowlist + payment ceiling (M), R4 auth before body read on HTTP (S), R5 uncertain write outcomes in client, 9 tools (S), R7 pin README install configs (S)

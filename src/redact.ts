@@ -1,4 +1,8 @@
-const SENSITIVE_KEYS = new Set([
+/** Sentence appended to every tool description that returns personal data; keep in sync with SENSITIVE_KEYS and redact(). */
+export const REDACTION_NOTE =
+  'Email addresses (also inside text), phone numbers, address lines, zip codes, SSNs, bank details (IBAN, bank account and account numbers) and invoice links are redacted unless the server runs with INIO_REVEAL_PII=true; names, city, organisation and VAT numbers, references, free text and amounts are not.';
+
+export const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   'iban',
   'ssn',
   'bankaccount',

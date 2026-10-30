@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { InioApiError, type InioClient } from '../inio-client.ts';
 import { type TokenProvider } from '../auth.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { CustomerRef } from './customer-ref.ts';
 import {
   city,
@@ -110,7 +111,8 @@ export function registerCreateCustomer(
     {
       title: 'Create customer',
       description:
-        'Creates a customer. customerNo must be new: a customerNo that exists is rejected, and serviceLineName can be copied from get_customer of an existing customer. A consumer (customerType C) needs SSN; a business (customerType B) needs orgNr and vatNo. If you cannot send an SSN, say that the consumer must be created in the Inio back office. A retry with the same customerNo is rejected, but after an unclear outcome check get_customer by number before trying again. The customer is only created; nothing is sent to the customer. This cannot be undone with these tools. Returns the new customer id and customerNo. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Creates a customer. customerNo must be new: a customerNo that exists is rejected, and serviceLineName can be copied from get_customer of an existing customer. A consumer (customerType C) needs SSN; a business (customerType B) needs orgNr and vatNo. If you cannot send an SSN, say that the consumer must be created in the Inio back office. A retry with the same customerNo is rejected, but after an unclear outcome check get_customer by number before trying again. The customer is only created; nothing is sent to the customer. This cannot be undone with these tools. Returns the new customer id and customerNo. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,

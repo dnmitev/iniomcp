@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import {
   CreditFields,
   InvoiceRef,
@@ -57,7 +58,8 @@ export function registerMatchCreditInvoice(
     {
       title: 'Match credit invoice',
       description:
-        "Match an existing credit invoice against a debit invoice, by UUID (id) or invoice number (number) of the debit invoice; pass exactly one. amount is 0 or negative, and its absolute value must not exceed either invoice's remaining amount. Both invoices must belong to the same customer. Nothing is sent to the end customer. This cannot be undone with these tools. Returns the credit invoice id, plus the debit invoice's remaining amount and payment status read back after the match. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.",
+        "Match an existing credit invoice against a debit invoice, by UUID (id) or invoice number (number) of the debit invoice; pass exactly one. amount is 0 or negative, and its absolute value must not exceed either invoice's remaining amount. Both invoices must belong to the same customer. Nothing is sent to the end customer. This cannot be undone with these tools. Returns the credit invoice id, plus the debit invoice's remaining amount and payment status read back after the match. " +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,

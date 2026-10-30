@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
 import { EXACTLY_ONE_REF, exactlyOneRef, IsoDate, ok, present, writeFailure } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
@@ -32,7 +33,8 @@ export function registerUpdateInvoiceDueDate(
     {
       title: 'Postpone invoice due date',
       description:
-        'Postpone an invoice due date, by UUID (id) or invoice number (number); pass exactly one. The new date must be later than the current due date and after today, so this cannot be undone with these tools. Rejected for closed, cancelled or paid invoices, invoices in debt collection, invoices that have already escalated, invoices whose first or second reminder waiting period has passed, or with an outstanding fee. Triggers the client webhook invoiceDueDatePostponed. Returns whether it was updated, plus the invoice number, due date, stage and status read back after the change. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Postpone an invoice due date, by UUID (id) or invoice number (number); pass exactly one. The new date must be later than the current due date and after today, so this cannot be undone with these tools. Rejected for closed, cancelled or paid invoices, invoices in debt collection, invoices that have already escalated, invoices whose first or second reminder waiting period has passed, or with an outstanding fee. Triggers the client webhook invoiceDueDatePostponed. Returns whether it was updated, plus the invoice number, due date, stage and status read back after the change. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,

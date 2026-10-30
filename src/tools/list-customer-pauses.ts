@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { pathSegment, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { compact, errorText, fail, ok, presentRaw } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
@@ -27,7 +28,8 @@ export function registerListCustomerPauses(
     {
       title: 'List customer pauses',
       description:
-        'List pauses for one customer by customer UUID (get_customer returns it), optionally filtered by status. Returns all matching pauses ordered by start time. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'List pauses for one customer by customer UUID (get_customer returns it), optionally filtered by status. Returns all matching pauses ordered by start time. ' +
+        REDACTION_NOTE,
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },

@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { CustomerRef, customerPath } from './customer-ref.ts';
 import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
@@ -45,7 +46,8 @@ export function registerGetCustomer(
     {
       title: 'Get customer',
       description:
-        'Fetch one customer with its service line and any active pause, by UUID (id) or customer number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Fetch one customer with its service line and any active pause, by UUID (id) or customer number (number); pass exactly one. ' +
+        REDACTION_NOTE,
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },

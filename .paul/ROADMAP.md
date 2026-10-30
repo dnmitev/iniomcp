@@ -20,7 +20,7 @@ Focus: Make the privacy and safety claims true, and close the pre-auth memory is
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 6 | HTTP auth and write outcomes | 2/2 | ✅ Complete | 2026-10-30 |
-| 7 | Docs and install trust | TBD | Not started | - |
+| 7 | Docs and install trust | 1/2 | In progress | - |
 
 ### Phase 6: HTTP auth and write outcomes ✅
 

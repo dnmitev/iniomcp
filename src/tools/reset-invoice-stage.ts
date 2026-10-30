@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { InvoiceRef, invoicePath, lookUpInvoiceId } from './invoice-ref.ts';
 import {
   acceptedUnreadable,
@@ -69,7 +70,8 @@ export function registerResetInvoiceStage(
     {
       title: 'Reset invoice stage',
       description:
-        'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
