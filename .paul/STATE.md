@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 5 of 5 (HTTP hardening)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-29 — Phase 4 complete, transitioned to Phase 5
+Phase: 5 of 5 (HTTP hardening) — Planning
+Plan: 05-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-30 — Created .paul/phases/05-http-hardening/05-01-PLAN.md
 
 Progress:
 - Milestone: [████████░░] 80%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Ready for first PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -72,6 +72,9 @@ See PROJECT.md Key Decisions.
 | 2026-10-29: reverse_payment out of v0.1 (payment id is not an allocation id; probe) | Phase 4 | Ask API team for allocation lookup |
 | 2026-10-29: create_invoice out of v0.1 (reaches end customer at once) | Phase 4 | Revisit after usage |
 | 2026-10-29: create_customer accepts SSN (C) and orgNr/vatNo (B); no workflowsSettings | Phase 4 | 04-04 |
+| 2026-10-30: HTTP auth = one static bearer token (MCP_AUTH_TOKEN, ≥32 chars); one instance = one tenant; no OAuth/PRM in v0.1 | Phase 5 | All four clients accept a fixed header; spec makes auth optional |
+| 2026-10-30: Node bridge via @modelcontextprotocol/node (toNodeHandler; pulls hono) | Phase 5 | Official adapter over hand-written SSE conversion |
+| 2026-10-30: Phase 5 = 05-01 transport+auth+Origin (TDD); 05-02 Docker HTTP, docs, release 0.3.0 | Phase 5 | devops-reviewer on 05-02 |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -86,27 +89,31 @@ See PROJECT.md Key Decisions.
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 | Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | Next schema change to customers |
-| Ask API team: allocation lookup for reverse_payment; JSON error envelope on reverse-payment | 04-04 | - | Upstream |
+| Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
 - Phase 1: Fixtures can drift from the real API; run the live suite before releases.
-- Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); report to the API team.
+- Phase 2: Upstream API bugs worked around (invoice status 500, retry-attempts page ignored); logged as Jira AS-7100.
 - Stryker incremental cache can report stale survivors; use --force after test changes.
+- Release live gate can fail on test-environment latency (0.2.0 attempt 1: list_customers hit the 30 s timeout); re-run the job.
 - Phase 4: Public API has no role checks; anything enabled is allowed. Defaults keep end customers out of it unless asked.
 - Phase 4: Claude declines to send an SSN, so consumer customers cannot be created from Claude (documented).
-- Phase 4: No public endpoint exposes paymentAllocationId, so payments cannot be reversed via the API; test invoice 20260925-07 carries two 0.01 probe payments (reverse in back office).
+- Phase 4: No public endpoint exposes paymentAllocationId, so payments cannot be reversed via the API (AS-7101). The two 0.01 probe payments on test invoice 20260925-07 stay; negligible.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: feat/04-04-plan
-Releases: v0.1.2 (npm latest); 0.2.0 (Phase 4 write tools) in release PR
+Branch: main (uncommitted .paul edits for the 0.2.0 release record)
+Releases: v0.2.0 (npm latest, 2026-10-29; Phase 4 write tools); v0.1.2 before
 
 ## Session Continuity
 
-Last session: 2026-10-29
-Stopped at: Phase 4 complete, ready to plan Phase 5
-Next action: merge release PR, tag v0.2.0, approve live gate; then /paul:plan for Phase 5
-Resume file: .paul/ROADMAP.md
+Last session: 2026-10-30
+Stopped at: Plan 05-01 created (upstream bugs logged as AS-7100, AS-7101)
+Next action: Review and approve plan, then run /paul:apply .paul/phases/05-http-hardening/05-01-PLAN.md
+Resume file: .paul/phases/05-http-hardening/05-01-PLAN.md
+Resume context:
+- 0.2.0 on npm latest + GHCR + GitHub Release (write tools, 18 tools with writes on)
+- Phase 5 research done (SDK 2.4.0 createMcpHandler, spec 2026-07-28); see 05-01-PLAN context
 
 ---
 *STATE.md — Updated after every significant action*

@@ -1,5 +1,5 @@
 name = "inio-mcp"
-version = "0.1.2"
+version = "0.2.0"
 status = "active"
 path = "."
 tags = []
@@ -17,11 +17,13 @@ phases = 5
 [phase]
 number = 5
 name = "HTTP hardening"
-status = "not_started"
+status = "planning"
 plans_completed = 0
 
 [loop]
-position = "IDLE"
+position = "PLAN"
+plan = "05-01"
+plan_path = "phases/05-http-hardening/05-01-PLAN.md"
 
 [satellite]
 groom = true
@@ -29,4 +31,4 @@ groom = true
 [stats]
 total_plans = 13
 total_phases = 5
-last_activity = "2026-10-29T17:20:18Z"
+last_activity = "2026-10-30T12:00:00Z"

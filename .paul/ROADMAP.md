@@ -24,7 +24,7 @@ Phases: 4 of 5 complete
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
 | 3 | Packaging and release | 3/3 | ✅ Complete | 2026-10-29 |
 | 4 | Write tools (opt-in) | 4/4 | ✅ Complete | 2026-10-29 |
-| 5 | HTTP hardening | TBD | Not started | - |
+| 5 | HTTP hardening | 0/2 | Planning | - |
 
 ## Phase Details
 
@@ -85,8 +85,12 @@ Phases: 4 of 5 complete
 
 **Goal:** A team can safely share one HTTP instance.
 **Depends on:** Phase 3
-**Research:** Likely (MCP OAuth protected-resource metadata)
+**Research:** Done 2026-10-30 (static bearer; OAuth deferred)
+
+**Plans:**
+- [ ] 05-01: Streamable HTTP transport, static bearer auth, Origin checks, shared Inio token
+- [ ] 05-02: Docker HTTP mode, README/client snippets, CHANGELOG, release 0.3.0
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-10-29 after Phase 4*
+*Last updated: 2026-10-30 Phase 5 planning*

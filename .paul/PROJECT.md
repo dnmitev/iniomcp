@@ -19,8 +19,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.1.2 |
-| Status | Phase 4 complete (write tools, unreleased); 0.1.2 released |
+| Version | 0.2.0 |
+| Status | Phase 4 complete; 0.2.0 released (write tools) |
 | Last Updated | 2026-10-29 |
 
 ## Requirements
@@ -53,7 +53,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - [ ] Phase 5: HTTP hardening
 
 ### Planned (Next)
-- v0.1 release with the write tools
+- v0.1 milestone close after Phase 5; move to the `@inio` npm scope when the org exists
 
 ### Out of Scope
 - Internal MCP for dev/QA/business (DB access, internal services) — separate future project
@@ -121,9 +121,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
 | Mutation score | ≥ 80 break, 90 target | 99.1% | On track |
-| Unit + integration tests | all green in CI | 749 unit + 20 integration green | Met |
+| Unit + integration tests | all green in CI | 1707 unit + 44 integration green | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
-| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.1.1 verified 2026-10-29 | Met |
+| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.2.0 verified 2026-10-29 (7 tools, 18 with writes) | Met |
 
 ## Tech Stack / Tools
 
