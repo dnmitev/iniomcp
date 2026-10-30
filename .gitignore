@@ -11,3 +11,6 @@ reports/
 
 # private ideation notes, never published
 projects/
+
+# AEGIS audit state (generated)
+.aegis/
