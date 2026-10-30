@@ -16,8 +16,18 @@ export type HttpConfig = Config & { http: NonNullable<Config['http']> };
 
 const digest = (value: string) => createHash('sha256').update(value).digest();
 
-const unauthorized = () =>
-  new Response('Unauthorized', { status: 401, headers: { 'WWW-Authenticate': 'Bearer' } });
+// ponytail: MCP JSON-RPC requests are a few KiB; raise if a tool takes large input.
+const MAX_REQUEST_BODY_BYTES = 256 * 1024;
+const DRAIN_GRACE_MS = 500;
+
+type Rejection = { status: 404 | 401; body: string; headers?: Record<string, string> };
+
+const rejectNotFound: Rejection = { status: 404, body: 'Not Found' };
+const rejectUnauthorized: Rejection = {
+  status: 401,
+  body: 'Unauthorized',
+  headers: { 'WWW-Authenticate': 'Bearer' },
+};
 
 /** Web-standard handler for POST/GET/DELETE /mcp behind a static bearer token and Origin allowlist. */
 export function createHttpHandler(
@@ -36,22 +46,46 @@ function buildHandler(config: HttpConfig, deps: Deps) {
   const origins = [...localhostAllowedOrigins(), ...allowedOrigins.map((o) => new URL(o).hostname)];
   const mcp = createMcpHandler(createServerFactory(config, deps));
 
+  /** Path + bearer gate, usable before any body is read. */
+  const reject = (path: string, authorization: string | null | undefined): Rejection | null => {
+    if (path !== '/mcp') return rejectNotFound;
+    const match = /^Bearer +(\S+)$/i.exec(authorization ?? '');
+    if (!match?.[1] || !timingSafeEqual(digest(match[1]), expected)) return rejectUnauthorized;
+    return null;
+  };
+
   const handle = async (req: Request): Promise<Response> => {
-    if (new URL(req.url).pathname !== '/mcp') return new Response('Not Found', { status: 404 });
-    const match = /^Bearer +(\S+)$/i.exec(req.headers.get('authorization') ?? '');
-    if (!match?.[1] || !timingSafeEqual(digest(match[1]), expected)) return unauthorized();
+    const rejection = reject(new URL(req.url).pathname, req.headers.get('authorization'));
+    if (rejection) return new Response(rejection.body, rejection);
     return originValidationResponse(req, origins) ?? mcp.fetch(req);
   };
-  return { handle, close: () => mcp.close() };
+  return { handle, reject, close: () => mcp.close() };
 }
 
 export async function startHttpServer(
   config: HttpConfig,
   deps: Deps = {},
 ): Promise<{ port: number; close(): Promise<void> }> {
-  const { handle, close } = buildHandler(config, deps);
-  const nodeHandler = toNodeHandler({ fetch: handle });
-  const server: Server = createServer((req, res) => void nodeHandler(req, res));
+  const { handle, reject: gate, close } = buildHandler(config, deps);
+  const nodeHandler = toNodeHandler(
+    { fetch: handle },
+    { maxRequestBodySize: MAX_REQUEST_BODY_BYTES },
+  );
+  const server: Server = createServer((req, res) => {
+    const path = URL.parse(req.url ?? '/', 'http://localhost')?.pathname ?? '';
+    const rejection = gate(path, req.headers.authorization);
+    if (!rejection) {
+      void nodeHandler(req, res);
+      return;
+    }
+    // Reply before the body is read, then drop the connection so an open upload cannot pin it.
+    res.writeHead(rejection.status, {
+      'Content-Type': 'text/plain',
+      Connection: 'close',
+      ...rejection.headers,
+    });
+    res.end(rejection.body);
+  });
   let onError: (err: Error) => void = () => {};
   await new Promise<void>((resolve, reject) => {
     onError = reject;
@@ -62,10 +96,20 @@ export async function startHttpServer(
   return {
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- listen on TCP always yields AddressInfo
     port: (server.address() as AddressInfo).port,
-    close: () =>
-      new Promise<void>((resolve, reject) => {
-        server.close((err) => (err ? reject(err) : resolve()));
-        server.closeAllConnections();
-      }).then(close),
+    close: async () => {
+      const serverClosed = new Promise<void>((resolve, fail) => {
+        server.close((err) => (err ? fail(err) : resolve()));
+      });
+      server.closeIdleConnections();
+      // In-flight requests get a short grace period before being cut.
+      const cut = setTimeout(() => server.closeAllConnections(), DRAIN_GRACE_MS);
+      cut.unref();
+      try {
+        // Connections finished by the handler shutdown go idle; close them now.
+        await Promise.all([serverClosed, close().finally(() => server.closeIdleConnections())]);
+      } finally {
+        clearTimeout(cut);
+      }
+    },
   };
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { InioApiError, type InioClient } from '../inio-client.ts';
 import { type TokenProvider } from '../auth.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { CustomerRef } from './customer-ref.ts';
 import {
   city,
@@ -98,7 +99,8 @@ const Input = z
 
 const Answer = z.array(z.string().min(1)).length(1);
 
-const UNREADABLE = 'The customer was created, but the API answer could not be read.';
+const UNREADABLE =
+  'The customer was created, but the API answer could not be read. Do not retry; call get_customer by number first.';
 
 export function registerCreateCustomer(
   server: McpServer,
@@ -109,7 +111,8 @@ export function registerCreateCustomer(
     {
       title: 'Create customer',
       description:
-        'Creates a customer. customerNo must be new: a customerNo that exists is rejected, and serviceLineName can be copied from get_customer of an existing customer. A consumer (customerType C) needs SSN; a business (customerType B) needs orgNr and vatNo. If you cannot send an SSN, say that the consumer must be created in the Inio back office. A retry with the same customerNo is rejected, but after an unclear outcome check get_customer by number before trying again. The customer is only created; nothing is sent to the customer. This cannot be undone with these tools. Returns the new customer id and customerNo. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Creates a customer. customerNo must be new: a customerNo that exists is rejected, and serviceLineName can be copied from get_customer of an existing customer. A consumer (customerType C) needs SSN; a business (customerType B) needs orgNr and vatNo. If you cannot send an SSN, say that the consumer must be created in the Inio back office. A retry with the same customerNo is rejected, but after an unclear outcome check get_customer by number before trying again. The customer is only created; nothing is sent to the customer. This cannot be undone with these tools. Returns the new customer id and customerNo. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -136,7 +139,7 @@ export function registerCreateCustomer(
           return fail(
             `${errorText(err)} A customer with this customerNo already exists; call get_customer by number to see it.`,
           );
-        const hint = ` The customer may or may not have been created. Do not retry yet: call get_customer with number ${input.customerNo} first.`;
+        const hint = ` Call get_customer with number ${input.customerNo} first.`;
         return fail(errorText(err) + (isUncertainOutcome(err) ? hint : ''));
       }
     }),

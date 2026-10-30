@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { errorText, fail, ok, PageInput, presentPage } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
@@ -88,7 +89,8 @@ export function registerListInvoices(
     {
       title: 'List invoices',
       description:
-        'List invoice summaries, filtered by invoiceNo, customerId or customerNo (not both), status or paymentStatus, with sort and limit/offset paging. Use get_invoice for full details. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'List invoice summaries, filtered by invoiceNo, customerId or customerNo (not both), status or paymentStatus, with sort and limit/offset paging. Use get_invoice for full details. ' +
+        REDACTION_NOTE,
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },

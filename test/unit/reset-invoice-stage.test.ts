@@ -7,6 +7,7 @@ import {
   makeHarness,
   textOf,
   WRITE_ANNOTATIONS,
+  expectAcceptedNote,
 } from './helpers/write-tool.ts';
 
 const ID = '3f2b8c1e-4a5d-4e6f-9a7b-1c2d3e4f5a6b';
@@ -297,11 +298,23 @@ describe('reset_invoice_stage output', () => {
     ['null', null],
     ['an array', [API_PLAN]],
     ['a string', 'Success'],
-  ])('rejects %s as the plan', async (_label, plan) => {
+  ])('reports success with a note when the plan is %s', async (_label, plan) => {
     const { call } = await setup({ post: () => Promise.resolve(plan) });
     const result = await call(ARGS);
+    expectAcceptedNote(result);
+  });
+});
+
+describe('reset_invoice_stage lookup is not an accepted write', () => {
+  it('reports an unreadable by-number lookup as an error, without posting', async () => {
+    const { inio, call } = await setup({
+      get: () => Promise.reject(new InioApiError(200, 'UPSTREAM_ERROR', 'Unexpected response')),
+      post: () => Promise.resolve(API_PLAN),
+    });
+    const result = await call({ number: 'INV-1001', targetStage: 'reminded', reason: 'r' });
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toMatch(/^UPSTREAM_ERROR: /);
+    expect(textOf(result)).not.toContain('accepted');
+    expect(inio.post).not.toHaveBeenCalled();
   });
 });
 
@@ -359,5 +372,24 @@ describe('reset_invoice_stage tool-call logging', () => {
       ],
     ]);
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('secret-reason');
+  });
+});
+
+describe('reset_invoice_stage accepted write with an unreadable answer', () => {
+  it.each([200, 201, 299])(
+    'reports success with a note when the client cannot read a %i answer',
+    async (status) => {
+      const err = new InioApiError(status, 'UPSTREAM_ERROR', 'Unexpected response');
+      const { call } = await setup({ ...impl(), post: () => Promise.reject(err) });
+      expectAcceptedNote(await call(ARGS));
+    },
+  );
+
+  it('still reports a non-2xx client error as an error', async () => {
+    const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
+    const { call } = await setup({ ...impl(), post: () => Promise.reject(err) });
+    const result = await call(ARGS);
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('BAD_REQUEST: Nope (correlationId c-1)');
   });
 });

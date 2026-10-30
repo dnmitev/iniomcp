@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { CreditFields, InvoiceRef, invoicePath, pastPaidDateRule } from './invoice-ref.ts';
 import {
   errorText,
@@ -86,7 +87,8 @@ export function registerCreateCreditInvoice(
     {
       title: 'Create credit invoice',
       description:
-        'Credit items of an existing invoice, by UUID (id) or invoice number (number) of the invoice to credit; pass exactly one. get_invoice lists the invoice items; pass each item id as debitItemId with a negative (or 0) unitPrice and the quantity to credit, within what remains on the item. The credit is posted against the invoice. Nothing is sent to the end customer unless distributionEnabled is true (with a distributionMethod). Rejected for invoices in debt collection and for a credit invoice number already in use. This cannot be undone with these tools. Returns the credit invoice id, number, payment reference and items. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Credit items of an existing invoice, by UUID (id) or invoice number (number) of the invoice to credit; pass exactly one. get_invoice lists the invoice items; pass each item id as debitItemId with a negative (or 0) unitPrice and the quantity to credit, within what remains on the item. The credit is posted against the invoice. Nothing is sent to the end customer unless distributionEnabled is true (with a distributionMethod). Rejected for invoices in debt collection and for a credit invoice number already in use. This cannot be undone with these tools. Returns the credit invoice id, number, payment reference and items. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -100,7 +102,8 @@ export function registerCreateCreditInvoice(
       'create_credit_invoice',
       async ({ id, number, creditInvoiceNo, items, distributionMethod, ...rest }) => {
         const unreadable = () => {
-          const note = 'The credit invoice was created, but the API answer could not be read.';
+          const note =
+            'The credit invoice was created, but the API answer could not be read. Do not retry; check the invoice first.';
           return ok(present({ created: true, creditInvoiceNo, note }, revealPii));
         };
         try {

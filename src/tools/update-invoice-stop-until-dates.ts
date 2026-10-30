@@ -2,8 +2,17 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { InioApiError, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, IsoDate, ok, present } from './result.ts';
+import {
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  fail,
+  IsoDate,
+  ok,
+  present,
+  writeFailure,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -63,7 +72,8 @@ export function registerUpdateInvoiceStopUntilDates(
     {
       title: 'Update invoice stop-until dates',
       description:
-        'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -96,7 +106,7 @@ export function registerUpdateInvoiceStopUntilDates(
         if (err instanceof InioApiError && err.status === 404 && err.code === 'UPSTREAM_ERROR') {
           return fail('FEATURE_DISABLED: Stop-until dates are not enabled for this tenant.');
         }
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

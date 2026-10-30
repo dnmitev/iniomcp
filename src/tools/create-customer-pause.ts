@@ -2,8 +2,9 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { pathSegment, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { PauseReason, pauseResult, PauseScope } from './pauses.ts';
-import { errorText, fail, IsoDate } from './result.ts';
+import { IsoDate, writeFailure } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -34,7 +35,8 @@ export function registerCreateCustomerPause(
     {
       title: 'Create customer pause',
       description:
-        'Create a pause for one customer that suspends reminders, debt-collection transfers or both (scope) from startAt, which must be tomorrow or later (UTC), until endAt; leave endAt out for an indefinite pause. Overlapping pauses of the same scope are rejected. Returns the created pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Create a pause for one customer that suspends reminders, debt-collection transfers or both (scope) from startAt, which must be tomorrow or later (UTC), until endAt; leave endAt out for an indefinite pause. Overlapping pauses of the same scope are rejected. Returns the created pause. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -46,9 +48,9 @@ export function registerCreateCustomerPause(
     withToolLogging(logger, 'create_customer_pause', async ({ customerId, ...body }) => {
       try {
         const path = `/customers/${pathSegment(customerId)}/pauses`;
-        return pauseResult(await client.post(path, body), revealPii);
+        return pauseResult(await client.post(path, body), revealPii, true);
       } catch (err) {
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

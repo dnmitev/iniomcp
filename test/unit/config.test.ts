@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadConfig, type Config } from '../../src/config.ts';
+import { isLoopbackHost, loadConfig, type Config } from '../../src/config.ts';
 
 const SECRET = 's3cr3t-Zq9xW7-do-not-leak';
 
@@ -514,5 +514,14 @@ describe('loadConfig', () => {
       expect(c.transport).toBe('stdio');
       expect('http' in c).toBe(false);
     });
+  });
+});
+
+describe('isLoopbackHost', () => {
+  it.each(['localhost', '127.0.0.1', '[::1]', '::1'])('is true for %s', (h) => {
+    expect(isLoopbackHost(h)).toBe(true);
+  });
+  it.each(['0.0.0.0', 'example.com', ''])('is false for %j', (h) => {
+    expect(isLoopbackHost(h)).toBe(false);
   });
 });

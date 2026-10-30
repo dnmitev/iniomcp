@@ -28,7 +28,8 @@ const BASE = {
 // The API requires SSN for a consumer and orgNr and vatNo for a business.
 const ARGS = { ...BASE, customerType: 'C', SSN: '19900101-1234' };
 const BARGS = { ...BASE, customerType: 'B', orgNr: '556000-0000', vatNo: 'SE556000000001' };
-const NOTE = 'The customer was created, but the API answer could not be read.';
+const NOTE =
+  'The customer was created, but the API answer could not be read. Do not retry; call get_customer by number first.';
 
 let token = TOKEN;
 const { setup, close } = makeHarness((server, deps) => {
@@ -578,10 +579,39 @@ describe('create_customer errors', () => {
         'The Inio API did not respond within 30 s. The change may or may not have been applied; check before retrying.',
       ),
     ],
-    ['a 500', new InioApiError(500, 'INTERNAL_ERROR', 'Server error')],
-    ['a 502', new InioApiError(502, 'UPSTREAM_ERROR', 'Bad gateway', 'c-8')],
-    ['a 503', new InioApiError(503, 'UNAVAILABLE', 'Service unavailable')],
-    ['a lost response', new InioApiError(0, 'NETWORK_ERROR', 'Could not reach the Inio API.')],
+    [
+      'a 500',
+      new InioApiError(
+        500,
+        'INTERNAL_ERROR',
+        'Server error The change may or may not have been applied; check before retrying.',
+      ),
+    ],
+    [
+      'a 502',
+      new InioApiError(
+        502,
+        'UPSTREAM_ERROR',
+        'Bad gateway The change may or may not have been applied; check before retrying.',
+        'c-8',
+      ),
+    ],
+    [
+      'a 503',
+      new InioApiError(
+        503,
+        'UNAVAILABLE',
+        'Service unavailable The change may or may not have been applied; check before retrying.',
+      ),
+    ],
+    [
+      'a lost response',
+      new InioApiError(
+        0,
+        'NETWORK_ERROR',
+        'Could not reach the Inio API. The change may or may not have been applied; check before retrying.',
+      ),
+    ],
   ])(
     'keeps %s an error and tells the model to check get_customer by number before any retry',
     async (_l, error) => {
@@ -592,7 +622,8 @@ describe('create_customer errors', () => {
       expect(text.startsWith(`${error.code}: ${error.message}`)).toBe(true);
       expect(text).toContain('get_customer');
       expect(text).toContain('C-1001');
-      expect(text).toContain('may or may not have been created');
+      expect(text.split('may or may not')).toHaveLength(2);
+      expect(text.indexOf('check before retrying.')).toBeLessThan(text.indexOf('get_customer'));
       expect(inio.post).toHaveBeenCalledTimes(1);
     },
   );
@@ -739,7 +770,7 @@ describe('create_customer through the real client', () => {
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain('TIMEOUT');
     expect(textOf(result)).toContain('get_customer');
-    expect(textOf(result)).toContain('may or may not have been created');
+    expect(textOf(result).split('may or may not')).toHaveLength(2);
     expect(f).toHaveBeenCalledTimes(1);
   });
 });

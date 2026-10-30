@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.3.1 |
-| Status | v0.1 complete (0.3.1); next milestone not defined |
+| Status | v0.2 Audit Quick Wins in progress (Phase 6 of 7 done); 0.3.1 released |
 | Last Updated | 2026-10-30 |
 
 ## Requirements
@@ -47,15 +47,18 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Tag-driven release with live gate, trusted publishing, GitHub Releases — Phase 3
 - ✓ Request timeout (30 s default) with a clear TIMEOUT result — Phase 3 (0.1.2)
 - ✓ Opt-in write tools behind INIO_ALLOW_WRITES (10): customer pauses (create/update/cancel), invoice due date and stop-until dates, update_customer, reset_invoice_stage, create/match credit invoices, create_payment, create_customer — Phase 4
-- ✓ Writes attributed to `inio-mcp` in audit fields; accepted writes never reported as failed; uncertain outcomes tell the model to check before retrying — Phase 4
+- ✓ Writes attributed to `inio-mcp` in audit fields; accepted writes never reported as failed; uncertain outcomes tell the model to check before retrying — Phase 4 (all 11 write tools and 5xx since Phase 6)
 
 - ✓ Shared HTTP server: `MCP_TRANSPORT=http` on `/mcp` behind a static bearer token (`MCP_AUTH_TOKEN`), Origin check, one Inio token shared across requests — Phase 5
 - ✓ Docker HTTP mode with graceful shutdown; README setup for Claude Code, Cursor and VS Code; 0.3.0 released — Phase 5
 
 - ✓ Distribution emails capped at 150 characters; npm audit clean — Phase 5 (0.3.1)
+- ✓ HTTP mode answers 404/401 before reading the body; 256 KiB body cap; non-loopback warning; drain-then-force shutdown (AEGIS F-04-007) — Phase 6 (unreleased)
+- ✓ Write 5xx carries the check-before-retry hint; accepted-but-unreadable = success + note in all 11 write tools (AEGIS F-04-002) — Phase 6 (unreleased)
 
 ### Active (In Progress)
-- None (v0.1 milestone complete)
+- [ ] Privacy claim matches redaction; README Data protection section (AEGIS R1) — Phase 7
+- [ ] Pinned install configs, no plaintext secret in examples, release-model note (AEGIS R7) — Phase 7
 
 ### Planned (Next)
 - Move to the `@inio` npm scope and the company GitHub org when they exist
@@ -125,7 +128,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | HTTP auth = one static bearer token (≥32 printable-ASCII chars), constant-time compare; one instance = one tenant; no OAuth in v0.1 | All common clients accept a fixed header; spec makes auth optional; no token passthrough | 2026-10-30 | Active |
 | Origin allowlist by hostname (SDK helper); auth before Origin | Bearer is the barrier; Origin is the DNS-rebinding layer | 2026-10-30 | Active |
 | @modelcontextprotocol/node (toNodeHandler) for the Node bridge | Official adapter; streaming handled | 2026-10-30 | Active |
-| Docker image binds 0.0.0.0, stdio default; no health endpoint; SDK body limit 4 MB | Token still required; no unauthenticated route | 2026-10-30 | Active |
+| Docker image binds 0.0.0.0, stdio default; no health endpoint; SDK body limit 4 MB | Token still required; no unauthenticated route | 2026-10-30 | Superseded (body limit) |
+| Auth and path checked before the body is read; 256 KiB body cap; 500 ms drain on shutdown | AEGIS F-04-007: pre-auth buffering let unauthenticated clients grow RSS by ~300 MB | 2026-10-30 | Active |
+| Client owns the check-before-retry sentence (status 0 or >= 500 on writes); tools add only a check pointer; accepted-unreadable = ok + note via writeFailure/acceptedUnreadable | AEGIS F-04-002: 8 of 11 write tools reported landed writes as failed | 2026-10-30 | Active |
 
 ## Success Metrics
 
@@ -160,4 +165,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-30 after v0.1 Initial Release*
+*Last updated: 2026-10-30 after Phase 6*

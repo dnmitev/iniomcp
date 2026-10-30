@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-30
+
+### Security
+
+- In HTTP mode the bearer token and path are checked before the request body is read: a request without a valid token gets 401 (or 404 on another path) and its body is never buffered. Before, an unauthenticated client could make the server buffer up to 4 MB per request.
+- Authenticated HTTP request bodies are capped at 256 KiB (was 4 MB); larger requests get 413. MCP requests are a few KiB, so no client should notice, but check if you send unusually large tool arguments.
+- A malformed request target in HTTP mode now gets 404 instead of an error.
+
+### Changed
+
+- Write tools never report an accepted write as failed. If the Inio API accepts a write but its answer cannot be read, the tool returns success with a note to check before retrying.
+- A write that gets a server error (HTTP 5xx) now says the change may or may not have been applied and to check before retrying, as timeouts and network errors already did. `create_payment` and `create_customer` add where to check.
+- Tool descriptions state exactly which fields are redacted and which are not (names, city, organisation and VAT numbers, references and free text are not), instead of "personal data is redacted".
+- In HTTP mode the server logs a warning at startup when it listens on a non-loopback address (the Docker image does, on `0.0.0.0`).
+- On shutdown in HTTP mode, in-flight requests get up to 500 ms to finish before connections are closed.
+
+### Documentation
+
+- New README sections: Data protection (what reaches your assistant's LLM provider, what is redacted, what is logged), Release model, and Pinning and verification.
+- Every install example pins the version (`@dnmitev/inio-mcp@0.4.0`, `ghcr.io/dnmitev/inio-mcp:0.4.0`) and warns about plaintext secrets in client config files.
+
 ## [0.3.1] - 2026-10-30
 
 ### Fixed

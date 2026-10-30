@@ -378,6 +378,18 @@ describe('createInioClient', () => {
       expect(err.message).toBe('Unexpected response from the Inio API (HTTP 502).');
     });
 
+    it.each([500, 502, 503])(
+      'adds no uncertain-outcome sentence to a GET answering %i',
+      async (status) => {
+        const envelope = { ...notFound, status, code: 'INTERNAL_ERROR', message: 'Boom' };
+        for (const res of [json(envelope, status), new Response('<html>x</html>', { status })]) {
+          const { client } = setup([res]);
+          const err = await apiErrorOf(client.get('/invoices/abc'));
+          expect(err.message).not.toContain('may or may not');
+        }
+      },
+    );
+
     it('maps an unexpected JSON error body to a generic UPSTREAM_ERROR', async () => {
       const { client } = setup([json({ oops: true }, 500)]);
       const err = await apiErrorOf(client.get('/invoices/abc'));
@@ -917,6 +929,7 @@ describe('createInioClient request timeout', () => {
 });
 
 describe('createInioClient writes', () => {
+  const UNCERTAIN = 'The change may or may not have been applied; check before retrying.';
   const BODY = { reason: 'BODY-SECRET-77', nested: { n: 1 } };
 
   function build(responses: Array<Response | Error>, timeoutMs?: number) {
@@ -1072,12 +1085,70 @@ describe('createInioClient writes', () => {
       );
     });
 
-    it('keeps the plain text for a non-2xx response that is not an error envelope', async () => {
-      const { client } = build([new Response('<html>bad gateway</html>', { status: 502 })]);
+    it.each([500, 502, 503])(
+      'adds the uncertain-outcome sentence to a %i that is not an error envelope',
+      async (status) => {
+        const { client } = build([new Response('<html>bad gateway</html>', { status })]);
+        const err = await apiErrorOf(pick(client)('/x', BODY));
+        expect(err.status).toBe(status);
+        expect(err.code).toBe('UPSTREAM_ERROR');
+        expect(err.message).toBe(
+          `Unexpected response from the Inio API (HTTP ${status}). ${UNCERTAIN}`,
+        );
+      },
+    );
+
+    it.each([500, 502, 503])(
+      'adds the uncertain-outcome sentence to a %i error envelope and keeps its fields',
+      async (status) => {
+        const envelope = {
+          success: false,
+          status,
+          code: 'INTERNAL_ERROR',
+          message: 'Boom',
+          correlationId: 'c-5xx',
+          fieldErrors: [{ fieldName: 'a', message: 'bad' }],
+        };
+        const { client } = build([json(envelope, status)]);
+        const err = await apiErrorOf(pick(client)('/x', BODY));
+        expect(err.status).toBe(status);
+        expect(err.code).toBe('INTERNAL_ERROR');
+        expect(err.message).toBe(`Boom. ${UNCERTAIN}`);
+        expect(err.correlationId).toBe('c-5xx');
+        expect(err.fieldErrors).toEqual([{ fieldName: 'a', message: 'bad' }]);
+      },
+    );
+
+    it('does not double the period when the envelope message already ends with one', async () => {
+      const { client } = build([
+        json({ success: false, status: 500, code: 'INTERNAL_ERROR', message: 'Boom.' }, 500),
+      ]);
       const err = await apiErrorOf(pick(client)('/x', BODY));
-      expect(err.status).toBe(502);
-      expect(err.code).toBe('UPSTREAM_ERROR');
-      expect(err.message).toBe('Unexpected response from the Inio API (HTTP 502).');
+      expect(err.message).toBe(`Boom. ${UNCERTAIN}`);
+    });
+
+    it('adds the sentence exactly once to a timeout', async () => {
+      const { client } = build([new DOMException('timeout', 'TimeoutError')]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.message.split('may or may not')).toHaveLength(2);
+    });
+
+    it('adds the sentence exactly once to a network failure', async () => {
+      const { client } = build([new TypeError('fetch failed')]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.message.split('may or may not')).toHaveLength(2);
+    });
+
+    it.each([400, 404, 409, 499])('adds no sentence to a %i error envelope', async (status) => {
+      const { client } = build([json({ ...notFound, status }, status)]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.message).toBe(notFound.message);
+    });
+
+    it('adds no sentence to a 4xx that is not an error envelope', async () => {
+      const { client } = build([new Response('<html>nope</html>', { status: 403 })]);
+      const err = await apiErrorOf(pick(client)('/x', BODY));
+      expect(err.message).toBe('Unexpected response from the Inio API (HTTP 403).');
     });
 
     it('keeps the API error text for a rejected write (nothing was applied)', async () => {

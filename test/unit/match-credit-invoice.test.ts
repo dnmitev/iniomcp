@@ -8,6 +8,7 @@ import {
   makeHarness,
   textOf,
   WRITE_ANNOTATIONS,
+  expectAcceptedNote,
 } from './helpers/write-tool.ts';
 
 const ID = '3f2b8c1e-4a5d-4e6f-9a7b-1c2d3e4f5a6b';
@@ -384,14 +385,13 @@ describe('match_credit_invoice response handling', () => {
     ['an object', { creditInvoiceId: CREDIT_ID }],
     ['null', null],
     ['a number', 42],
-  ])('fails with an upstream error when the API returns %s instead of an id', async (_l, body) => {
+  ])('reports success with a note when the API returns %s instead of an id', async (_l, body) => {
     const { inio, call } = await setup({
       post: () => Promise.resolve(body),
       get: () => Promise.resolve(INVOICE),
     });
     const result = await call(ARGS);
-    expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe('UPSTREAM_ERROR: Unexpected credit invoice id from the Inio API.');
+    expectAcceptedNote(result);
     expect(inio.get).not.toHaveBeenCalled();
   });
 });
@@ -455,5 +455,24 @@ describe('match_credit_invoice tool-call logging', () => {
       ],
     ]);
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('secret-note');
+  });
+});
+
+describe('match_credit_invoice accepted write with an unreadable answer', () => {
+  it.each([200, 201, 299])(
+    'reports success with a note when the client cannot read a %i answer',
+    async (status) => {
+      const err = new InioApiError(status, 'UPSTREAM_ERROR', 'Unexpected response');
+      const { call } = await setup({ ...impl(), post: () => Promise.reject(err) });
+      expectAcceptedNote(await call(ARGS));
+    },
+  );
+
+  it('still reports a non-2xx client error as an error', async () => {
+    const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
+    const { call } = await setup({ ...impl(), post: () => Promise.reject(err) });
+    const result = await call(ARGS);
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('BAD_REQUEST: Nope (correlationId c-1)');
   });
 });

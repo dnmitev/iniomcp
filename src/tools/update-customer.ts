@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
+import { REDACTION_NOTE } from '../redact.ts';
 import { CustomerRef, customerPath } from './customer-ref.ts';
 import {
   city,
@@ -12,7 +13,14 @@ import {
   line,
   zipCode,
 } from './customer-fields.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
+import {
+  acceptedUnreadable,
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  ok,
+  present,
+  writeFailure,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = {
@@ -88,7 +96,8 @@ export function registerUpdateCustomer(
     {
       title: 'Update customer',
       description:
-        'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. ' +
+        REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -101,13 +110,13 @@ export function registerUpdateCustomer(
       try {
         const parsed = Payload.safeParse(await client.patch(customerPath({ id, number }), body));
         if (!parsed.success) {
-          return fail('UPSTREAM_ERROR: Unexpected customer payload from the Inio API.');
+          return acceptedUnreadable();
         }
         // workflowsSettings is large and not editable here; leave it out as get_customer does.
         const [{ workflowsSettings: _, ...customer }] = parsed.data;
         return ok(present(customer, revealPii));
       } catch (err) {
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

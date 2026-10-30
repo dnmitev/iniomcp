@@ -7,6 +7,7 @@ import {
   makeHarness,
   textOf,
   WRITE_ANNOTATIONS,
+  expectAcceptedNote,
 } from './helpers/write-tool.ts';
 
 const ID = '3f2b8c1e-4a5d-4e6f-9a7b-1c2d3e4f5a6b';
@@ -401,5 +402,24 @@ describe('update_invoice_stop_until_dates tool-call logging', () => {
       ],
     ]);
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('secret-reason');
+  });
+});
+
+describe('update_invoice_stop_until_dates accepted write with an unreadable answer', () => {
+  it.each([200, 201, 299])(
+    'reports success with a note when the client cannot read a %i answer',
+    async (status) => {
+      const err = new InioApiError(status, 'UPSTREAM_ERROR', 'Unexpected response');
+      const { call } = await setup({ ...impl(), post: () => Promise.reject(err) });
+      expectAcceptedNote(await call({ id: ID, reason: 'Dispute', invoicing1: '2026-12-01' }));
+    },
+  );
+
+  it('still reports a non-2xx client error as an error', async () => {
+    const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
+    const { call } = await setup({ ...impl(), post: () => Promise.reject(err) });
+    const result = await call({ id: ID, reason: 'Dispute', invoicing1: '2026-12-01' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('BAD_REQUEST: Nope (correlationId c-1)');
   });
 });

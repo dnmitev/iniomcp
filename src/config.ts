@@ -16,7 +16,9 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 
 type Env = Record<string, string | undefined>;
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+export const isLoopbackHost = (host: string): boolean => LOCAL_HOSTS.has(host);
 const TOKEN_PATH = '/protocol/openid-connect/token';
 
 /** Parses and validates Inio MCP settings. Error messages name vars only, never values. */

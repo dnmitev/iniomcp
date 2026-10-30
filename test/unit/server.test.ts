@@ -8,6 +8,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { createServer, createServerFactory } from '../../src/server.ts';
 import type { Config } from '../../src/config.ts';
+import { REDACTION_NOTE } from '../../src/redact.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const PKG = z
@@ -139,7 +140,8 @@ describe('createServer', () => {
       get_invoice: {
         title: 'Get invoice',
         description:
-          'Fetch one invoice by UUID (id) or invoice number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Fetch one invoice by UUID (id) or invoice number (number); pass exactly one. ' +
+          REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',
           number: 'Business invoice number, e.g. INV-1001',
@@ -162,7 +164,8 @@ describe('createServer', () => {
       get_customer: {
         title: 'Get customer',
         description:
-          'Fetch one customer with its service line and any active pause, by UUID (id) or customer number (number); pass exactly one. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Fetch one customer with its service line and any active pause, by UUID (id) or customer number (number); pass exactly one. ' +
+          REDACTION_NOTE,
         inputs: {
           id: 'Customer UUID',
           number: 'Business customer number, e.g. C-1001',
@@ -173,7 +176,8 @@ describe('createServer', () => {
       list_invoices: {
         title: 'List invoices',
         description:
-          'List invoice summaries, filtered by invoiceNo, customerId or customerNo (not both), status or paymentStatus, with sort and limit/offset paging. Use get_invoice for full details. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'List invoice summaries, filtered by invoiceNo, customerId or customerNo (not both), status or paymentStatus, with sort and limit/offset paging. Use get_invoice for full details. ' +
+          REDACTION_NOTE,
         inputs: {
           invoiceNo: 'Exact invoice number, e.g. INV-1001',
           customerId: 'Customer UUID; not together with customerNo',
@@ -189,14 +193,14 @@ describe('createServer', () => {
       },
       get_customer_pause: {
         title: 'Get customer pause',
-        description:
-          'Fetch one customer pause by customer UUID and pause UUID. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+        description: 'Fetch one customer pause by customer UUID and pause UUID. ' + REDACTION_NOTE,
         inputs: { customerId: 'Customer UUID', pauseId: 'Pause UUID' },
       },
       list_customer_pauses: {
         title: 'List customer pauses',
         description:
-          'List pauses for one customer by customer UUID (get_customer returns it), optionally filtered by status. Returns all matching pauses ordered by start time. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'List pauses for one customer by customer UUID (get_customer returns it), optionally filtered by status. Returns all matching pauses ordered by start time. ' +
+          REDACTION_NOTE,
         inputs: {
           customerId: 'Customer UUID',
           status: 'Pause status filter: scheduled, active, completed or cancelled',
@@ -205,7 +209,8 @@ describe('createServer', () => {
       list_customers: {
         title: 'List customers',
         description:
-          'List customer summaries, filtered by customerNo, directDebit or serviceLineId, with sort and limit/offset paging. Use get_customer for full details. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'List customer summaries, filtered by customerNo, directDebit or serviceLineId, with sort and limit/offset paging. Use get_customer for full details. ' +
+          REDACTION_NOTE,
         inputs: {
           customerNo: 'Exact customer number, e.g. C-1001',
           directDebit: 'Only customers with (true) or without direct debit',
@@ -476,7 +481,8 @@ describe('write gate', () => {
       create_customer_pause: {
         title: 'Create customer pause',
         description:
-          'Create a pause for one customer that suspends reminders, debt-collection transfers or both (scope) from startAt, which must be tomorrow or later (UTC), until endAt; leave endAt out for an indefinite pause. Overlapping pauses of the same scope are rejected. Returns the created pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Create a pause for one customer that suspends reminders, debt-collection transfers or both (scope) from startAt, which must be tomorrow or later (UTC), until endAt; leave endAt out for an indefinite pause. Overlapping pauses of the same scope are rejected. Returns the created pause. ' +
+          REDACTION_NOTE,
         inputs: {
           customerId: 'Customer UUID',
           scope: 'What to pause: reminders, dcTransfers (debt-collection transfers) or both',
@@ -488,7 +494,8 @@ describe('write gate', () => {
       update_customer_pause: {
         title: 'Update customer pause',
         description:
-          'Change a customer pause: scheduled pauses can change startAt, endAt and scope; active pauses can change only endAt (null makes it indefinite). Completed or cancelled pauses cannot be changed. Changes that overlap another pause of the same scope are rejected. Returns the updated pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Change a customer pause: scheduled pauses can change startAt, endAt and scope; active pauses can change only endAt (null makes it indefinite). Completed or cancelled pauses cannot be changed. Changes that overlap another pause of the same scope are rejected. Returns the updated pause. ' +
+          REDACTION_NOTE,
         inputs: {
           customerId: 'Customer UUID',
           pauseId: 'Pause UUID',
@@ -501,7 +508,8 @@ describe('write gate', () => {
       cancel_customer_pause: {
         title: 'Cancel customer pause',
         description:
-          'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. ' +
+          REDACTION_NOTE,
         inputs: {
           customerId: 'Customer UUID',
           pauseId: 'Pause UUID',
@@ -511,7 +519,8 @@ describe('write gate', () => {
       update_invoice_due_date: {
         title: 'Postpone invoice due date',
         description:
-          'Postpone an invoice due date, by UUID (id) or invoice number (number); pass exactly one. The new date must be later than the current due date and after today, so this cannot be undone with these tools. Rejected for closed, cancelled or paid invoices, invoices in debt collection, invoices that have already escalated, invoices whose first or second reminder waiting period has passed, or with an outstanding fee. Triggers the client webhook invoiceDueDatePostponed. Returns whether it was updated, plus the invoice number, due date, stage and status read back after the change. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Postpone an invoice due date, by UUID (id) or invoice number (number); pass exactly one. The new date must be later than the current due date and after today, so this cannot be undone with these tools. Rejected for closed, cancelled or paid invoices, invoices in debt collection, invoices that have already escalated, invoices whose first or second reminder waiting period has passed, or with an outstanding fee. Triggers the client webhook invoiceDueDatePostponed. Returns whether it was updated, plus the invoice number, due date, stage and status read back after the change. ' +
+          REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',
           number: 'Business invoice number, e.g. INV-1001',
@@ -522,7 +531,8 @@ describe('write gate', () => {
       update_customer: {
         title: 'Update customer',
         description:
-          'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. ' +
+          REDACTION_NOTE,
         inputs: {
           id: 'Customer UUID',
           number: 'Business customer number, e.g. C-1001',
@@ -542,7 +552,8 @@ describe('write gate', () => {
       reset_invoice_stage: {
         title: 'Reset invoice stage',
         description:
-          'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. ' +
+          REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',
           number:
@@ -557,7 +568,8 @@ describe('write gate', () => {
       update_invoice_stop_until_dates: {
         title: 'Update invoice stop-until dates',
         description:
-          'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. Personal data is redacted unless the server runs with INIO_REVEAL_PII=true.',
+          'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. ' +
+          REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',
           number: 'Business invoice number, e.g. INV-1001',

@@ -93,7 +93,7 @@ function isTimeout(err: unknown): boolean {
 }
 
 /**
- * Suffix for write failures whose outcome is unknown (timeout, network error, unreadable 2xx):
+ * Suffix for write failures whose outcome is unknown (timeout, network error, 5xx, unreadable 2xx):
  * the change may have landed, so say so instead of inviting a blind retry. Empty for GET.
  */
 function uncertainOutcome({ method }: Request): string {
@@ -251,9 +251,16 @@ export function createInioClient({
       const err = ErrorEnvelope.safeParse(resBody);
       if (err.success) {
         const { code, message, correlationId, fieldErrors } = err.data;
+        const hint = res.status >= 500 ? uncertainOutcome(req) : '';
         throw fail(
           req,
-          new InioApiError(res.status, code, message, correlationId, fieldErrorsOf(fieldErrors)),
+          new InioApiError(
+            res.status,
+            code,
+            hint ? message.replace(/\.?$/, '.') + hint : message,
+            correlationId,
+            fieldErrorsOf(fieldErrors),
+          ),
         );
       }
     }
@@ -261,7 +268,7 @@ export function createInioClient({
     const unexpected = new InioApiError(
       res.status,
       'UPSTREAM_ERROR',
-      `Unexpected response from the Inio API (HTTP ${res.status}).${res.ok ? uncertainOutcome(req) : ''}`,
+      `Unexpected response from the Inio API (HTTP ${res.status}).${res.ok || res.status >= 500 ? uncertainOutcome(req) : ''}`,
     );
     throw res.ok ? unexpected : fail(req, unexpected);
   }
