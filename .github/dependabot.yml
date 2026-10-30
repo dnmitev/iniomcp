@@ -19,6 +19,9 @@ updates:
     schedule:
       interval: weekly
     groups:
+      # The node adapter's peer range follows the server's minor version, so the SDK packages move together.
+      mcp-sdk:
+        patterns: ['@modelcontextprotocol/*']
       minor-and-patch:
         update-types: [minor, patch]
     ignore:

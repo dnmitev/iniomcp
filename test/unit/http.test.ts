@@ -352,4 +352,75 @@ describe('http entry point (spawned process)', () => {
       child.kill();
     }
   }, 20_000);
+
+  type Signals = readonly NodeJS.Signals[];
+
+  async function stopWith(signals: Signals) {
+    const port = await freePort();
+    const child = spawn(process.execPath, ['src/index.ts'], {
+      cwd: ROOT,
+      env: {
+        PATH: process.env.PATH ?? '',
+        INIO_CLIENT_ID: 'x',
+        INIO_CLIENT_SECRET: SECRET,
+        INIO_AUTH_URL: 'http://127.0.0.1:9/token',
+        INIO_URL: 'http://127.0.0.1:9/v1',
+        MCP_TRANSPORT: 'http',
+        MCP_AUTH_TOKEN: BEARER,
+        HOST: '127.0.0.1',
+        PORT: String(port),
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stderr = '';
+    child.stderr.on('data', (c: Buffer) => {
+      stderr += c.toString('utf8');
+    });
+    const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) =>
+      child.once('exit', (code, sig) => resolve({ code, signal: sig })),
+    );
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await vi.waitFor(() => expect(stderr).toContain('server started'), { timeout: 8_000 });
+      for (const s of signals) child.kill(s);
+      const timeout = new Promise<'timeout'>((resolve) => {
+        timer = setTimeout(resolve, 2_000, 'timeout');
+      });
+      const result = await Promise.race([exited, timeout]);
+      return { result, port, stderr: () => stderr };
+    } finally {
+      clearTimeout(timer);
+      child.kill('SIGKILL');
+    }
+  }
+
+  const stoppedLines = (stderr: string) =>
+    stderr.split('\n').filter((l) => l.includes('"msg":"server stopped"'));
+
+  it.each(['SIGTERM', 'SIGINT'] as const)(
+    'shuts down gracefully on %s: logs server stopped and exits 0 within 2 s',
+    async (signal) => {
+      const { result, port, stderr } = await stopWith([signal]);
+      expect(result).toEqual({ code: 0, signal: null });
+      expect(stoppedLines(stderr())).toHaveLength(1);
+      await expect(fetch(`http://127.0.0.1:${port}/mcp`)).rejects.toThrow(/fetch failed/);
+    },
+    20_000,
+  );
+
+  it('survives SIGTERM sent twice: one server stopped, exit 0, no error output', async () => {
+    const { result, stderr } = await stopWith(['SIGTERM', 'SIGTERM']);
+    expect(result).toEqual({ code: 0, signal: null });
+    expect(stoppedLines(stderr())).toHaveLength(1);
+    expect(stderr()).not.toContain('Error');
+    expect(stderr()).not.toContain('    at ');
+  }, 20_000);
+
+  it('survives SIGINT immediately followed by SIGTERM: one server stopped, exit 0, no error output', async () => {
+    const { result, stderr } = await stopWith(['SIGINT', 'SIGTERM']);
+    expect(result).toEqual({ code: 0, signal: null });
+    expect(stoppedLines(stderr())).toHaveLength(1);
+    expect(stderr()).not.toContain('Error');
+    expect(stderr()).not.toContain('    at ');
+  }, 20_000);
 });

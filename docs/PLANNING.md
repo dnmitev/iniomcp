@@ -136,7 +136,7 @@ Live-environment secrets live only in a protected GitHub environment and are nev
 - **Authz:** the server acts as one Inio client with that client's credentials and adds no privilege. Read-only by default; write tools are not registered unless `INIO_ALLOW_WRITES=true`, and carry `destructiveHint` so assistants ask for confirmation. Write tool descriptions state their consequences.
 - **Secrets:** read from env only; never logged, never echoed in errors or tool output; token held in memory. Logs go to stderr (stdout is the stdio protocol channel). Tests assert the secret never appears in logs or errors.
 - **Transport:** refuse non-`https` `INIO_URL` except localhost.
-- **HTTP mode:** an instance serves that client's data to anyone who can reach its port. Default bind is `127.0.0.1`, and the README tells operators to keep it behind their own network auth. Built-in auth is planned for Phase 5.
+- **HTTP mode:** an instance serves that client's data to anyone who can reach its port. Default bind is `127.0.0.1`. Since 0.3.0 every request needs a static bearer token (`MCP_AUTH_TOKEN`), and foreign browser origins are refused; TLS belongs to a reverse proxy.
 - **PII / GDPR:** tool output goes to third-party LLM providers. SSN, IBAN and similar fields are redacted by default; responses are trimmed to useful fields.
 - **Input validation:** strict zod schemas (no unknown keys, enums from the spec, length limits); path parameters URL-encoded.
 - **Prompt injection:** free-text fields from Inio data are returned as data. Write tools are the blast radius, which is why they are opt-in.
@@ -263,5 +263,5 @@ Loop: QA (red), developer (green, refactor), reviewer, mutation tester, then bac
 1. Owner of the `@inio` npm org, and final GitHub org after transfer.
 2. Prism or Postman mock for integration tests.
 3. Which fields beyond SSN and IBAN count as PII for redaction (names, addresses, emails, phone numbers)?
-4. HTTP mode auth model (Phase 5): static bearer, per-request token passthrough, or MCP OAuth.
+4. ~~HTTP mode auth model~~ Answered in Phase 5: a static bearer token in v0.1 (all common clients accept a fixed header). MCP OAuth with protected-resource metadata later, if asked for. Token passthrough is ruled out by the MCP spec.
 5. Dedicated, resettable test tenant for live write smoke tests (Phase 4).

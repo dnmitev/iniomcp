@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 5 of 5 (HTTP hardening) — In progress
-Plan: 05-01 complete; 05-02 not yet planned
-Status: Ready for next PLAN
-Last activity: 2026-10-30 — UNIFY 05-01 (HTTP transport with static bearer auth)
+Phase: 5 of 5 (HTTP hardening) — Planning
+Plan: 05-02 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-10-30 — Created .paul/phases/05-http-hardening/05-02-PLAN.md
 
 Progress:
 - Milestone: [█████████░] 90%
@@ -30,7 +30,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -77,6 +77,8 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: Phase 5 = 05-01 transport+auth+Origin (TDD); 05-02 Docker HTTP, docs, release 0.3.0 | Phase 5 | devops-reviewer on 05-02 |
 | 2026-10-30: MCP_AUTH_TOKEN rejects whitespace; Bearer accepts 1+ spaces; Origin allowlist by hostname | Phase 5 | 05-01 review fixes |
 | 2026-10-30: HttpConfig type narrows config.http (no runtime guard) | Phase 5 | Pattern for HTTP code |
+| 2026-10-30: 05-02: graceful shutdown built; health endpoint skipped (YAGNI, no unauthenticated route); body limit = SDK 413 at 4 MB | Phase 5 | Closes 05-01 deferred items |
+| 2026-10-30: Docker image sets HOST=0.0.0.0 + EXPOSE 3000; stdio stays default | Phase 5 | Token still required for HTTP |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -107,15 +109,15 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: plan/05-01-http-transport (not pushed; no PR yet)
+Branch: plan/05-02-docker-http (from plan/05-01-http-transport; PR #32 open for 05-01)
 Releases: v0.2.0 (npm latest, 2026-10-29; Phase 4 write tools); v0.1.2 before
 
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Plan 05-01 loop closed; branch plan/05-01-http-transport ready for PR
-Next action: Open PR for 05-01, then /paul:plan for 05-02 (Docker HTTP mode, docs, release 0.3.0)
-Resume file: .paul/phases/05-http-hardening/05-01-SUMMARY.md
+Stopped at: Plan 05-02 created; PR #32 (05-01) open
+Next action: Review and approve plan, then run /paul:apply .paul/phases/05-http-hardening/05-02-PLAN.md
+Resume file: .paul/phases/05-http-hardening/05-02-PLAN.md
 Resume context:
 - 0.2.0 on npm latest + GHCR + GitHub Release (write tools, 18 tools with writes on)
 - 05-01 done: MCP_TRANSPORT=http with static bearer (src/http.ts); not released yet

@@ -21,7 +21,25 @@ if (config) {
   if (config.http) {
     const { http } = config;
     const { host, port } = http;
-    await startHttpServer({ ...config, http }, { logger });
+    const server = await startHttpServer({ ...config, http }, { logger });
+    let stopping = false;
+    const stop = () => {
+      if (stopping) return;
+      stopping = true;
+      setTimeout(() => process.exit(1), 2_000).unref();
+      server
+        .close()
+        .then(() => {
+          logger.info('server stopped');
+          logger.flush(() => process.exit(0));
+        })
+        .catch((err: unknown) => {
+          logger.error({ err }, 'shutdown failed');
+          logger.flush(() => process.exit(1));
+        });
+    };
+    process.on('SIGTERM', stop);
+    process.on('SIGINT', stop);
     logger.info(
       { version, transport: 'http', host, port, allowWrites, revealPii, logLevel },
       'server started',
