@@ -17,7 +17,7 @@ COPY --from=build /app/dist ./dist
 COPY LICENSE NOTICE ./
 USER node
 # stdio by default: the client keeps stdin open (docker run -i).
-# HTTP: -e MCP_TRANSPORT=http -e MCP_AUTH_TOKEN -p 3000:3000. HOST=0.0.0.0 makes the
+# HTTP: -e MCP_TRANSPORT=http -e MCP_AUTH_TOKEN -p 127.0.0.1:3000:3000. HOST=0.0.0.0 makes the
 # port reachable from outside the container; requests still need the bearer token.
 ENV HOST=0.0.0.0
 EXPOSE 3000

@@ -38,8 +38,8 @@ if (config) {
           logger.flush(() => process.exit(1));
         });
     };
-    process.once('SIGTERM', stop);
-    process.once('SIGINT', stop);
+    process.on('SIGTERM', stop);
+    process.on('SIGINT', stop);
     logger.info(
       { version, transport: 'http', host, port, allowWrites, revealPii, logLevel },
       'server started',

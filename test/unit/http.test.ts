@@ -408,6 +408,14 @@ describe('http entry point (spawned process)', () => {
     20_000,
   );
 
+  it('survives SIGTERM sent twice: one server stopped, exit 0, no error output', async () => {
+    const { result, stderr } = await stopWith(['SIGTERM', 'SIGTERM']);
+    expect(result).toEqual({ code: 0, signal: null });
+    expect(stoppedLines(stderr())).toHaveLength(1);
+    expect(stderr()).not.toContain('Error');
+    expect(stderr()).not.toContain('    at ');
+  }, 20_000);
+
   it('survives SIGINT immediately followed by SIGTERM: one server stopped, exit 0, no error output', async () => {
     const { result, stderr } = await stopWith(['SIGINT', 'SIGTERM']);
     expect(result).toEqual({ code: 0, signal: null });
