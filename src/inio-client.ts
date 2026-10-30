@@ -1,6 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
-import { noopLogger, type Logger, type TokenProvider } from './auth.ts';
+import { type TokenProvider } from './auth.ts';
+import { noopLogger, type Logger } from './logger.ts';
 
 export type FieldError = { fieldName: string; message: string };
 

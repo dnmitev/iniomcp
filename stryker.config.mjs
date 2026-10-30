@@ -2,7 +2,10 @@
 export default {
   testRunner: 'vitest',
   vitest: { dir: 'test/unit' },
-  mutate: ['src/**/*.ts', '!src/index.ts'],
+  // MUTATE=src/a.ts,src/b.ts narrows a run; the CLI --mutate is merged with this list instead.
+  mutate: process.env.MUTATE
+    ? process.env.MUTATE.split(',').map((s) => s.trim())
+    : ['src/**/*.ts', '!src/index.ts'],
   thresholds: { high: 90, low: 80, break: 80 },
   incremental: true,
   incrementalFile: 'reports/stryker-incremental.json',

@@ -8,7 +8,7 @@ export const zipCode = z.string().regex(/^[0-9A-Za-z ]{4,6}$/);
 
 /** A distribution email field; `clearable` adds null for update_customer. */
 export const email = (which: string, clearable: boolean) => {
-  const base = clearable ? z.email().nullable() : z.email();
+  const base = clearable ? z.email().max(150).nullable() : z.email().max(150);
   return base
     .optional()
     .describe(`${which} distribution email address${clearable ? ', or null to clear' : ''}`);
