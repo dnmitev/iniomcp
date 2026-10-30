@@ -8,29 +8,29 @@ about: "inio-mcp"
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-10-28)
+See: .paul/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.1 — Phase 5 HTTP hardening
+**Current focus:** v0.1 milestone complete (0.3.0) — ready to close the milestone
 
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 5 of 5 (HTTP hardening) — Planning
-Plan: 05-02 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-10-30 — Created .paul/phases/05-http-hardening/05-02-PLAN.md
+Phase: 5 of 5 (HTTP hardening) — Complete
+Plan: 05-02 complete
+Status: Milestone complete; ready for /paul:complete-milestone
+Last activity: 2026-10-30 — Phase 5 complete; v0.3.0 released
 
 Progress:
-- Milestone: [█████████░] 90%
-- Phase 5: [█████░░░░░] 50%
+- Milestone: [██████████] 100%
+- Phase 5: [██████████] 100%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ✓        ✓        ✓     [Loop complete - milestone complete]
 ```
 
 ## Accumulated Context
@@ -93,9 +93,10 @@ See PROJECT.md Key Decisions.
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 | Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | Next schema change to customers |
-| Dockerfile HTTP mode: EXPOSE, HOST=0.0.0.0, stale stdio-only comment | 05-01 | S | 05-02 |
-| Dependabot: group @modelcontextprotocol/node with server | 05-01 | S | 05-02 |
-| Graceful shutdown (SIGTERM), health endpoint, body-size limit for HTTP | 05-01 | S | 05-02 decides for Docker |
+| release.yml OCI image description label still says "(stdio)" | 05-02 | S | Next release.yml touch |
+| Health endpoint for HTTP mode (skipped: would be unauthenticated) | 05-02 | S | If an orchestrator needs it |
+| Per-user tokens or MCP OAuth for HTTP | 05-01 | M | If teams ask |
+| Double-signal shutdown tests are race-prone smoke tests | 05-02 | S | If shutdown logic changes |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
@@ -109,18 +110,17 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: plan/05-02-docker-http (from plan/05-01-http-transport; PR #32 open for 05-01)
-Releases: v0.2.0 (npm latest, 2026-10-29; Phase 4 write tools); v0.1.2 before
+Branch: paul/05-02-unify (main has #32 c0fcda2, #33 b2ce186; tag v0.3.0 on b2ce186)
+Releases: v0.3.0 (npm latest, GHCR 0.3.0/0.3/latest, 2026-10-30; shared HTTP server); v0.2.0 before
 
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Plan 05-02 created; PR #32 (05-01) open
-Next action: Review and approve plan, then run /paul:apply .paul/phases/05-http-hardening/05-02-PLAN.md
-Resume file: .paul/phases/05-http-hardening/05-02-PLAN.md
+Stopped at: Phase 5 complete, v0.1 milestone complete; v0.3.0 released and verified
+Next action: /paul:complete-milestone (v0.1), then plan the next milestone or the @inio scope move
+Resume file: .paul/phases/05-http-hardening/05-02-SUMMARY.md
 Resume context:
-- 0.2.0 on npm latest + GHCR + GitHub Release (write tools, 18 tools with writes on)
-- 05-01 done: MCP_TRANSPORT=http with static bearer (src/http.ts); not released yet
+- 0.3.0 on npm latest + GHCR + GitHub Release (stdio and shared HTTP server, 18 tools with writes on)
 
 ---
 *STATE.md — Updated after every significant action*

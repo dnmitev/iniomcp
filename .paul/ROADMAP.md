@@ -13,8 +13,8 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 ## Current Milestone
 
 **v0.1 Initial Release** (v0.1.0)
-Status: In progress
-Phases: 4 of 5 complete
+Status: Complete (released as 0.3.0)
+Phases: 5 of 5 complete
 
 ## Phases
 
@@ -24,7 +24,7 @@ Phases: 4 of 5 complete
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
 | 3 | Packaging and release | 3/3 | ✅ Complete | 2026-10-29 |
 | 4 | Write tools (opt-in) | 4/4 | ✅ Complete | 2026-10-29 |
-| 5 | HTTP hardening | 1/2 | In progress | - |
+| 5 | HTTP hardening | 2/2 | ✅ Complete | 2026-10-30 |
 
 ## Phase Details
 
@@ -89,8 +89,8 @@ Phases: 4 of 5 complete
 
 **Plans:**
 - [x] 05-01: Streamable HTTP transport, static bearer auth, Origin checks, shared Inio token
-- [ ] 05-02: Docker HTTP mode, README/client snippets, CHANGELOG, release 0.3.0
+- [x] 05-02: Docker HTTP mode, README/client snippets, CHANGELOG, release 0.3.0
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-10-30 Phase 5 planning*
+*Last updated: 2026-10-30 after Phase 5 (milestone complete)*
