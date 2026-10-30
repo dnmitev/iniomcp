@@ -11,27 +11,26 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.2 Audit Quick Wins — Phase 7 Docs and install trust
+**Current focus:** v0.2 Audit Quick Wins complete (0.4.0) — ready to close milestone
 
 ## Current Position
 
 Milestone: v0.2 Audit Quick Wins
-Phase: 7 of 7 (Docs and install trust) — milestone phase 2 of 2
-Plan: 07-02 created, awaiting approval (07-01 complete)
-Status: PLAN created, ready for APPLY
-Last activity: 2026-10-30 — Created .paul/phases/07-docs-install-trust/07-02-PLAN.md
+Phase: 7 of 7 (Docs and install trust) — Complete
+Plan: 07-02 complete (0.4.0 released)
+Status: Milestone v0.2 complete — ready for /paul:complete-milestone
+Last activity: 2026-10-30 — 0.4.0 released; Phase 7 transitioned
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
-- v0.2 Audit Quick Wins: [███████░░░] 75% (Phase 6 ✓, 07-01 ✓)
-- Phase 7: [█████░░░░░] 50%
+- v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ○        ○        ○     [Milestone complete - ready to close]
 ```
 
 ## Accumulated Context
@@ -101,6 +100,7 @@ See PROJECT.md Key Decisions.
 | Double-signal shutdown tests are race-prone smoke tests; spawned SIGTERM test accepts finished-or-closed (drain proven via close()) | 05-02, 06-01 | S | If shutdown logic changes |
 | 5xx hint punctuation for API messages ending !/?/whitespace/empty | 06-02 | S | Cosmetic; any client touch |
 | Image build provenance (attest-build-provenance) and npm-shrinkwrap for transitive pins | 07-01 | M | R6 |
+| Redundant closeIdleConnections() calls in src/http.ts close() (server.close() already does it on Node ≥ 24; verified 07-02) | 07-02 | S | Next http.ts touch |
 | acceptedUnreadable() echoes no identifier (create_customer_pause gives no pause id to check) | 06-02 | S | With R8 write attribution |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
@@ -115,16 +115,16 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/milestone-v0.2 (from main 736b6a0 + v0.1 close commits); last commit a1871e7 (Phase 6); not pushed
+Branch: paul/milestone-v0.2-close (from main 1ddab79 = PR #38 squash); tag v0.4.0 on 1ddab79 (pushed)
 Previous: paul/milestone-v0.1; milestone tag milestone-v0.1 (local, not pushed)
-Releases: v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
+Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-30; v0.2 Audit Quick Wins); v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
 
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: 07-01 unified (uncommitted on paul/milestone-v0.2; phase commit at transition). README pins 0.4.0 — merge, tag and publish back to back
-Next action: Review and approve plan, then run /paul:apply .paul/phases/07-docs-install-trust/07-02-PLAN.md
-Resume file: .paul/phases/07-docs-install-trust/07-02-PLAN.md
+Stopped at: v0.2 complete; 0.4.0 on npm (latest, provenance) and GHCR (sha256:c7c188c1…6dfcf, amd64+arm64); phase close committed on paul/milestone-v0.2-close (not pushed)
+Next action: /paul:complete-milestone (then /paul:discuss-milestone: R2, R3, R6, R8 candidates)
+Resume file: .paul/phases/07-docs-install-trust/07-02-SUMMARY.md
 Resume context:
 - AEGIS final: 29 raised, 27 after dedup (high 2, medium 8 incl. accepted F-00-002, low 15, info 2); 7 root causes, 10 roadmap items R1..R10
 - Roadmap top: R1 PII claim fix (S), R2 redaction of orgNr/names/free text (M), R3 write allowlist + payment ceiling (M), R4 auth before body read on HTTP (S), R5 uncertain write outcomes in client, 9 tools (S), R7 pin README install configs (S)

@@ -19,8 +19,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.3.1 |
-| Status | v0.2 Audit Quick Wins in progress (Phase 6 of 7 done); 0.3.1 released |
+| Version | 0.4.0 |
+| Status | v0.2 Audit Quick Wins complete (0.4.0 released); awaiting milestone close |
 | Last Updated | 2026-10-30 |
 
 ## Requirements
@@ -53,12 +53,13 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Docker HTTP mode with graceful shutdown; README setup for Claude Code, Cursor and VS Code; 0.3.0 released — Phase 5
 
 - ✓ Distribution emails capped at 150 characters; npm audit clean — Phase 5 (0.3.1)
-- ✓ HTTP mode answers 404/401 before reading the body; 256 KiB body cap; non-loopback warning; drain-then-force shutdown (AEGIS F-04-007) — Phase 6 (unreleased)
-- ✓ Write 5xx carries the check-before-retry hint; accepted-but-unreadable = success + note in all 11 write tools (AEGIS F-04-002) — Phase 6 (unreleased)
+- ✓ HTTP mode answers 404/401 before reading the body; 256 KiB body cap; non-loopback warning; drain-then-force shutdown (AEGIS F-04-007) — Phase 6 (0.4.0)
+- ✓ Write 5xx carries the check-before-retry hint; accepted-but-unreadable = success + note in all 11 write tools (AEGIS F-04-002) — Phase 6 (0.4.0)
+- ✓ Tool descriptions and README state exactly what is and is not redacted; README Data protection, Release model, Pinning and verification (AEGIS R1) — Phase 7 (0.4.0)
+- ✓ Install examples pinned to the release; plaintext-secret warnings; inspector pinned (AEGIS R7) — Phase 7 (0.4.0)
 
 ### Active (In Progress)
-- [ ] Privacy claim matches redaction; README Data protection section (AEGIS R1) — Phase 7
-- [ ] Pinned install configs, no plaintext secret in examples, release-model note (AEGIS R7) — Phase 7
+- None (v0.2 complete)
 
 ### Planned (Next)
 - Move to the `@inio` npm scope and the company GitHub org when they exist
@@ -165,4 +166,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-30 after Phase 6*
+*Last updated: 2026-10-30 after Phase 7 (0.4.0)*
