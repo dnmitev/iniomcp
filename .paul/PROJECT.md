@@ -19,8 +19,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.3.0 |
-| Status | 0.3.0 released (shared HTTP server); 05-03 cleanup before milestone close |
+| Version | 0.3.1 |
+| Status | v0.1 milestone complete; 0.3.1 released |
 | Last Updated | 2026-10-30 |
 
 ## Requirements
@@ -52,8 +52,10 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Shared HTTP server: `MCP_TRANSPORT=http` on `/mcp` behind a static bearer token (`MCP_AUTH_TOKEN`), Origin check, one Inio token shared across requests — Phase 5
 - ✓ Docker HTTP mode with graceful shutdown; README setup for Claude Code, Cursor and VS Code; 0.3.0 released — Phase 5
 
+- ✓ Distribution emails capped at 150 characters; npm audit clean — Phase 5 (0.3.1)
+
 ### Active (In Progress)
-- [ ] 05-03: deferred cleanup and release 0.3.1
+- None (v0.1 milestone complete)
 
 ### Planned (Next)
 - Close the v0.1 milestone; move to the `@inio` npm scope when the org exists
@@ -129,9 +131,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
 | Mutation score | ≥ 80 break, 90 target | 99.1% | On track |
-| Unit + integration tests | all green in CI | 1776 unit + 47 integration + 11 Docker green | Met |
+| Unit + integration tests | all green in CI | 1788 unit + 47 integration + 11 Docker green | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
-| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP) | Met |
+| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); 0.3.1 published with provenance | Met |
 
 ## Tech Stack / Tools
 
