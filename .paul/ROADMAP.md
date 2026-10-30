@@ -24,7 +24,7 @@ Phases: 4 of 5 complete
 | 2 | Read tools | 3/3 | ✅ Complete | 2026-10-29 |
 | 3 | Packaging and release | 3/3 | ✅ Complete | 2026-10-29 |
 | 4 | Write tools (opt-in) | 4/4 | ✅ Complete | 2026-10-29 |
-| 5 | HTTP hardening | 0/2 | Planning | - |
+| 5 | HTTP hardening | 1/2 | In progress | - |
 
 ## Phase Details
 
@@ -88,7 +88,7 @@ Phases: 4 of 5 complete
 **Research:** Done 2026-10-30 (static bearer; OAuth deferred)
 
 **Plans:**
-- [ ] 05-01: Streamable HTTP transport, static bearer auth, Origin checks, shared Inio token
+- [x] 05-01: Streamable HTTP transport, static bearer auth, Origin checks, shared Inio token
 - [ ] 05-02: Docker HTTP mode, README/client snippets, CHANGELOG, release 0.3.0
 
 ---

@@ -16,21 +16,21 @@ See: .paul/PROJECT.md (updated 2026-10-28)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 5 of 5 (HTTP hardening) — Planning
-Plan: 05-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-10-30 — Created .paul/phases/05-http-hardening/05-01-PLAN.md
+Phase: 5 of 5 (HTTP hardening) — In progress
+Plan: 05-01 complete; 05-02 not yet planned
+Status: Ready for next PLAN
+Last activity: 2026-10-30 — UNIFY 05-01 (HTTP transport with static bearer auth)
 
 Progress:
-- Milestone: [████████░░] 80%
-- Phase 5: [░░░░░░░░░░] 0%
+- Milestone: [█████████░] 90%
+- Phase 5: [█████░░░░░] 50%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -75,6 +75,8 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: HTTP auth = one static bearer token (MCP_AUTH_TOKEN, ≥32 chars); one instance = one tenant; no OAuth/PRM in v0.1 | Phase 5 | All four clients accept a fixed header; spec makes auth optional |
 | 2026-10-30: Node bridge via @modelcontextprotocol/node (toNodeHandler; pulls hono) | Phase 5 | Official adapter over hand-written SSE conversion |
 | 2026-10-30: Phase 5 = 05-01 transport+auth+Origin (TDD); 05-02 Docker HTTP, docs, release 0.3.0 | Phase 5 | devops-reviewer on 05-02 |
+| 2026-10-30: MCP_AUTH_TOKEN rejects whitespace; Bearer accepts 1+ spaces; Origin allowlist by hostname | Phase 5 | 05-01 review fixes |
+| 2026-10-30: HttpConfig type narrows config.http (no runtime guard) | Phase 5 | Pattern for HTTP code |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
 
@@ -89,6 +91,9 @@ See PROJECT.md Key Decisions.
 | Trusted publisher first run failed ENEEDAUTH until npm settings fixed; consider verbose npm log on failure | 03-02 | S | If it recurs |
 | Stryker CLI --mutate ignored (full runs) | 01-02 | S | If mutation runs get slow |
 | Distribution emails lack maxLength 150 (update_customer, create_customer) | 04-04 | S | Next schema change to customers |
+| Dockerfile HTTP mode: EXPOSE, HOST=0.0.0.0, stale stdio-only comment | 05-01 | S | 05-02 |
+| Dependabot: group @modelcontextprotocol/node with server | 05-01 | S | 05-02 |
+| Graceful shutdown (SIGTERM), health endpoint, body-size limit for HTTP | 05-01 | S | 05-02 decides for Docker |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
@@ -102,18 +107,18 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: main (uncommitted .paul edits for the 0.2.0 release record)
+Branch: plan/05-01-http-transport (not pushed; no PR yet)
 Releases: v0.2.0 (npm latest, 2026-10-29; Phase 4 write tools); v0.1.2 before
 
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Plan 05-01 created (upstream bugs logged as AS-7100, AS-7101)
-Next action: Review and approve plan, then run /paul:apply .paul/phases/05-http-hardening/05-01-PLAN.md
-Resume file: .paul/phases/05-http-hardening/05-01-PLAN.md
+Stopped at: Plan 05-01 loop closed; branch plan/05-01-http-transport ready for PR
+Next action: Open PR for 05-01, then /paul:plan for 05-02 (Docker HTTP mode, docs, release 0.3.0)
+Resume file: .paul/phases/05-http-hardening/05-01-SUMMARY.md
 Resume context:
 - 0.2.0 on npm latest + GHCR + GitHub Release (write tools, 18 tools with writes on)
-- Phase 5 research done (SDK 2.4.0 createMcpHandler, spec 2026-07-28); see 05-01-PLAN context
+- 05-01 done: MCP_TRANSPORT=http with static bearer (src/http.ts); not released yet
 
 ---
 *STATE.md — Updated after every significant action*
