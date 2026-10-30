@@ -35,7 +35,7 @@
     "provenance": true
   },
   "scripts": {
-    "dev": "node --watch src/index.ts",
+    "dev": "node --env-file-if-exists=.env --watch src/index.ts",
     "inspect": "npx @modelcontextprotocol/inspector node src/index.ts",
     "lint": "oxlint --type-aware --deny-warnings && prettier --check .",
     "format": "prettier --write .",
@@ -62,6 +62,7 @@
     "vitest": "^5"
   },
   "dependencies": {
+    "@modelcontextprotocol/node": "^2.1.2",
     "@modelcontextprotocol/server": "^2.4.0",
     "pino": "^10.4.0",
     "zod": "^4.6.7"

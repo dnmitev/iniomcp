@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { createServer } from '../../src/server.ts';
+import { createServer, createServerFactory } from '../../src/server.ts';
 import type { Config } from '../../src/config.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -577,6 +577,133 @@ describe('write gate', () => {
   });
 });
 
+describe('createServerFactory', () => {
+  async function connectTo(server: ReturnType<ReturnType<typeof createServerFactory>>) {
+    const [st, ct] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([server.connect(st), client.connect(ct)]);
+    return client;
+  }
+
+  it('creates a distinct McpServer per call', () => {
+    const create = createServerFactory(CONFIG, { fetch: fakeFetch(), logger: fakeLogger() });
+    expect(create()).not.toBe(create());
+  });
+
+  it('shares one token provider and API client across instances', async () => {
+    const fetch = fakeFetch();
+    const create = createServerFactory(CONFIG, { fetch, logger: fakeLogger() });
+    const a = await connectTo(create());
+    const b = await connectTo(create());
+    try {
+      await a.callTool({ name: 'get_invoice', arguments: { id: ID } });
+      await b.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    } finally {
+      await a.close();
+      await b.close();
+    }
+    expect(fetch.mock.calls.map(([url]) => urlOf(url))).toEqual([
+      AUTH_URL,
+      `${API_URL}/invoices/${ID}`,
+      `${API_URL}/invoices/${ID}`,
+    ]);
+  });
+
+  it('lists exactly the 7 read tools when allowWrites is false', async () => {
+    const create = createServerFactory(CONFIG, { fetch: fakeFetch(), logger: fakeLogger() });
+    const client = await connectTo(create());
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('also lists the write tools when allowWrites is true', async () => {
+    const config = { ...CONFIG, allowWrites: true };
+    const create = createServerFactory(config, { fetch: fakeFetch(), logger: fakeLogger() });
+    const client = await connectTo(create());
+    try {
+      const names = (await client.listTools()).tools.map((t) => t.name);
+      expect(names).toHaveLength(18);
+      expect(names).toEqual(expect.arrayContaining([...TOOLS, 'create_customer']));
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('redacts PII unless revealPii is set', async () => {
+    const run = async (revealPii: boolean) => {
+      const create = createServerFactory(
+        { ...CONFIG, revealPii },
+        { fetch: fakeFetch(), logger: fakeLogger() },
+      );
+      const client = await connectTo(create());
+      try {
+        return (await client.callTool({ name: 'get_invoice', arguments: { id: ID } })).content;
+      } finally {
+        await client.close();
+      }
+    };
+    expect(await run(false)).toEqual([
+      { type: 'text', text: JSON.stringify({ ...INVOICE, IBAN: '[redacted]' }) },
+    ]);
+    expect(await run(true)).toEqual([{ type: 'text', text: JSON.stringify(INVOICE) }]);
+  });
+
+  it('shares one token provider with create_payment and create_customer across instances', async () => {
+    const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    const jwt = `${b64({ alg: 'none' })}.${b64({ inio_client_id: 'client-7f3a9c' })}.sig`;
+    const fetch = vi.fn<typeof globalThis.fetch>((input) => {
+      const url = urlOf(input);
+      if (url === AUTH_URL) return Promise.resolve(json({ access_token: jwt, expires_in: 300 }));
+      if (url === `${API_URL}/payments` || url === `${API_URL}/customers`) {
+        return Promise.resolve(json({ success: true, status: 200, result: [ID] }));
+      }
+      return Promise.reject(new Error(`unexpected fetch ${url}`));
+    });
+    const create = createServerFactory(
+      { ...CONFIG, allowWrites: true },
+      { fetch, logger: fakeLogger() },
+    );
+    const a = await connectTo(create());
+    const b = await connectTo(create());
+    try {
+      const pay = await a.callTool({
+        name: 'create_payment',
+        arguments: { number: 'INV-1', transactionType: 'direct_payment', amount: 10.5 },
+      });
+      const cust = await b.callTool({
+        name: 'create_customer',
+        arguments: {
+          customerNo: 'C-1',
+          customerName: 'Jane Doe',
+          languageCode: 'EN',
+          serviceLineName: 'B2C',
+          customerType: 'C',
+          SSN: '19900101-1234',
+          customerAddress: {
+            countryCode: 'SE',
+            city: 'Goteborg',
+            zipCode: '41101',
+            addressLine1: 'Example Street 1',
+          },
+        },
+      });
+      expect(pay.isError).not.toBe(true);
+      expect(cust.isError).not.toBe(true);
+    } finally {
+      await a.close();
+      await b.close();
+    }
+    const urls = fetch.mock.calls.map(([u]) => urlOf(u));
+    expect(urls.filter((u) => u === AUTH_URL)).toHaveLength(1);
+    expect(urls).toContain(`${API_URL}/payments`);
+    expect(urls).toContain(`${API_URL}/customers`);
+  });
+});
+
 describe('createServer request timeout wiring', () => {
   /** Rejects with a TimeoutError, but only when a real AbortSignal was passed. */
   function timingOutFetch(hangOn: (url: string) => boolean) {
@@ -679,7 +806,7 @@ describe('stdio entry point (spawned process)', () => {
   );
 
   it(
-    'exits 1 with the not-supported message and nothing on stdout for MCP_TRANSPORT=http',
+    'exits 1 without starting when MCP_TRANSPORT=http has no MCP_AUTH_TOKEN',
     () => {
       const res = spawnSync(process.execPath, ['src/index.ts'], {
         cwd: ROOT,
@@ -696,9 +823,7 @@ describe('stdio entry point (spawned process)', () => {
         input: '',
       });
       expect(res.status).toBe(1);
-      expect(res.stderr).toContain(
-        'MCP_TRANSPORT=http is not supported yet; only stdio is available.',
-      );
+      expect(res.stderr).toContain('MCP_AUTH_TOKEN is required when MCP_TRANSPORT=http');
       expect(res.stderr).not.toContain(SECRET);
       expect(res.stdout).toBe('');
     },
