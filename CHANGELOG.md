@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-30
+
+### Added
+
+- Shared HTTP server: `MCP_TRANSPORT=http` serves Streamable HTTP on `/mcp` (`PORT`, default 3000; `HOST`, default 127.0.0.1). Every request needs `Authorization: Bearer <MCP_AUTH_TOKEN>`; the server refuses to start without a token of at least 32 characters. Browser requests from origins other than localhost or `MCP_ALLOWED_ORIGINS` get 403. All requests share one Inio access token.
+- Docker image HTTP mode: `-e MCP_TRANSPORT=http -e MCP_AUTH_TOKEN -p 127.0.0.1:3000:3000`. The image binds `0.0.0.0` and exposes port 3000; stdio stays the default.
+- In HTTP mode, SIGTERM and SIGINT close the server and exit cleanly, so `docker stop` returns at once.
+
+### Changed
+
+- `npm run dev` loads `.env`.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added
@@ -60,4 +72,4 @@ First public release. Read-only, stdio only. Published manually, without npm pro
 
 - Invoice `status` filters are sent as repeated query keys, because the Inio API answers a single or comma-separated status with HTTP 500.
 - Retry attempts support `limit` only; the Inio API ignores paging for this endpoint.
-- `MCP_TRANSPORT=http` is not supported yet.
+- `MCP_TRANSPORT=http` is not supported yet (added in 0.3.0).
