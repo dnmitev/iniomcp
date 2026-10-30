@@ -16,6 +16,14 @@ function env(
   return { ...valid, ...overrides };
 }
 
+const TOKEN = 'tok-0123456789abcdef0123456789abcdef-http';
+
+function httpEnv(
+  overrides: Record<string, string | undefined> = {},
+): Record<string, string | undefined> {
+  return env({ MCP_TRANSPORT: 'http', MCP_AUTH_TOKEN: TOKEN, ...overrides });
+}
+
 function errorOf(input: Record<string, string | undefined>): Error {
   let caught: unknown;
   try {
@@ -259,9 +267,9 @@ describe('loadConfig', () => {
   });
 
   describe('MCP_TRANSPORT', () => {
-    it('lists only stdio as allowed when rejected', () => {
+    it('lists stdio and http as allowed when rejected', () => {
       expect(errorOf(env({ MCP_TRANSPORT: 'sse' })).message).toMatch(
-        /MCP_TRANSPORT must be one of: stdio$/m,
+        /^- MCP_TRANSPORT must be one of: stdio, http$/m,
       );
     });
 
@@ -277,14 +285,12 @@ describe('loadConfig', () => {
       expect(loadConfig(env({ MCP_TRANSPORT: 'stdio' })).transport).toBe('stdio');
     });
 
-    it('rejects http as not supported yet', () => {
-      expect(errorOf(env({ MCP_TRANSPORT: 'http' })).message).toContain(
-        'MCP_TRANSPORT=http is not supported yet; only stdio is available.',
-      );
+    it('accepts http with a valid token', () => {
+      expect(loadConfig(httpEnv()).transport).toBe('http');
     });
 
-    it('does not leak the client secret when rejecting http', () => {
-      expect(errorOf(env({ MCP_TRANSPORT: 'http' })).message).not.toContain(SECRET);
+    it('omits the http key for stdio', () => {
+      expect('http' in loadConfig(env())).toBe(false);
     });
 
     it.each(['sse', 'HTTP', 'websocket'])('rejects %j', (value) => {
@@ -387,6 +393,110 @@ describe('loadConfig', () => {
       expect(msg).toContain('INIO_REVEAL_PII');
       expect(msg).toContain('MCP_TRANSPORT');
       expect(msg).not.toContain(SECRET);
+    });
+  });
+
+  describe('http transport', () => {
+    const msgOf = (o: Record<string, string | undefined>) => errorOf(httpEnv(o)).message;
+
+    it('returns defaults for port, host and origins', () => {
+      expect(loadConfig(httpEnv()).http).toEqual({
+        port: 3000,
+        host: '127.0.0.1',
+        authToken: TOKEN,
+        allowedOrigins: [],
+      });
+    });
+
+    it('uses explicit PORT and HOST', () => {
+      expect(loadConfig(httpEnv({ PORT: '8080', HOST: '0.0.0.0' })).http).toMatchObject({
+        port: 8080,
+        host: '0.0.0.0',
+      });
+    });
+
+    it.each([undefined, ''])('requires MCP_AUTH_TOKEN when it is %j', (v) => {
+      expect(msgOf({ MCP_AUTH_TOKEN: v })).toContain(
+        '- MCP_AUTH_TOKEN is required when MCP_TRANSPORT=http',
+      );
+    });
+
+    it.each([
+      ['32 spaces', ' '.repeat(32)],
+      ['a trailing newline', TOKEN + '\n'],
+      ['an inner space', TOKEN.slice(0, 16) + ' ' + TOKEN.slice(16)],
+    ])('rejects a token with %s without leaking it', (_n, token) => {
+      const msg = msgOf({ MCP_AUTH_TOKEN: token });
+      expect(msg).toContain('- MCP_AUTH_TOKEN must not contain whitespace');
+      expect(msg).not.toContain(TOKEN);
+    });
+
+    it('accepts a 32 character token', () => {
+      expect(loadConfig(httpEnv({ MCP_AUTH_TOKEN: 'a'.repeat(32) })).http?.authToken).toBe(
+        'a'.repeat(32),
+      );
+    });
+
+    it('rejects a 31 character token without leaking it', () => {
+      const short = 'b'.repeat(31);
+      const msg = msgOf({ MCP_AUTH_TOKEN: short });
+      expect(msg).toContain('- MCP_AUTH_TOKEN must be at least 32 characters');
+      expect(msg).not.toContain(short);
+    });
+
+    it.each(['0', '65536', '3.5', '-1', 'abc', ' 80'])('rejects PORT %j', (v) => {
+      expect(msgOf({ PORT: v })).toContain('- PORT must be an integer from 1 to 65535');
+    });
+
+    it.each([
+      ['1', 1],
+      ['65535', 65535],
+    ])('accepts PORT %s', (v, n) => {
+      expect(loadConfig(httpEnv({ PORT: v })).http?.port).toBe(n);
+    });
+
+    it('splits, trims and filters MCP_ALLOWED_ORIGINS', () => {
+      const o = loadConfig(
+        httpEnv({ MCP_ALLOWED_ORIGINS: 'https://a.example, http://localhost:5173,,' }),
+      ).http?.allowedOrigins;
+      expect(o).toEqual(['https://a.example', 'http://localhost:5173']);
+    });
+
+    it('treats an empty MCP_ALLOWED_ORIGINS as no origins', () => {
+      expect(loadConfig(httpEnv({ MCP_ALLOWED_ORIGINS: '' })).http?.allowedOrigins).toEqual([]);
+    });
+
+    it.each([
+      'https://a.example/',
+      'https://a.example/path',
+      'ftp://a.example',
+      'a.example',
+      'null',
+    ])('rejects origin %j', (v) => {
+      expect(msgOf({ MCP_ALLOWED_ORIGINS: `https://ok.example,${v}` })).toContain(
+        '- MCP_ALLOWED_ORIGINS must be a comma-separated list of http(s) origins',
+      );
+    });
+
+    it('collects http problems with other problems in one error', () => {
+      const msg = msgOf({ MCP_AUTH_TOKEN: undefined, PORT: '0', INIO_URL: undefined });
+      expect(msg).toContain('INIO_URL is required');
+      expect(msg).toContain('MCP_AUTH_TOKEN is required when MCP_TRANSPORT=http');
+      expect(msg).toContain('PORT must be an integer');
+    });
+
+    it('never leaks the token or client secret in errors', () => {
+      const msg = msgOf({ PORT: '0', MCP_ALLOWED_ORIGINS: 'bad' });
+      expect(msg).not.toContain(TOKEN);
+      expect(msg).not.toContain(SECRET);
+    });
+
+    it('does not validate http settings for stdio', () => {
+      const c = loadConfig(
+        env({ PORT: 'abc', MCP_ALLOWED_ORIGINS: 'bad', MCP_AUTH_TOKEN: 'x', HOST: '' }),
+      );
+      expect(c.transport).toBe('stdio');
+      expect('http' in c).toBe(false);
     });
   });
 });

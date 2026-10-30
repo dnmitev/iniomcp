@@ -30,9 +30,11 @@ export const { version } = z
 
 type Deps = { fetch?: typeof globalThis.fetch; logger?: Logger };
 
-/** Builds the MCP server with its token provider, API client and tools. */
-export function createServer(config: Config, { fetch, logger = noopLogger }: Deps = {}): McpServer {
-  const server = new McpServer({ name: 'inio-mcp', version });
+/** Builds the token provider and API client once; each call of the result yields a fresh server with tools. */
+export function createServerFactory(
+  config: Config,
+  { fetch, logger = noopLogger }: Deps = {},
+): () => McpServer {
   const tokens = createTokenProvider({
     authUrl: config.authUrl,
     clientId: config.clientId,
@@ -48,27 +50,35 @@ export function createServer(config: Config, { fetch, logger = noopLogger }: Dep
     logger,
     timeoutMs: config.requestTimeoutMs,
   });
-  const deps = { client, revealPii: config.revealPii, logger };
-  registerGetInvoice(server, deps);
-  registerGetInvoiceRetryAttempts(server, deps);
-  registerListCustomers(server, deps);
-  registerListInvoices(server, deps);
-  registerGetCustomer(server, deps);
-  registerListCustomerPauses(server, deps);
-  registerGetCustomerPause(server, deps);
-  // Write tools exist only when explicitly enabled (INIO_ALLOW_WRITES=true).
-  if (config.allowWrites) {
-    registerCreateCustomerPause(server, deps);
-    registerUpdateCustomerPause(server, deps);
-    registerCancelCustomerPause(server, deps);
-    registerUpdateInvoiceDueDate(server, deps);
-    registerUpdateInvoiceStopUntilDates(server, deps);
-    registerUpdateCustomer(server, deps);
-    registerResetInvoiceStage(server, deps);
-    registerCreateCreditInvoice(server, deps);
-    registerMatchCreditInvoice(server, deps);
-    registerCreatePayment(server, { ...deps, tokens });
-    registerCreateCustomer(server, { ...deps, tokens });
-  }
-  return server;
+  return () => {
+    const server = new McpServer({ name: 'inio-mcp', version });
+    const deps = { client, revealPii: config.revealPii, logger };
+    registerGetInvoice(server, deps);
+    registerGetInvoiceRetryAttempts(server, deps);
+    registerListCustomers(server, deps);
+    registerListInvoices(server, deps);
+    registerGetCustomer(server, deps);
+    registerListCustomerPauses(server, deps);
+    registerGetCustomerPause(server, deps);
+    // Write tools exist only when explicitly enabled (INIO_ALLOW_WRITES=true).
+    if (config.allowWrites) {
+      registerCreateCustomerPause(server, deps);
+      registerUpdateCustomerPause(server, deps);
+      registerCancelCustomerPause(server, deps);
+      registerUpdateInvoiceDueDate(server, deps);
+      registerUpdateInvoiceStopUntilDates(server, deps);
+      registerUpdateCustomer(server, deps);
+      registerResetInvoiceStage(server, deps);
+      registerCreateCreditInvoice(server, deps);
+      registerMatchCreditInvoice(server, deps);
+      registerCreatePayment(server, { ...deps, tokens });
+      registerCreateCustomer(server, { ...deps, tokens });
+    }
+    return server;
+  };
+}
+
+/** Builds a single MCP server (stdio). */
+export function createServer(config: Config, deps: Deps = {}): McpServer {
+  return createServerFactory(config, deps)();
 }

@@ -5,7 +5,8 @@ export type Config = {
   apiUrl: string;
   allowWrites: boolean;
   revealPii: boolean;
-  transport: 'stdio';
+  transport: 'stdio' | 'http';
+  http?: { port: number; host: string; authToken: string; allowedOrigins: string[] };
   logLevel: LogLevel;
   requestTimeoutMs: number;
 };
@@ -45,20 +46,34 @@ export function loadConfig(env: Env): Config {
     return fallback;
   };
 
-  // stdio is the only transport; http is planned, so name it instead of "must be one of".
-  if (env.MCP_TRANSPORT === 'http') {
-    problems.push('MCP_TRANSPORT=http is not supported yet; only stdio is available.');
-  } else {
-    oneOf('MCP_TRANSPORT', ['stdio'], 'stdio');
-  }
+  const transport = oneOf('MCP_TRANSPORT', ['stdio', 'http'], 'stdio');
 
-  const timeoutMs = (name: string): number => {
+  const integer = (name: string, fallback: number, min: number, max: number): number => {
     const raw = env[name];
-    if (!raw) return 30_000;
+    if (!raw) return fallback;
     const value = /^\d+$/.test(raw) ? Number(raw) : NaN;
-    if (value >= 1000 && value <= 600_000) return value;
-    problems.push(`${name} must be an integer from 1000 to 600000`);
-    return 30_000;
+    if (value >= min && value <= max) return value;
+    problems.push(`${name} must be an integer from ${min} to ${max}`);
+    return fallback;
+  };
+
+  const authToken = (): string => {
+    const value = env.MCP_AUTH_TOKEN ?? '';
+    if (!value) problems.push('MCP_AUTH_TOKEN is required when MCP_TRANSPORT=http');
+    else if (/\s/.test(value)) problems.push('MCP_AUTH_TOKEN must not contain whitespace');
+    else if (value.length < 32) problems.push('MCP_AUTH_TOKEN must be at least 32 characters');
+    return value;
+  };
+
+  const origins = (name: string): string[] => {
+    const list = (env[name] ?? '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    if (!list.every(isHttpOrigin)) {
+      problems.push(`${name} must be a comma-separated list of http(s) origins`);
+    }
+    return list;
   };
 
   const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
@@ -70,15 +85,29 @@ export function loadConfig(env: Env): Config {
     apiUrl: url('INIO_URL').replace(/\/+$/, ''),
     allowWrites: flag('INIO_ALLOW_WRITES'),
     revealPii: flag('INIO_REVEAL_PII'),
-    transport: 'stdio',
+    transport,
     logLevel: oneOf('INIO_LOG_LEVEL', LOG_LEVELS, 'info'),
-    requestTimeoutMs: timeoutMs('INIO_REQUEST_TIMEOUT_MS'),
+    requestTimeoutMs: integer('INIO_REQUEST_TIMEOUT_MS', 30_000, 1000, 600_000),
   };
+  if (transport === 'http') {
+    config.http = {
+      port: integer('PORT', 3000, 1, 65_535),
+      host: env.HOST || '127.0.0.1',
+      authToken: authToken(),
+      allowedOrigins: origins('MCP_ALLOWED_ORIGINS'),
+    };
+  }
 
   if (problems.length > 0) {
     throw new Error(`Invalid Inio MCP configuration:\n- ${problems.join('\n- ')}`);
   }
   return config;
+}
+
+function isHttpOrigin(value: string): boolean {
+  if (!URL.canParse(value)) return false;
+  const { protocol, origin } = new URL(value);
+  return (protocol === 'http:' || protocol === 'https:') && origin === value;
 }
 
 function isAllowedUrl(value: string): boolean {
