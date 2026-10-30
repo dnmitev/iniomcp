@@ -181,7 +181,7 @@ jobs:
             latest=false
           labels: |
             org.opencontainers.image.title=inio-mcp
-            org.opencontainers.image.description=MCP server for the Inio REST API (stdio)
+            org.opencontainers.image.description=MCP server for the Inio REST API (stdio and HTTP)
             org.opencontainers.image.licenses=Apache-2.0
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         if: steps.exists.outputs.skip != 'true'

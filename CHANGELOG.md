@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-30
+
+### Fixed
+
+- `create_customer` and `update_customer` reject distribution email addresses longer than 150 characters before calling the Inio API, as the API's own limit requires.
+
+### Changed
+
+- The Docker image description now says it serves stdio and HTTP.
+
 ## [0.3.0] - 2026-10-30
 
 ### Added
