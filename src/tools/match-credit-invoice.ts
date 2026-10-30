@@ -9,7 +9,14 @@ import {
   pastPaidDateRule,
   readBackInvoice,
 } from './invoice-ref.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
+import {
+  acceptedUnreadable,
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  ok,
+  present,
+  writeFailure,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = {
@@ -64,7 +71,7 @@ export function registerMatchCreditInvoice(
         const path = invoicePath({ id, number });
         const creditInvoiceId = await client.post(`${path}/match-credit-invoice`, body);
         if (typeof creditInvoiceId !== 'string') {
-          return fail('UPSTREAM_ERROR: Unexpected credit invoice id from the Inio API.');
+          return acceptedUnreadable();
         }
         const result = {
           matched: true,
@@ -76,7 +83,7 @@ export function registerMatchCreditInvoice(
         };
         return ok(present(result, revealPii));
       } catch (err) {
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

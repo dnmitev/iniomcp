@@ -98,7 +98,8 @@ const Input = z
 
 const Answer = z.array(z.string().min(1)).length(1);
 
-const UNREADABLE = 'The customer was created, but the API answer could not be read.';
+const UNREADABLE =
+  'The customer was created, but the API answer could not be read. Do not retry; call get_customer by number first.';
 
 export function registerCreateCustomer(
   server: McpServer,
@@ -136,7 +137,7 @@ export function registerCreateCustomer(
           return fail(
             `${errorText(err)} A customer with this customerNo already exists; call get_customer by number to see it.`,
           );
-        const hint = ` The customer may or may not have been created. Do not retry yet: call get_customer with number ${input.customerNo} first.`;
+        const hint = ` Call get_customer with number ${input.customerNo} first.`;
         return fail(errorText(err) + (isUncertainOutcome(err) ? hint : ''));
       }
     }),

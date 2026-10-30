@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { registerUpdateCustomer } from '../../src/tools/update-customer.ts';
 import { InioApiError } from '../../src/inio-client.ts';
-import { makeHarness, textOf, WRITE_ANNOTATIONS } from './helpers/write-tool.ts';
+import {
+  makeHarness,
+  textOf,
+  WRITE_ANNOTATIONS,
+  expectAcceptedNote,
+} from './helpers/write-tool.ts';
 
 const CID = '3f2b8c1e-4a5d-4e6f-9a7b-1c2d3e4f5a6b';
 const CUSTOMER = {
@@ -333,11 +338,10 @@ describe('update_customer errors', () => {
     ['an object', API_CUSTOMER],
     ['a string', 'Success'],
     ['an array of non-objects', ['x']],
-  ])('rejects %s as an unexpected customer payload', async (_label, payload) => {
+  ])('reports success with a note when the answer is %s', async (_label, payload) => {
     const { call } = await setup({ patch: () => Promise.resolve(payload) });
     const result = await call({ id: CID, customerName: 'Name AB' });
-    expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe('UPSTREAM_ERROR: Unexpected customer payload from the Inio API.');
+    expectAcceptedNote(result);
   });
 
   it('returns API validation errors with field errors, redacting sensitive fields', async () => {
@@ -416,4 +420,23 @@ describe('update_customer distribution email length', () => {
       expect(inio.patch).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+describe('update_customer accepted write with an unreadable answer', () => {
+  it.each([200, 201, 299])(
+    'reports success with a note when the client cannot read a %i answer',
+    async (status) => {
+      const err = new InioApiError(status, 'UPSTREAM_ERROR', 'Unexpected response');
+      const { call } = await setup({ patch: () => Promise.reject(err) });
+      expectAcceptedNote(await call({ id: CID, customerName: 'Name AB' }));
+    },
+  );
+
+  it('still reports a non-2xx client error as an error', async () => {
+    const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
+    const { call } = await setup({ patch: () => Promise.reject(err) });
+    const result = await call({ id: CID, customerName: 'Name AB' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('BAD_REQUEST: Nope (correlationId c-1)');
+  });
 });

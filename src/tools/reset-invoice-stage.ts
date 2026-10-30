@@ -3,7 +3,17 @@ import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
 import { InvoiceRef, invoicePath, lookUpInvoiceId } from './invoice-ref.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, IsoDate, ok, present } from './result.ts';
+import {
+  acceptedUnreadable,
+  errorText,
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  fail,
+  IsoDate,
+  ok,
+  present,
+  writeFailure,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = {
@@ -72,19 +82,24 @@ export function registerResetInvoiceStage(
       logger,
       'reset_invoice_stage',
       async ({ id, number, targetStage, dueDate, reason, redistribute }) => {
+        let invoiceId: string;
         try {
-          // reset-stage exists only by id, so a number costs an extra lookup; a failed lookup throws.
-          const invoiceId = id ?? (await lookUpInvoiceId(client, number ?? ''));
+          // reset-stage exists only by id, so a number costs an extra lookup; a failed lookup is an
+          // error, not an accepted write.
+          invoiceId = id ?? (await lookUpInvoiceId(client, number ?? ''));
+        } catch (err) {
+          return fail(errorText(err));
+        }
+        try {
           // dueDate only when given: the API rejects it for reminded.
           const body = { targetStage, ...(dueDate && { dueDate }), reason, redistribute };
           const plan = Plan.safeParse(
             await client.post(`${invoicePath({ id: invoiceId })}/reset-stage`, body),
           );
-          if (!plan.success)
-            return fail('UPSTREAM_ERROR: Unexpected reset plan from the Inio API.');
+          if (!plan.success) return acceptedUnreadable();
           return ok(present(plan.data, revealPii));
         } catch (err) {
-          return fail(errorText(err));
+          return writeFailure(err);
         }
       },
     ),

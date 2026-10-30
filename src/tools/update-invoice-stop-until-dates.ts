@@ -3,7 +3,15 @@ import { z } from 'zod';
 import { InioApiError, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, IsoDate, ok, present } from './result.ts';
+import {
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  fail,
+  IsoDate,
+  ok,
+  present,
+  writeFailure,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -96,7 +104,7 @@ export function registerUpdateInvoiceStopUntilDates(
         if (err instanceof InioApiError && err.status === 404 && err.code === 'UPSTREAM_ERROR') {
           return fail('FEATURE_DISABLED: Stop-until dates are not enabled for this tenant.');
         }
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

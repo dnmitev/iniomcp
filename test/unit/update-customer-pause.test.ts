@@ -7,6 +7,7 @@ import {
   makeHarness,
   textOf,
   WRITE_ANNOTATIONS,
+  expectAcceptedNote,
 } from './helpers/write-tool.ts';
 
 const CID = '3f2b8c1e-4a5d-4e6f-9a7b-1c2d3e4f5a6b';
@@ -199,11 +200,10 @@ describe('update_customer_pause errors', () => {
     ['null', null],
     ['an array', [API_PAUSE]],
     ['a string', 'Success'],
-  ])('rejects %s as an unexpected pause payload', async (_label, payload) => {
+  ])('reports success with a note when the answer is %s', async (_label, payload) => {
     const { call } = await setup({ patch: () => Promise.resolve(payload) });
     const result = await call({ ...BASE, endAt: '2027-01-15' });
-    expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe('UPSTREAM_ERROR: Unexpected pause payload from the Inio API.');
+    expectAcceptedNote(result);
   });
 
   it('returns API errors with their field errors', async () => {
@@ -246,5 +246,24 @@ describe('update_customer_pause tool-call logging', () => {
         'tool call',
       ],
     ]);
+  });
+});
+
+describe('update_customer_pause accepted write with an unreadable answer', () => {
+  it.each([200, 201, 299])(
+    'reports success with a note when the client cannot read a %i answer',
+    async (status) => {
+      const err = new InioApiError(status, 'UPSTREAM_ERROR', 'Unexpected response');
+      const { call } = await setup({ patch: () => Promise.reject(err) });
+      expectAcceptedNote(await call({ ...BASE, endAt: '2027-01-15' }));
+    },
+  );
+
+  it('still reports a non-2xx client error as an error', async () => {
+    const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
+    const { call } = await setup({ patch: () => Promise.reject(err) });
+    const result = await call({ ...BASE, endAt: '2027-01-15' });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('BAD_REQUEST: Nope (correlationId c-1)');
   });
 });

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, IsoDate, ok, present } from './result.ts';
+import { EXACTLY_ONE_REF, exactlyOneRef, IsoDate, ok, present, writeFailure } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -55,7 +55,7 @@ export function registerUpdateInvoiceDueDate(
         };
         return ok(present(result, revealPii));
       } catch (err) {
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

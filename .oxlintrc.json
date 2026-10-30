@@ -8,7 +8,8 @@
   "rules": {
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",
-    "typescript/await-thenable": "error"
+    "typescript/await-thenable": "error",
+    "vitest/expect-expect": ["error", { "assertFunctionNames": ["expect", "expectAcceptedNote"] }]
   },
   "ignorePatterns": ["dist", "coverage", "reports", ".stryker-tmp"]
 }

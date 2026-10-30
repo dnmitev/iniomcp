@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { registerCancelCustomerPause } from '../../src/tools/cancel-customer-pause.ts';
 import { InioApiError } from '../../src/inio-client.ts';
-import { makeHarness, textOf, WRITE_ANNOTATIONS } from './helpers/write-tool.ts';
+import {
+  makeHarness,
+  textOf,
+  WRITE_ANNOTATIONS,
+  expectAcceptedNote,
+} from './helpers/write-tool.ts';
 
 const CID = '3f2b8c1e-4a5d-4e6f-9a7b-1c2d3e4f5a6b';
 const PID = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
@@ -109,11 +114,9 @@ describe('cancel_customer_pause output and errors', () => {
     ['null', null],
     ['an array', [API_PAUSE]],
     ['a string', 'Success'],
-  ])('rejects %s as an unexpected pause payload', async (_label, payload) => {
+  ])('reports success with a note when the answer is %s', async (_label, payload) => {
     const { call } = await setup({ post: () => Promise.resolve(payload) });
-    const result = await call(ARGS);
-    expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe('UPSTREAM_ERROR: Unexpected pause payload from the Inio API.');
+    expectAcceptedNote(await call(ARGS));
   });
 
   it('returns a rejection for an already completed pause as the API error text', async () => {
@@ -152,5 +155,24 @@ describe('cancel_customer_pause tool-call logging', () => {
         'tool call',
       ],
     ]);
+  });
+});
+
+describe('cancel_customer_pause accepted write with an unreadable answer', () => {
+  it.each([200, 201, 299])(
+    'reports success with a note when the client cannot read a %i answer',
+    async (status) => {
+      const err = new InioApiError(status, 'UPSTREAM_ERROR', 'Unexpected response');
+      const { call } = await setup({ post: () => Promise.reject(err) });
+      expectAcceptedNote(await call(ARGS));
+    },
+  );
+
+  it('still reports a non-2xx client error as an error', async () => {
+    const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
+    const { call } = await setup({ post: () => Promise.reject(err) });
+    const result = await call(ARGS);
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('BAD_REQUEST: Nope (correlationId c-1)');
   });
 });

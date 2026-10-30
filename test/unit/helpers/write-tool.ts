@@ -72,3 +72,13 @@ export const BAD_DATES = [
   '',
 ];
 export const GOOD_DATES = ['2026-12-01', '2028-02-29', '2026-01-31'];
+
+/** An accepted write whose answer was unreadable: success, with a note to check before retrying. */
+export function expectAcceptedNote(result: Awaited<ReturnType<Client['callTool']>>): void {
+  expect(result.isError).not.toBe(true);
+  const text = textOf(result);
+  expect(text).toContain('accepted');
+  expect(text).toContain('could not be read');
+  expect(text).toContain('check');
+  expect(text).not.toContain('UPSTREAM_ERROR');
+}

@@ -561,9 +561,31 @@ describe('create_payment errors', () => {
         'The Inio API did not respond within 30 s. The change may or may not have been applied; check before retrying.',
       ),
     ],
-    ['a 500', new InioApiError(500, 'INTERNAL_ERROR', 'Server error')],
-    ['a 502', new InioApiError(502, 'UPSTREAM_ERROR', 'Bad gateway', 'c-8')],
-    ['a 503', new InioApiError(503, 'UNAVAILABLE', 'Service unavailable')],
+    [
+      'a 500',
+      new InioApiError(
+        500,
+        'INTERNAL_ERROR',
+        'Server error The change may or may not have been applied; check before retrying.',
+      ),
+    ],
+    [
+      'a 502',
+      new InioApiError(
+        502,
+        'UPSTREAM_ERROR',
+        'Bad gateway The change may or may not have been applied; check before retrying.',
+        'c-8',
+      ),
+    ],
+    [
+      'a 503',
+      new InioApiError(
+        503,
+        'UNAVAILABLE',
+        'Service unavailable The change may or may not have been applied; check before retrying.',
+      ),
+    ],
     [
       'a lost response',
       new InioApiError(
@@ -582,7 +604,8 @@ describe('create_payment errors', () => {
       expect(text.startsWith(`${error.code}: ${error.message}`)).toBe(true);
       expect(text).toContain('get_invoice');
       expect(text).toContain('remainingAmount');
-      expect(text).toContain('may or may not have been recorded');
+      expect(text.split('may or may not')).toHaveLength(2);
+      expect(text.indexOf('check before retrying.')).toBeLessThan(text.indexOf('get_invoice'));
       expect(inio.post).toHaveBeenCalledTimes(1);
     },
   );

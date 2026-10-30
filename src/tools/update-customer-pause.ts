@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { pathSegment, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
 import { PauseReason, pauseResult, PauseScope } from './pauses.ts';
-import { errorText, fail, IsoDate } from './result.ts';
+import { IsoDate, writeFailure } from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
@@ -51,9 +51,9 @@ export function registerUpdateCustomerPause(
     withToolLogging(logger, 'update_customer_pause', async ({ customerId, pauseId, ...body }) => {
       try {
         const path = `/customers/${pathSegment(customerId)}/pauses/${pathSegment(pauseId)}`;
-        return pauseResult(await client.patch(path, body), revealPii);
+        return pauseResult(await client.patch(path, body), revealPii, true);
       } catch (err) {
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

@@ -12,7 +12,14 @@ import {
   line,
   zipCode,
 } from './customer-fields.ts';
-import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
+import {
+  acceptedUnreadable,
+  EXACTLY_ONE_REF,
+  exactlyOneRef,
+  ok,
+  present,
+  writeFailure,
+} from './result.ts';
 import { withToolLogging } from '../tool-logging.ts';
 
 type Deps = {
@@ -101,13 +108,13 @@ export function registerUpdateCustomer(
       try {
         const parsed = Payload.safeParse(await client.patch(customerPath({ id, number }), body));
         if (!parsed.success) {
-          return fail('UPSTREAM_ERROR: Unexpected customer payload from the Inio API.');
+          return acceptedUnreadable();
         }
         // workflowsSettings is large and not editable here; leave it out as get_customer does.
         const [{ workflowsSettings: _, ...customer }] = parsed.data;
         return ok(present(customer, revealPii));
       } catch (err) {
-        return fail(errorText(err));
+        return writeFailure(err);
       }
     }),
   );

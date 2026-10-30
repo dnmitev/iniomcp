@@ -9,16 +9,16 @@ version = "1.4"
 source = "https://chrisai.cv/skool"
 
 [milestone]
-name = "v0.1 Initial Release"
-version = "0.1.0"
-status = "complete"
-phases = 5
+name = "v0.2 Audit Quick Wins"
+version = "0.2.0"
+status = "in_progress"
+phases = 2
 
 [phase]
-number = 5
-name = "HTTP hardening"
-status = "complete"
-plans_completed = 3
+number = 7
+name = "Docs and install trust"
+status = "not_started"
+plans_completed = 0
 
 [loop]
 position = "IDLE"
@@ -27,6 +27,6 @@ position = "IDLE"
 groom = true
 
 [stats]
-total_plans = 16
-total_phases = 5
-last_activity = "2026-10-30T09:20:00Z"
+total_plans = 18
+total_phases = 6
+last_activity = "2026-10-30T11:42:59Z"

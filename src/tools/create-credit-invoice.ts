@@ -100,7 +100,8 @@ export function registerCreateCreditInvoice(
       'create_credit_invoice',
       async ({ id, number, creditInvoiceNo, items, distributionMethod, ...rest }) => {
         const unreadable = () => {
-          const note = 'The credit invoice was created, but the API answer could not be read.';
+          const note =
+            'The credit invoice was created, but the API answer could not be read. Do not retry; check the invoice first.';
           return ok(present({ created: true, creditInvoiceNo, note }, revealPii));
         };
         try {

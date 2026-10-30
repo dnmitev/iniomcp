@@ -11,25 +11,27 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** Awaiting next milestone (v0.1 complete, 0.3.1)
+**Current focus:** v0.2 Audit Quick Wins — Phase 7 Docs and install trust
 
 ## Current Position
 
-Milestone: Awaiting next milestone
-Phase: None active
-Plan: None
-Status: Milestone v0.1 Initial Release complete — ready for next
-Last activity: 2026-10-30 — Milestone completed
+Milestone: v0.2 Audit Quick Wins
+Phase: 7 of 7 (Docs and install trust) — milestone phase 2 of 2
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-30 — Phase 6 complete, transitioned to Phase 7
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
+- v0.2 Audit Quick Wins: [█████░░░░░] 50% (Phase 6 ✓)
+- Phase 7: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone complete - ready for next]
+  ○        ○        ○     [Phase 6 complete - ready to plan Phase 7]
 ```
 
 ## Accumulated Context
@@ -81,6 +83,10 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: Deferred triage: ENEEDAUTH closed (no recurrence through 0.3.0); 5 quick items into 05-03 + release 0.3.1 | Phase 5 | Milestone closes with a short deferred list |
 | 2026-10-29: npm bootstrap = manual 0.1.0-rc.0 under "next" (manual-rc) | Phase 3 | First CI release with provenance |
 | 2026-10-29: 0.1.0 also published manually (no provenance); first CI release is 0.1.1 | Phase 3 | Plan 03-02 amended |
+| 2026-10-30: v0.2 = AEGIS quick wins R4, R5, R1, R7; R2 later with consumer-only name redaction | v0.2 | Source: .aegis/report/05-remediation-roadmap.md |
+| 2026-10-30: HTTP auth and path checked before the body is read; body cap 256 KiB (supersedes 05-02 SDK 4 MB) | Phase 6 | F-04-007 closed; raise cap only if a tool needs large input |
+| 2026-10-30: Shutdown drains with DRAIN_GRACE_MS 500, then forces; no req.destroy() on rejection | Phase 6 | Clients mid-upload may see a reset instead of 401 |
+| 2026-10-30: Client appends check-before-retry to write 5xx; write tools catch via writeFailure, shape failures → acceptedUnreadable (ok + note) | Phase 6 | New write tools inherit it; tools add only a check pointer |
 
 ### Deferred Issues
 
@@ -90,7 +96,9 @@ See PROJECT.md Key Decisions.
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
 | Health endpoint for HTTP mode (skipped: would be unauthenticated) | 05-02 | S | If an orchestrator needs it |
 | Per-user tokens or MCP OAuth for HTTP | 05-01 | M | If teams ask |
-| Double-signal shutdown tests are race-prone smoke tests | 05-02 | S | If shutdown logic changes |
+| Double-signal shutdown tests are race-prone smoke tests; spawned SIGTERM test accepts finished-or-closed (drain proven via close()) | 05-02, 06-01 | S | If shutdown logic changes |
+| 5xx hint punctuation for API messages ending !/?/whitespace/empty | 06-02 | S | Cosmetic; any client touch |
+| acceptedUnreadable() echoes no identifier (create_customer_pause gives no pause id to check) | 06-02 | S | With R8 write attribution |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
@@ -110,11 +118,13 @@ Releases: v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.
 ## Session Continuity
 
 Last session: 2026-10-30
-Stopped at: Milestone v0.1 complete; AEGIS targeted audit (domains 00/01/04/05) paused after Phase 4
-Next action: /aegis:resume (resolve D-001..D-007, Phase 5 report), then /paul:discuss-milestone with audit findings as input
-Resume file: .aegis/STATE.md (local, git-ignored)
+Stopped at: Phase 6 complete (06-01 R4, 06-02 R5), committed on paul/milestone-v0.2; ready to plan Phase 7
+Next action: /paul:plan for Phase 7 (Docs and install trust: R1, R7, then release)
+Resume file: .paul/ROADMAP.md
 Resume context:
-- AEGIS so far: 29 findings (high 2, medium 9, low 14, info 2, + 2 P0 medium); key: F-05-001 redaction gap (names/orgNr reach LLM), F-04-001 injection into writes, F-04-007 unauthenticated 4 MB body buffering before auth (HTTP DoS), F-00-003 8/11 write tools report false failures
+- AEGIS final: 29 raised, 27 after dedup (high 2, medium 8 incl. accepted F-00-002, low 15, info 2); 7 root causes, 10 roadmap items R1..R10
+- Roadmap top: R1 PII claim fix (S), R2 redaction of orgNr/names/free text (M), R3 write allowlist + payment ceiling (M), R4 auth before body read on HTTP (S), R5 uncertain write outcomes in client, 9 tools (S), R7 pin README install configs (S)
+- Owner action: re-confirm bounded F-00-002 acceptance (D-006: release structure only; not F-04-006/008/009; re-confirm before org transfer)
 - Next milestone scope ideas: per-user tokens, INIO_REVEAL_LINKS, get_invoice opt-in, MCP OAuth (separate Keycloak realm OK), business one-pager, audit remediations
 - 0.3.1 on npm latest + GHCR + GitHub Release (stdio and shared HTTP server, 18 tools with writes on)
 

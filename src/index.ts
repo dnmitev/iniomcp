@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { pino } from 'pino';
-import { loadConfig, type Config } from './config.ts';
+import { isLoopbackHost, loadConfig, type Config } from './config.ts';
 import { createLogger } from './logger.ts';
 import { startHttpServer } from './http.ts';
 import { createServer, version } from './server.ts';
@@ -40,6 +40,12 @@ if (config) {
     };
     process.on('SIGTERM', stop);
     process.on('SIGINT', stop);
+    if (!isLoopbackHost(host)) {
+      logger.warn(
+        { host },
+        'listening on a non-loopback host; the bearer token is the only barrier',
+      );
+    }
     logger.info(
       { version, transport: 'http', host, port, allowWrites, revealPii, logLevel },
       'server started',

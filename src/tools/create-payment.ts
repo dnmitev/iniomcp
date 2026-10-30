@@ -76,8 +76,7 @@ const Answer = z.array(z.string().min(1)).length(1);
 const UNREADABLE =
   'The payment was recorded, but the API answer could not be read. Do not retry; check the invoice first.';
 
-const UNCERTAIN =
-  ' The payment may or may not have been recorded. Do not retry yet: call get_invoice and compare remainingAmount first.';
+const CHECK = ' Call get_invoice and compare remainingAmount first.';
 
 const Invoice = z.object({
   remainingAmount: z.union([z.number(), z.string()]),
@@ -130,7 +129,7 @@ export function registerCreatePayment(
         // A 2xx the client could not parse (no result envelope) also means the payment exists.
         if (isUnreadableSuccess(err))
           return ok(present({ ...summary, note: UNREADABLE }, revealPii));
-        return fail(errorText(err) + (isUncertainOutcome(err) ? UNCERTAIN : ''));
+        return fail(errorText(err) + (isUncertainOutcome(err) ? CHECK : ''));
       }
     }),
   );

@@ -434,7 +434,7 @@ describe('create_credit_invoice output', () => {
     expect(JSON.parse(textOf(result))).toStrictEqual({
       created: true,
       creditInvoiceNo: 'CN-1',
-      note: 'The credit invoice was created, but the API answer could not be read.',
+      note: 'The credit invoice was created, but the API answer could not be read. Do not retry; check the invoice first.',
     });
   });
 });
@@ -452,7 +452,7 @@ describe('create_credit_invoice errors', () => {
       expect(JSON.parse(textOf(result))).toStrictEqual({
         created: true,
         creditInvoiceNo: 'CN-1',
-        note: 'The credit invoice was created, but the API answer could not be read.',
+        note: 'The credit invoice was created, but the API answer could not be read. Do not retry; check the invoice first.',
       });
     },
   );
@@ -532,7 +532,8 @@ describe('create_credit_invoice tool-call logging', () => {
 });
 
 describe('create_credit_invoice through the real client', () => {
-  const NOTE = 'The credit invoice was created, but the API answer could not be read.';
+  const NOTE =
+    'The credit invoice was created, but the API answer could not be read. Do not retry; check the invoice first.';
   const run = async (res: Response) => {
     const real = createInioClient({
       apiUrl: 'https://api.example/v1',
