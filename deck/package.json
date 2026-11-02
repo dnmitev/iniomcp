@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "screenshots": "playwright test"
+    "screenshots": "playwright test",
+    "video:studio": "remotion studio video/index.ts --public-dir=audio",
+    "video:render": "remotion render video/index.ts DeckVideo out/inio-mcp-deck.mp4 --public-dir=audio"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -15,9 +17,14 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
+    "@remotion/bundler": "^4.0.250",
+    "@remotion/cli": "^4.0.250",
+    "@remotion/media-parser": "^4.0.250",
+    "@remotion/media-utils": "^4.0.250",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "remotion": "^4.0.250",
     "typescript": "^5.6.3",
     "vite": "^6.0.1"
   }

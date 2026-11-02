@@ -97,12 +97,71 @@ This registry makes it easy to pair slides with their narration for video compos
 
 ## Narration
 
-Each slide has corresponding narration text in `deck/narration/NN-slug.md`. These files are:
-- **Not used** by the current slide deck app
-- **Reserved** for future text-to-speech and video generation
-- **Not editable** as part of this deliverable (source of truth)
+Each slide has corresponding narration text in `deck/narration/NN-slug.md`. These are the per-slide narration scripts that `deck/scripts/tts.sh` turns into `deck/audio/*.wav` for the video composition. The narration files are referenced in the slide registry for pairing with slide components during video rendering.
 
-The narration files are referenced in the slide registry for easy pairing during video composition with tools like Remotion.
+## Video Generation
+
+Generate a narrated video of the slide deck with synchronized audio and crossfade transitions.
+
+### Prerequisites
+
+- **Apple Silicon Mac** (required for mlx-audio TTS)
+- **Python 3.10+** with venv support
+- **Node.js** with npm
+- **ffmpeg** (for video verification)
+
+### Generate Audio
+
+Run the TTS script to create audio files from narration:
+
+```bash
+deck/scripts/tts.sh
+```
+
+This creates `deck/audio/NN-slug.wav` for each narration file in `deck/narration/`. The script:
+- Sets up a Python virtual environment at `deck/.venv`
+- Installs `mlx-audio` and dependencies
+- Uses the Kokoro TTS model (mlx-community/Kokoro-82M-bf16)
+- Strips markdown formatting and non-spoken content
+- Skips audio files that are already up-to-date
+
+The script is idempotent: re-running it only regenerates audio for changed narration files.
+
+### Preview Video
+
+Open the Remotion studio to preview the video composition:
+
+```bash
+npm --prefix deck run video:studio
+```
+
+### Render Video
+
+Render the final video:
+
+```bash
+npm --prefix deck run video:render
+```
+
+Output: `deck/out/inio-mcp-deck.mp4`
+
+The video composition:
+- **Resolution**: 1920x1080
+- **Frame rate**: 30 fps
+- **Duration**: Calculated from audio files (each slide = audio duration + 0.5s padding)
+- **Transitions**: 0.4s crossfades between slides
+- **Audio**: Synchronized per-slide narration
+
+### Video Architecture
+
+- `deck/video/Root.tsx`: Remotion composition with dynamic metadata calculation
+- `deck/video/DeckVideo.tsx`: Main video component rendering slides with audio
+- `deck/video/calculateMetadata.ts`: Calculates video duration from audio files at render time
+- `deck/remotion.config.ts`: Remotion configuration
+- `deck/scripts/tts.sh`: TTS generation script
+- `deck/scripts/tts.py`: Python TTS implementation
+
+Audio files are not committed to the repository. Generated video output is also excluded.
 
 ## Technical Details
 
