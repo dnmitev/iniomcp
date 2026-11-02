@@ -66,40 +66,17 @@
 
 **Sources:** .paul/PROJECT.md (Key Decisions, Requirements Core Features), CHANGELOG.md [0.2.0], README.md (Write tools section)
 
-## 07-security-hardening
+## 07-built-for-trust
 
-**Title:** Audit-Driven Improvements
+**Title:** Audited, Verified, and Team-Ready
 
-- Independent security audit completed with 29 findings across 7 root causes
-- Version 0.4.0 addressed authentication bypass where unauthenticated clients could consume 4 megabytes of memory per request; now rejected before body parsing
-- Fixed 8 of 11 write tools that incorrectly reported successful writes as failures
-- Request body size capped at 256 kilobytes; malformed requests handled before authentication
+- Independent security audit with 29 findings completed and fixed: authentication strengthened, write operations report correctly, and malicious requests are rejected early
+- Every release tested against real Inio environments and published with verification records so you can confirm what you're installing
+- Teams can share one secured server setup instead of each person configuring their own credentials
 
-**Sources:** .paul/handoffs/archive/HANDOFF-2026-10-30.md (AEGIS audit findings), CHANGELOG.md [0.4.0] Security and Changed sections
+**Sources:** .paul/handoffs/archive/HANDOFF-2026-10-30.md (AEGIS audit findings), CHANGELOG.md [0.4.0] Security and Changed sections, .paul/PROJECT.md (Key Decisions), CHANGELOG.md [0.1.1], README.md (Pinning and verification section, Shared HTTP server section), CHANGELOG.md [0.3.0]
 
-## 08-production-ready
-
-**Title:** Distribution Built for Trust
-
-- Tag-driven release pipeline with live validation gate testing against real Inio environments
-- npm package published with supply chain provenance through trusted publishing
-- Multi-architecture Docker images for AMD64 and ARM64 with Software Bill of Materials attestations
-- GitHub Actions automates build and publication to npm registry and GitHub Container Registry
-
-**Sources:** .paul/PROJECT.md (Key Decisions), CHANGELOG.md [0.1.1], README.md (Pinning and verification section)
-
-## 09-team-collaboration
-
-**Title:** Share One Server with Your Team
-
-- Shared HTTP server mode launched in version 0.3.0 for multi-user access
-- Bearer token authentication protects all requests with constant-time comparison
-- Origin allowlist blocks cross-site attacks, limiting requests to localhost or approved domains
-- Graceful shutdown with drain period handles in-flight requests during restarts
-
-**Sources:** CHANGELOG.md [0.3.0], .paul/PROJECT.md (Key Decisions), README.md (Shared HTTP server section)
-
-## 10-whats-next
+## 08-whats-next
 
 **Title:** Upcoming Enhancements
 
@@ -110,7 +87,7 @@
 
 **Sources:** .paul/PROJECT.md (Requirements Planned), .paul/ROADMAP.md (Next Milestone candidates), .paul/handoffs/archive/HANDOFF-2026-10-30.md (What's Next)
 
-## 11-current-limits
+## 09-current-limits
 
 **Title:** Known Constraints and Upstream Gaps
 
@@ -121,7 +98,7 @@
 
 **Sources:** CHANGELOG.md [0.2.0] Known limitations, .paul/PROJECT.md (Out of Scope, Requirements section), README.md (Write tools section)
 
-## 12-risks-and-mitigations
+## 10-risks-and-mitigations
 
 **Title:** Risk Profile and Controls
 
@@ -132,7 +109,7 @@
 
 **Sources:** .paul/PROJECT.md (Constraints Compliance, Key Decisions), .paul/handoffs/archive/HANDOFF-2026-10-30.md (Owner action pending, D-006), .paul/STATE.md (Blockers/Concerns)
 
-## 13-asks
+## 11-asks
 
 **Title:** Support Needed
 
