@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.4.0 |
-| Status | v0.2 Audit Quick Wins complete (0.4.0 released); awaiting next milestone |
+| Status | v0.3 Integration Layer in progress (Phase 8) |
 | Last Updated | 2026-11-02 |
 
 ## Requirements
@@ -58,21 +58,22 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Tool descriptions and README state exactly what is and is not redacted; README Data protection, Release model, Pinning and verification (AEGIS R1) — Phase 7 (0.4.0)
 - ✓ Install examples pinned to the release; plaintext-secret warnings; inspector pinned (AEGIS R7) — Phase 7 (0.4.0)
 
-### Active (In Progress)
-- None (v0.2 complete)
+### Active (In Progress) — v0.3 Integration Layer
+- [ ] Redaction by customer type: businesses open except bearer invoice links; consumers redacted incl. name, address, city (reworked AEGIS R2) — Phase 8
+- [ ] Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor), usage examples, doc drift fixed (AEGIS R10) — Phase 9
+- [ ] Opt-in `INIO_WRITE_TOOLS` and `INIO_MAX_PAYMENT_AMOUNT`; write logging with client attribution; SHA-pinned actions and image smoke test (trimmed AEGIS R3, R8, R6) — Phase 10
+- [ ] Helm chart (Ingress and Gateway API) published as OCI; team runs it on EKS via ArgoCD — Phase 11
 
 ### Planned (Next)
-- AEGIS R2: redact orgNr, address, city and free text for everyone, names for consumers only (update `REDACTION_NOTE`, `SENSITIVE_KEYS` and README together)
-- AEGIS R3: write-tool allowlist (`INIO_WRITE_TOOLS`) and payment ceiling (`INIO_MAX_PAYMENT_AMOUNT`)
-- AEGIS R6: release-path hardening (SHA-pinned actions, image build provenance, packed tarball publish, sandbox live gate)
-- AEGIS R8: write attribution in logs
+- v0.4 Hosted: MCP Keycloak realm (BoP brokering), OAuth resource server, per-user write roles and audit, multi-tenant (`.paul/research/v0.4-hosted-auth.md`)
+- AEGIS R6 remainder: pack-once publish with `--ignore-scripts`, image build provenance, sandbox-tenant live gate
+- ChatGPT support: deferred until the hosted server has OAuth (v0.4 or later); ChatGPT connectors need a remote server with OAuth
 - Move to the `@inio` npm scope and the company GitHub org when they exist
-- Per-user tokens or MCP OAuth for the HTTP server, only if teams ask
 
 ### Out of Scope
 - Internal MCP for dev/QA/business (DB access, internal services) — separate future project
 - Bulk `PATCH /customers` and `PUT` variants — PATCH covers updates; bulk LLM updates too risky
-- Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard
+- Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard (per-user roles come with the v0.4 MCP realm)
 - `reverse_payment` — the public API exposes no paymentAllocationId (payment id is not one; live probe 2026-10-29)
 - `create_invoice` in v0.1 — sends to the end customer at once and needs full calcInput (revisit after usage)
 - Health endpoint for HTTP mode — would be the only unauthenticated route; discovered during v0.1 (add if an orchestrator needs it)

@@ -9,16 +9,16 @@ version = "1.4"
 source = "https://chrisai.cv/skool"
 
 [milestone]
-name = "v0.2 Audit Quick Wins"
-version = "0.2.0"
-status = "complete"
-phases = 2
+name = "v0.3 Integration Layer"
+version = "0.3.0"
+status = "in_progress"
+phases = 4
 
 [phase]
-number = 7
-name = "Docs and install trust"
-status = "complete"
-plans_completed = 2
+number = 8
+name = "Redaction by customer type"
+status = "not_started"
+plans_completed = 0
 
 [loop]
 position = "IDLE"
@@ -29,4 +29,4 @@ groom = true
 [stats]
 total_plans = 20
 total_phases = 7
-last_activity = "2026-11-02T07:11:31Z"
+last_activity = "2026-11-02T09:02:37Z"

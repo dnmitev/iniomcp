@@ -12,15 +12,41 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 
 ## Current Milestone
 
-**v0.2 Audit Quick Wins** (0.2.0)
-Status: ✅ Complete (released as 0.4.0)
-Completed: 2026-10-30
+**v0.3 Integration Layer** (0.3.0, releases as 0.5.0)
+Status: 🚧 In Progress
+Phases: 0 of 4 complete
+Focus: Make inio-mcp an easy, trustworthy integration layer for Claude and dev tools, and deployable by the team on EKS. Ease of use first: new safety settings are opt-in. Fixed `MCP_AUTH_TOKEN` stays the hosted auth (one instance = one tenant).
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 8 | Redaction by customer type | TBD | Not started | - |
+| 9 | Docs overhaul | TBD | Not started | - |
+| 10 | Write bounds, attribution, release hygiene | TBD | Not started | - |
+| 11 | Helm chart and EKS | TBD | Not started | - |
+
+### Phase 8: Redaction by customer type
+
+Focus: TDD loop. Reworked AEGIS R2. Businesses (`B`): no redaction except bearer invoice links (`pdfURL`, `digitalInvoiceURL`). Consumers (`C`): today's redaction plus name, address lines and city. `INIO_REVEAL_PII=true` still disables all. Invoices carry no `customerType`, so `get_invoice` looks the customer up (cached per customer number) and falls back to consumer rules on failure; `list_invoices` unchanged. Key-drift test (fixture keys vs reviewed list). `REDACTION_NOTE`, `SENSITIVE_KEYS` and README updated together.
+Plans: TBD (defined during /paul:plan)
+
+### Phase 9: Docs overhaul
+
+Focus: AEGIS R10 widened. Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor; stdio and hosted HTTP), "what you can ask" examples, drift fixes (PLANNING.md marked as original plan, tool count and version, 99.1% mutation claim, AS-7100 references).
+Plans: TBD (defined during /paul:plan)
+
+### Phase 10: Write bounds, attribution, release hygiene
+
+Focus: Trimmed AEGIS R3 (opt-in `INIO_WRITE_TOOLS`, `INIO_MAX_PAYMENT_AMOUNT`, later-effect sentences, README guidance), R8 (write logging with `clientInfo`, 401 warn rate-limited, `onerror`, pause id in `acceptedUnreadable()`), small R6 parts (SHA-pinned actions, rulesets, image `docker run` smoke test).
+Plans: TBD (defined during /paul:plan)
+
+### Phase 11: Helm chart and EKS
+
+Focus: Chart in `charts/inio-mcp/` (version = app version) published as OCI to GHCR by `release.yml`. Deployment, Service, optional Ingress (ingress-nginx defaults) and optional Gateway API HTTPRoute side by side, `existingSecret` (hand-made or ESO), tcpSocket probes, restricted security context (read-only root verified), `preStop` sleep. ArgoCD in the owner's infra repo. kubeconform for ingress/route/both; kind smoke test. Release 0.5.0. Design input: `.paul/research/v0.3-helm-chart.md`.
+Plans: TBD (defined during /paul:plan)
 
 ## Next Milestone
 
-Run /paul:discuss-milestone or /paul:milestone to define.
-
-Candidates: R2 redaction (decided: consumer names only), R3 write allowlist and payment ceiling, R6 release-path hardening, R8 write attribution in logs, R10 docs drift, INIO_REVEAL_LINKS, get_invoice opt-in, per-user auth/OAuth (with R9), move to the `@inio` npm scope and company GitHub org.
+v0.4 Hosted (candidate): dedicated MCP Keycloak realm with BoP brokering, OAuth resource server, per-user write roles and audit, per-tenant credentials, multi-tenant hosting. Design input: `.paul/research/v0.4-hosted-auth.md`. Other candidates: INIO_REVEAL_LINKS, get_invoice opt-in, R6 pack-once publish and sandbox live gate. ChatGPT deferred until the hosted server has OAuth.
 
 ## Completed Milestones
 
@@ -53,4 +79,4 @@ Full detail: `.paul/milestones/v0.1-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-11-02 — v0.2 Audit Quick Wins archived*
+*Last updated: 2026-11-02 — v0.3 Integration Layer created*

@@ -11,26 +11,27 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** Awaiting next milestone (v0.2 archived; 0.4.0 released)
+**Current focus:** v0.3 Integration Layer — Phase 8 Redaction by customer type
 
 ## Current Position
 
-Milestone: Awaiting next milestone
-Phase: None active
-Plan: None
-Status: Milestone v0.2 Audit Quick Wins complete — ready for next
-Last activity: 2026-11-02 — Milestone v0.2 archived
+Milestone: v0.3 Integration Layer
+Phase: 8 of 11 (Redaction by customer type)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-02 — Milestone created
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
+- v0.3 Integration Layer: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone complete - ready for next]
+  ○        ○        ○     [Ready for first PLAN]
 ```
 
 ## Accumulated Context
@@ -88,6 +89,9 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: REDACTION_NOTE next to SENSITIVE_KEYS; README field list guarded by test; docs claim npm provenance only (image provenance → R6) | Phase 7 | R2 must update note, keys and README together |
 | 2026-10-30: v0.2 releases as 0.4.0; README pins 0.4.0 before the tag; merge → tag → publish back to back (release.yml requires the tag on main) | Phase 7 | Brief window where main's README pins an unpublished version |
 | 2026-10-30: Client appends check-before-retry to write 5xx; write tools catch via writeFailure, shape failures → acceptedUnreadable (ok + note) | Phase 6 | New write tools inherit it; tools add only a check pointer |
+| 2026-11-02: v0.3 = customer-type redaction (B open except bearer links; C strict + names/address/city), docs per client, trimmed opt-in R3, R8, small R6, Helm chart; ChatGPT deferred to the hosted server (OAuth) | v0.3 | Ease of use first; AEGIS R2/R3 reworked |
+| 2026-11-02: Hosted auth direction = dedicated MCP Keycloak realm with BoP brokering; per-tenant MCP api2api clients first, APISIX trusting the realm later | v0.4 | `.paul/research/v0.4-hosted-auth.md` |
+| 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
 
 ### Deferred Issues
 
@@ -115,21 +119,20 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/milestone-v0.2-close (from main 1ddab79 = PR #38 squash); tag v0.4.0 on 1ddab79 (pushed)
+Branch: paul/milestone-v0.3 (from main 3151511 = PR #39 squash); tag v0.4.0 on 1ddab79 (pushed)
 Previous: paul/milestone-v0.1; milestone tags milestone-v0.1, milestone-v0.2 (local, not pushed)
 Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-30; v0.2 Audit Quick Wins); v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
 
 ## Session Continuity
 
 Last session: 2026-11-02
-Stopped at: Milestone v0.2 Audit Quick Wins complete and archived
-Next action: /paul:discuss-milestone (R2, R3, R6, R8 candidates)
-Resume file: .paul/MILESTONES.md
+Stopped at: Milestone v0.3 Integration Layer created, ready to plan
+Next action: /paul:plan for Phase 8
+Resume file: .paul/ROADMAP.md
 Resume context:
-- v0.2 shipped as 0.4.0 (R4, R5, R1, R7 done) and archived to .paul/milestones/v0.2-ROADMAP.md
-- paul/milestone-v0.2-close: .paul-only commits; PR to main like #37
-- Next milestone candidates: R2 (consumer-only names; update REDACTION_NOTE + SENSITIVE_KEYS + README together), R3, R6, R8, R10
-- Owner action: re-confirm bounded F-00-002 acceptance (D-006: release structure only; not F-04-006/008/009; re-confirm before org transfer)
+- v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
+- Phase 8 note: invoices have no customerType (spec Invoices_Read: customerNo/customerId only); get_invoice needs a cached customer lookup, consumer fallback
+- Research inputs: .paul/research/v0.3-helm-chart.md, .paul/research/v0.4-hosted-auth.md
 - Next release must bump the README @0.4.0 pins
 
 ---
