@@ -1,5 +1,5 @@
 # TTS dependencies for macOS arm64 with Python 3.12
-# Resolved versions with wheels available on macOS 14+ arm64
+# Input requirements - generate lock file with: uv pip compile --python-version 3.12
 
 # Core TTS
 mlx-audio==0.6.3
@@ -7,3 +7,6 @@ soundfile==0.12.1
 
 # Phonemization and NLP
 misaki[en]>=0.9.4
+
+# spaCy English model (required by misaki)
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl

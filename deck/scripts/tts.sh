@@ -35,15 +35,14 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 
 echo "==> Installing dependencies with uv..."
-uv pip install --python "$VENV_DIR" -r "$REQUIREMENTS"
+LOCK_FILE="$SCRIPT_DIR/requirements-tts.lock"
+uv pip install --python "$VENV_DIR" -r "$LOCK_FILE"
 
-echo "==> Installing spaCy English model..."
-"$VENV_DIR/bin/python" -m spacy download en_core_web_sm --quiet || true
-
-echo "==> Generating audio files..."
+echo "==> Checking for stale audio files..."
 mkdir -p "$AUDIO_DIR"
 
-generated_count=0
+# Collect all stale (narration, audio) pairs
+stale_pairs=()
 skipped_count=0
 
 for narration_file in "$NARRATION_DIR"/*.md; do
@@ -52,11 +51,18 @@ for narration_file in "$NARRATION_DIR"/*.md; do
     
     if [ -f "$audio_file" ] && [ "$audio_file" -nt "$narration_file" ]; then
         skipped_count=$((skipped_count + 1))
-        continue
+    else
+        stale_pairs+=("$narration_file" "$audio_file")
     fi
-    
-    "$VENV_DIR/bin/python" "$TTS_SCRIPT" "$narration_file" "$audio_file"
-    generated_count=$((generated_count + 1))
 done
+
+# Generate audio for all stale files in one model load
+if [ ${#stale_pairs[@]} -gt 0 ]; then
+    echo "==> Generating ${#stale_pairs[@]} audio files (model loads once)..."
+    "$VENV_DIR/bin/python" "$TTS_SCRIPT" "${stale_pairs[@]}"
+    generated_count=$((${#stale_pairs[@]} / 2))
+else
+    generated_count=0
+fi
 
 echo "==> Complete: generated $generated_count, skipped $skipped_count (already up-to-date)"

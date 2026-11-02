@@ -84,30 +84,37 @@ def generate_audio_with_model(text: str, output_path: Path, model,
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: tts.py <input.md> <output.wav>", file=sys.stderr)
+    if len(sys.argv) < 3 or len(sys.argv) % 2 != 1:
+        print("Usage: tts.py <input1.md> <output1.wav> [<input2.md> <output2.wav> ...]", file=sys.stderr)
         sys.exit(1)
     
-    input_path = Path(sys.argv[1])
-    output_path = Path(sys.argv[2])
+    # Parse input/output pairs
+    file_pairs = []
+    for i in range(1, len(sys.argv), 2):
+        input_path = Path(sys.argv[i])
+        output_path = Path(sys.argv[i + 1])
+        
+        if not input_path.exists():
+            print(f"Error: {input_path} not found", file=sys.stderr)
+            sys.exit(1)
+        
+        file_pairs.append((input_path, output_path))
     
-    if not input_path.exists():
-        print(f"Error: {input_path} not found", file=sys.stderr)
-        sys.exit(1)
-    
-    text = input_path.read_text(encoding='utf-8')
-    spoken_text = strip_markdown_and_non_spoken(text)
-    
-    if not spoken_text:
-        print(f"Warning: No spoken content in {input_path}", file=sys.stderr)
-        sys.exit(1)
-    
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+    # Load model once for all files
     model = load_model("mlx-community/Kokoro-82M-bf16")
-    generate_audio_with_model(spoken_text, output_path, model, voice="af_heart", speed=1.0)
     
-    print(f"Generated: {output_path}")
+    # Process each file
+    for input_path, output_path in file_pairs:
+        text = input_path.read_text(encoding='utf-8')
+        spoken_text = strip_markdown_and_non_spoken(text)
+        
+        if not spoken_text:
+            print(f"Warning: No spoken content in {input_path}", file=sys.stderr)
+            continue
+        
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        generate_audio_with_model(spoken_text, output_path, model, voice="af_heart", speed=1.0)
+        print(f"Generated: {output_path}")
 
 
 if __name__ == '__main__':

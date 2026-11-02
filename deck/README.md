@@ -105,10 +105,11 @@ Generate a narrated video of the slide deck with synchronized audio and crossfad
 
 ### Prerequisites
 
-- **Apple Silicon Mac** (required for mlx-audio TTS)
-- **Python 3.10+** with venv support
+- **Apple Silicon Mac** running macOS 14 (Sonoma) or later (required for mlx-audio)
+- **uv** package manager (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- **espeak-ng** for phonemization (install with: `brew install espeak-ng`)
 - **Node.js** with npm
-- **ffmpeg** (for video verification)
+- **ffmpeg** (optional, for video verification)
 
 ### Generate Audio
 
@@ -119,18 +120,19 @@ deck/scripts/tts.sh
 ```
 
 This creates `deck/audio/NN-slug.wav` for each narration file in `deck/narration/`. The script:
-- Sets up a Python virtual environment at `deck/.venv`
-- Installs `mlx-audio==0.6.3`, `soundfile`, and `misaki[en]` (for English phonemization)
+- Creates a Python 3.12 virtual environment at `deck/.venv` using uv (recreates if wrong version)
+- Installs pinned dependencies from `scripts/requirements-tts.txt` (mlx-audio, spaCy, misaki)
+- Downloads the spaCy English model (en_core_web_sm)
 - Uses the Kokoro TTS model (mlx-community/Kokoro-82M-bf16, voice `af_heart`, 24kHz output)
 - Strips markdown formatting and non-spoken content
 - Skips audio files that are already up-to-date
 
 The script is idempotent: re-running it only regenerates audio for changed narration files.
 
-**Note**: The TTS script requires **espeak-ng** for phonemization. On macOS, install with:
-```bash
-brew install espeak-ng
-```
+**Key dependencies** (pinned for Python 3.12 macOS arm64 wheels):
+- `mlx-audio==0.6.3` + `mlx==0.32.4` (requires macOS 14+)
+- `spacy==3.8.18` + `thinc==8.3.14` + `blis==1.3.4`
+- `misaki==0.9.4` + `espeakng-loader==0.2.4`
 
 ### Preview Video
 
