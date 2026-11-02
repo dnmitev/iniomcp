@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { InioApiError } from '../../src/inio-client.ts';
 import {
+  acceptedUnreadable,
   compact,
   errorText,
   fail,
@@ -11,6 +12,7 @@ import {
   presentPage,
   presentRaw,
   toPage,
+  writeFailure,
 } from '../../src/tools/result.ts';
 
 describe('errorText', () => {
@@ -449,6 +451,41 @@ describe('type pass-through', () => {
     ]);
     expect(errorText(err)).toBe(
       'X: bad [redacted-email] (correlationId c) Fields: customerAddress.city: [redacted]; customerName: [redacted]; yourReference: [redacted]; note: bad text',
+    );
+  });
+});
+
+const BASE_TEXT =
+  'The change was accepted, but the API answer could not be read. Do not retry; check the current state first.';
+
+describe('acceptedUnreadable', () => {
+  it('keeps the generic text without a check', () => {
+    expect(acceptedUnreadable()).toEqual(ok(BASE_TEXT));
+  });
+
+  it('ends with "check <check> first." when a check is given', () => {
+    const text = acceptedUnreadable('customer c-1').content[0]?.text;
+    expect(text).toBe(
+      'The change was accepted, but the API answer could not be read. Do not retry; check customer c-1 first.',
+    );
+  });
+});
+
+describe('writeFailure with a check', () => {
+  const unreadable = new InioApiError(200, 'UPSTREAM_ERROR', 'Unexpected response');
+
+  it('names the check for an unreadable 2xx', () => {
+    expect(writeFailure(unreadable, 'customer c-1')).toEqual(acceptedUnreadable('customer c-1'));
+  });
+
+  it('keeps the generic text for an unreadable 2xx without a check', () => {
+    expect(writeFailure(unreadable)).toEqual(ok(BASE_TEXT));
+  });
+
+  it('ignores the check for a real failure', () => {
+    const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
+    expect(writeFailure(err, 'customer c-1')).toEqual(
+      fail('BAD_REQUEST: Nope (correlationId c-1)'),
     );
   });
 });

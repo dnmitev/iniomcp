@@ -15,12 +15,13 @@ import {
   ok,
   present,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
 type Deps = {
   client: Pick<InioClient, 'get' | 'post'>;
   revealPii: boolean;
   logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
   tokens: Pick<TokenProvider, 'getToken'>;
   maxPaymentAmount?: number;
 };
@@ -129,7 +130,7 @@ async function checkCeiling(
 
 export function registerCreatePayment(
   server: McpServer,
-  { client, revealPii, logger = noopLogger, tokens, maxPaymentAmount }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog, tokens, maxPaymentAmount }: Deps,
 ): void {
   server.registerTool(
     'create_payment',
@@ -149,40 +150,45 @@ export function registerCreatePayment(
       },
       inputSchema,
     },
-    withToolLogging(logger, 'create_payment', async ({ number, amount, fullPayment, ...rest }) => {
-      const summary = { paid: true, invoice: number };
-      try {
-        const path = invoicePath({ number });
-        if (maxPaymentAmount !== undefined) {
-          const rejection = await checkCeiling(client, path, amount, maxPaymentAmount);
-          if (rejection) return fail(rejection);
+    withToolLogging(
+      logger,
+      'create_payment',
+      async ({ number, amount, fullPayment, ...rest }) => {
+        const summary = { paid: true, invoice: number };
+        try {
+          const path = invoicePath({ number });
+          if (maxPaymentAmount !== undefined) {
+            const rejection = await checkCeiling(client, path, amount, maxPaymentAmount);
+            if (rejection) return fail(rejection);
+          }
+          const clientId = clientIdOf(await tokens.getToken());
+          const body = {
+            clientId,
+            invoiceNo: number,
+            ...(amount === undefined ? {} : { amount }),
+            ...rest,
+          };
+          const answer = Answer.safeParse(await client.post('/payments', [body]));
+          // The payment exists once the POST resolves, so an unreadable answer is still success.
+          if (!answer.success) return ok(present({ ...summary, note: UNREADABLE }, revealPii));
+          const { transactionType } = rest;
+          const result = {
+            ...summary,
+            transactionType,
+            amount,
+            fullPayment,
+            paymentId: answer.data[0],
+            ...(await readBackInvoice(client, path, Invoice)),
+          };
+          return ok(present(result, revealPii));
+        } catch (err) {
+          // A 2xx the client could not parse (no result envelope) also means the payment exists.
+          if (isUnreadableSuccess(err))
+            return ok(present({ ...summary, note: UNREADABLE }, revealPii));
+          return fail(errorText(err) + (isUncertainOutcome(err) ? CHECK : ''));
         }
-        const clientId = clientIdOf(await tokens.getToken());
-        const body = {
-          clientId,
-          invoiceNo: number,
-          ...(amount === undefined ? {} : { amount }),
-          ...rest,
-        };
-        const answer = Answer.safeParse(await client.post('/payments', [body]));
-        // The payment exists once the POST resolves, so an unreadable answer is still success.
-        if (!answer.success) return ok(present({ ...summary, note: UNREADABLE }, revealPii));
-        const { transactionType } = rest;
-        const result = {
-          ...summary,
-          transactionType,
-          amount,
-          fullPayment,
-          paymentId: answer.data[0],
-          ...(await readBackInvoice(client, path, Invoice)),
-        };
-        return ok(present(result, revealPii));
-      } catch (err) {
-        // A 2xx the client could not parse (no result envelope) also means the payment exists.
-        if (isUnreadableSuccess(err))
-          return ok(present({ ...summary, note: UNREADABLE }, revealPii));
-        return fail(errorText(err) + (isUncertainOutcome(err) ? CHECK : ''));
-      }
-    }),
+      },
+      toolLog,
+    ),
   );
 }

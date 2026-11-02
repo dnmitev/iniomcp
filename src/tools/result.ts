@@ -117,14 +117,14 @@ export const isUnreadableSuccess = (err: unknown): boolean =>
   err instanceof InioApiError && err.status >= 200 && err.status < 300;
 
 /** Success result for a write the API accepted (2xx) but whose answer could not be read. */
-export const acceptedUnreadable = () =>
+export const acceptedUnreadable = (check = 'the current state') =>
   ok(
-    'The change was accepted, but the API answer could not be read. Do not retry; check the current state first.',
+    `The change was accepted, but the API answer could not be read. Do not retry; check ${check} first.`,
   );
 
 /** Tool result for an error thrown around a write: an unreadable 2xx means it landed, so it is not a failure. */
-export const writeFailure = (err: unknown) =>
-  isUnreadableSuccess(err) ? acceptedUnreadable() : fail(errorText(err));
+export const writeFailure = (err: unknown, check?: string) =>
+  isUnreadableSuccess(err) ? acceptedUnreadable(check) : fail(errorText(err));
 
 /** True when the outcome of a write is unknown: no response (status 0) or a server error. */
 export const isUncertainOutcome = (err: unknown): boolean =>

@@ -5,9 +5,14 @@ import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { pauseResult } from './pauses.ts';
 import { errorText, fail } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: Pick<InioClient, 'get'>;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z.strictObject({
   customerId: z.uuid().describe('Customer UUID'),
@@ -16,7 +21,7 @@ const Input = z.strictObject({
 
 export function registerGetCustomerPause(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'get_customer_pause',
@@ -26,13 +31,18 @@ export function registerGetCustomerPause(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'get_customer_pause', async ({ customerId, pauseId }) => {
-      try {
-        const path = `/customers/${pathSegment(customerId)}/pauses/${pathSegment(pauseId)}`;
-        return pauseResult(await client.get(path), revealPii);
-      } catch (err) {
-        return fail(errorText(err));
-      }
-    }),
+    withToolLogging(
+      logger,
+      'get_customer_pause',
+      async ({ customerId, pauseId }) => {
+        try {
+          const path = `/customers/${pathSegment(customerId)}/pauses/${pathSegment(pauseId)}`;
+          return pauseResult(await client.get(path), revealPii);
+        } catch (err) {
+          return fail(errorText(err));
+        }
+      },
+      toolLog,
+    ),
   );
 }

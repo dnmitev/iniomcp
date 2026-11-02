@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { pino } from 'pino';
-import { isLoopbackHost, loadConfig, type Config } from './config.ts';
+import { isLoopbackHost, loadConfig, startupFields, type Config } from './config.ts';
 import { createLogger } from './logger.ts';
 import { startHttpServer } from './http.ts';
 import { createServer, version } from './server.ts';
@@ -17,7 +17,7 @@ try {
 
 if (config) {
   const logger = createLogger(config.logLevel, pino.destination(2));
-  const { allowWrites, revealPii, logLevel } = config;
+  const settings = startupFields(config);
   if (config.http) {
     const { http } = config;
     const { host, port } = http;
@@ -46,15 +46,9 @@ if (config) {
         'listening on a non-loopback host; the bearer token is the only barrier',
       );
     }
-    logger.info(
-      { version, transport: 'http', host, port, allowWrites, revealPii, logLevel },
-      'server started',
-    );
+    logger.info({ version, transport: 'http', host, port, ...settings }, 'server started');
   } else {
     await createServer(config, { logger }).connect(new StdioServerTransport());
-    logger.info(
-      { version, transport: 'stdio', allowWrites, revealPii, logLevel },
-      'server started',
-    );
+    logger.info({ version, transport: 'stdio', ...settings }, 'server started');
   }
 }

@@ -37,6 +37,23 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 export const isLoopbackHost = (host: string): boolean => LOCAL_HOSTS.has(host);
 const TOKEN_PATH = '/protocol/openid-connect/token';
 
+/** Settings shown on the 'server started' line. */
+export function startupFields({
+  allowWrites,
+  revealPii,
+  logLevel,
+  writeTools,
+  maxPaymentAmount,
+}: Config) {
+  return {
+    allowWrites,
+    revealPii,
+    logLevel,
+    writeTools: allowWrites ? WRITE_TOOL_NAMES.filter((n) => writeTools.has(n)) : [],
+    ...(allowWrites && maxPaymentAmount !== undefined && { maxPaymentAmount }),
+  };
+}
+
 /** Parses and validates Inio MCP settings. Error messages name vars only, never values. */
 export function loadConfig(env: Env): Config {
   const problems: string[] = [];

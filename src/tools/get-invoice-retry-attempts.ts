@@ -12,9 +12,14 @@ import {
   ok,
   presentRaw,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: Pick<InioClient, 'get'>;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z
   .strictObject({
@@ -33,7 +38,7 @@ const Payload = z.object({
 
 export function registerGetInvoiceRetryAttempts(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'get_invoice_retry_attempts',
@@ -44,28 +49,33 @@ export function registerGetInvoiceRetryAttempts(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'get_invoice_retry_attempts', async ({ id, number, limit }) => {
-      try {
-        const parsed = Payload.safeParse(
-          await client.get(`${invoicePath({ id, number })}/retry-attempts`, { query: { limit } }),
-        );
-        if (!parsed.success) {
-          return fail('UPSTREAM_ERROR: Unexpected retry attempts payload from the Inio API.');
+    withToolLogging(
+      logger,
+      'get_invoice_retry_attempts',
+      async ({ id, number, limit }) => {
+        try {
+          const parsed = Payload.safeParse(
+            await client.get(`${invoicePath({ id, number })}/retry-attempts`, { query: { limit } }),
+          );
+          if (!parsed.success) {
+            return fail('UPSTREAM_ERROR: Unexpected retry attempts payload from the Inio API.');
+          }
+          const { data, failedPaymentCount, successfullAtemptsCount, directDebitEligible } =
+            parsed.data;
+          // totalItems is dropped: it is only the page length. Compact the attempts, not the
+          // wrapper, so an empty list and zero counts survive.
+          const result = {
+            attempts: compact(data),
+            failedPaymentCount,
+            successfulAttemptsCount: successfullAtemptsCount,
+            directDebitEligible,
+          };
+          return ok(presentRaw(result, revealPii));
+        } catch (err) {
+          return fail(errorText(err));
         }
-        const { data, failedPaymentCount, successfullAtemptsCount, directDebitEligible } =
-          parsed.data;
-        // totalItems is dropped: it is only the page length. Compact the attempts, not the
-        // wrapper, so an empty list and zero counts survive.
-        const result = {
-          attempts: compact(data),
-          failedPaymentCount,
-          successfulAttemptsCount: successfullAtemptsCount,
-          directDebitEligible,
-        };
-        return ok(presentRaw(result, revealPii));
-      } catch (err) {
-        return fail(errorText(err));
-      }
-    }),
+      },
+      toolLog,
+    ),
   );
 }

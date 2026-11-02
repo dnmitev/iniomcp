@@ -55,7 +55,12 @@ export function createServerFactory(
   const customerTypes = new Map<string, CustomerKind>();
   return () => {
     const server = new McpServer({ name: 'inio-mcp', version });
-    const deps = { client, revealPii: config.revealPii, logger };
+    const deps = {
+      client,
+      revealPii: config.revealPii,
+      logger,
+      toolLog: { client: () => server.server.getClientVersion() },
+    };
     registerGetInvoice(server, { ...deps, customerTypes });
     registerGetInvoiceRetryAttempts(server, deps);
     registerListCustomers(server, deps);
@@ -65,23 +70,25 @@ export function createServerFactory(
     registerGetCustomerPause(server, deps);
     // Write tools exist only when explicitly enabled (INIO_ALLOW_WRITES=true), narrowed by INIO_WRITE_TOOLS.
     if (config.allowWrites) {
+      const writeDeps = { ...deps, toolLog: { ...deps.toolLog, write: true } };
       const writers: Record<(typeof WRITE_TOOL_NAMES)[number], () => void> = {
-        create_customer_pause: () => registerCreateCustomerPause(server, deps),
-        update_customer_pause: () => registerUpdateCustomerPause(server, deps),
-        cancel_customer_pause: () => registerCancelCustomerPause(server, deps),
-        update_invoice_due_date: () => registerUpdateInvoiceDueDate(server, deps),
-        update_invoice_stop_until_dates: () => registerUpdateInvoiceStopUntilDates(server, deps),
-        update_customer: () => registerUpdateCustomer(server, deps),
-        reset_invoice_stage: () => registerResetInvoiceStage(server, deps),
-        create_credit_invoice: () => registerCreateCreditInvoice(server, deps),
-        match_credit_invoice: () => registerMatchCreditInvoice(server, deps),
+        create_customer_pause: () => registerCreateCustomerPause(server, writeDeps),
+        update_customer_pause: () => registerUpdateCustomerPause(server, writeDeps),
+        cancel_customer_pause: () => registerCancelCustomerPause(server, writeDeps),
+        update_invoice_due_date: () => registerUpdateInvoiceDueDate(server, writeDeps),
+        update_invoice_stop_until_dates: () =>
+          registerUpdateInvoiceStopUntilDates(server, writeDeps),
+        update_customer: () => registerUpdateCustomer(server, writeDeps),
+        reset_invoice_stage: () => registerResetInvoiceStage(server, writeDeps),
+        create_credit_invoice: () => registerCreateCreditInvoice(server, writeDeps),
+        match_credit_invoice: () => registerMatchCreditInvoice(server, writeDeps),
         create_payment: () =>
           registerCreatePayment(server, {
-            ...deps,
+            ...writeDeps,
             tokens,
             maxPaymentAmount: config.maxPaymentAmount,
           }),
-        create_customer: () => registerCreateCustomer(server, { ...deps, tokens }),
+        create_customer: () => registerCreateCustomer(server, { ...writeDeps, tokens }),
       };
       for (const name of WRITE_TOOL_NAMES) if (config.writeTools.has(name)) writers[name]();
     }

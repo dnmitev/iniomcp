@@ -51,6 +51,8 @@ INIO_MAX_PAYMENT_AMOUNT=500
 
 - Put the server behind a reverse proxy that terminates TLS, and do not expose port 3000 directly. The server has no TLS of its own.
 - One server serves one Inio tenant, with that tenant's credentials. Everyone holding the token has the same access, and `INIO_ALLOW_WRITES` and `INIO_REVEAL_PII` apply to all of them.
+- The server cannot tell people apart: write calls are logged with the tool, the identifiers changed and the outcome, but not with a person. Over HTTP most clients today also do not identify their app on each request, so the log usually has no client name either (it does in local stdio setups). Inio's audit fields show `inio-mcp` for every write. Keep the team small or give each group its own server and token.
+- Requests with a missing or wrong token are logged at `warn` with the connecting address, at most once a minute; the next such line says how many were held back in between. Behind a reverse proxy that address is the proxy's, so use the proxy's access log to find the real client.
 - There is one token. To rotate it, change `MCP_AUTH_TOKEN` and restart the server.
 - The token is checked before the request body is read; requests without a valid token get 401 and their body is never read. Authenticated requests larger than 256 KiB get 413.
 - When `HOST` is not a loopback address (the Docker image uses `0.0.0.0`), the server logs a warning at startup: the token is then the only barrier, so keep the port behind the proxy.

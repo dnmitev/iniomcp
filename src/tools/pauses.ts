@@ -9,11 +9,16 @@ export const PauseReason = z.string().min(1).max(255);
 const Pause = z.record(z.string(), z.unknown());
 
 /** Tool result for one pause payload (a bad shape after a write is an accepted write, else an error): temporalWorkflowId (internal plumbing) removed, compacted, redacted. */
-export function pauseResult(payload: unknown, revealPii: boolean, afterWrite = false) {
+export function pauseResult(
+  payload: unknown,
+  revealPii: boolean,
+  afterWrite = false,
+  check?: string,
+) {
   const parsed = Pause.safeParse(payload);
   if (!parsed.success)
     return afterWrite
-      ? acceptedUnreadable()
+      ? acceptedUnreadable(check)
       : fail('UPSTREAM_ERROR: Unexpected pause payload from the Inio API.');
   const { temporalWorkflowId: _, ...pause } = parsed.data;
   return ok(present(pause, revealPii));

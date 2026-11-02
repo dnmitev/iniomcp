@@ -934,3 +934,59 @@ describe('stdio entry point (spawned process)', () => {
     SPAWN_TIMEOUT,
   );
 });
+
+describe('client attribution in tool call logs', () => {
+  async function connectAs(config: Config) {
+    const logger = fakeLogger();
+    const fetch = vi.fn<typeof globalThis.fetch>((input) => {
+      const url = urlOf(input);
+      if (url === AUTH_URL) return Promise.resolve(json({ access_token: TOKEN, expires_in: 300 }));
+      if (url === `${API_URL}/invoices/${ID}`) {
+        return Promise.resolve(json({ success: true, status: 200, result: INVOICE }));
+      }
+      return Promise.resolve(json({ success: false, status: 400, error: 'nope' }, 400));
+    });
+    const server = createServer(config, { fetch, logger });
+    const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '9.9.9' });
+    mcpClient = client;
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    return { client, logger };
+  }
+  const toolLines = (logger: ReturnType<typeof fakeLogger>) =>
+    logger.info.mock.calls.filter(([, msg]) => msg === 'tool call').map(([obj]) => obj);
+
+  it('adds the MCP client name and version to a read tool line without write or target', async () => {
+    const { client, logger } = await connectAs(CONFIG);
+    await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    const [line] = toolLines(logger);
+    expect(line).toMatchObject({
+      tool: 'get_invoice',
+      client: { name: 'test-client', version: '9.9.9' },
+    });
+    expect(line).not.toHaveProperty('write');
+    expect(line).not.toHaveProperty('target');
+  });
+
+  it('marks a write tool line with write, client and only the identifiers as target', async () => {
+    const { client, logger } = await connectAs({ ...CONFIG, allowWrites: true });
+    await client.callTool({
+      name: 'create_customer_pause',
+      arguments: {
+        customerId: ID,
+        scope: 'reminders',
+        startAt: '2099-12-01',
+        reason: 'Payment plan secret-reason',
+      },
+    });
+    const lines = toolLines(logger);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      tool: 'create_customer_pause',
+      write: true,
+      target: { customerId: ID },
+      client: { name: 'test-client', version: '9.9.9' },
+    });
+    expect(JSON.stringify(lines[0])).not.toContain('secret-reason');
+  });
+});

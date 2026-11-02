@@ -5,9 +5,14 @@ import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { InvoiceRef, invoicePath, readBackInvoice } from './invoice-ref.ts';
 import { EXACTLY_ONE_REF, exactlyOneRef, IsoDate, ok, present, writeFailure } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: InioClient;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z
   .strictObject({
@@ -26,7 +31,7 @@ const Invoice = z.object({
 
 export function registerUpdateInvoiceDueDate(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'update_invoice_due_date',
@@ -43,22 +48,27 @@ export function registerUpdateInvoiceDueDate(
       },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'update_invoice_due_date', async ({ id, number, dueDate, reason }) => {
-      try {
-        const path = invoicePath({ id, number });
-        await client.post(`${path}/update-due-date`, { dueDate, updateReason: reason });
-        // The API answers only "Success"; read back so the result shows what is stored now.
-        const stored = await readBackInvoice(client, path, Invoice);
-        const result = {
-          updated: true,
-          invoice: id ?? number,
-          requestedDueDate: dueDate,
-          ...stored,
-        };
-        return ok(present(result, revealPii));
-      } catch (err) {
-        return writeFailure(err);
-      }
-    }),
+    withToolLogging(
+      logger,
+      'update_invoice_due_date',
+      async ({ id, number, dueDate, reason }) => {
+        try {
+          const path = invoicePath({ id, number });
+          await client.post(`${path}/update-due-date`, { dueDate, updateReason: reason });
+          // The API answers only "Success"; read back so the result shows what is stored now.
+          const stored = await readBackInvoice(client, path, Invoice);
+          const result = {
+            updated: true,
+            invoice: id ?? number,
+            requestedDueDate: dueDate,
+            ...stored,
+          };
+          return ok(present(result, revealPii));
+        } catch (err) {
+          return writeFailure(err);
+        }
+      },
+      toolLog,
+    ),
   );
 }

@@ -13,9 +13,14 @@ import {
   present,
   writeFailure,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: InioClient;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const STEPS = [
   'invoicing1',
@@ -65,7 +70,7 @@ const Invoice = z
 
 export function registerUpdateInvoiceStopUntilDates(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'update_invoice_stop_until_dates',
@@ -82,32 +87,37 @@ export function registerUpdateInvoiceStopUntilDates(
       },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'update_invoice_stop_until_dates', async (args) => {
-      try {
-        const path = invoicePath(args);
-        const metadata = Object.fromEntries(
-          STEPS.filter((step) => args[step] !== undefined).map((step) => [
-            `${step}StopUntilDate`,
-            args[step],
-          ]),
-        );
-        await client.post(`${path}/update-stop-until-dates`, {
-          metadata,
-          escalationStopReason: args.reason,
-        });
-        // The API answers only "Success"; read back so the result shows what is stored now.
-        const stored = await readBackInvoice(client, path, Invoice);
-        const invoice = args.id ?? args.number;
-        return ok(present({ updated: true, invoice, ...stored }, revealPii));
-      } catch (err) {
-        // With the feature flag off the API answers a bare 404 without an envelope
-        // (requireFeatureFlag middleware), which the client reports as UPSTREAM_ERROR.
-        // Read-back failures never reach here, so this is always the POST.
-        if (err instanceof InioApiError && err.status === 404 && err.code === 'UPSTREAM_ERROR') {
-          return fail('FEATURE_DISABLED: Stop-until dates are not enabled for this tenant.');
+    withToolLogging(
+      logger,
+      'update_invoice_stop_until_dates',
+      async (args) => {
+        try {
+          const path = invoicePath(args);
+          const metadata = Object.fromEntries(
+            STEPS.filter((step) => args[step] !== undefined).map((step) => [
+              `${step}StopUntilDate`,
+              args[step],
+            ]),
+          );
+          await client.post(`${path}/update-stop-until-dates`, {
+            metadata,
+            escalationStopReason: args.reason,
+          });
+          // The API answers only "Success"; read back so the result shows what is stored now.
+          const stored = await readBackInvoice(client, path, Invoice);
+          const invoice = args.id ?? args.number;
+          return ok(present({ updated: true, invoice, ...stored }, revealPii));
+        } catch (err) {
+          // With the feature flag off the API answers a bare 404 without an envelope
+          // (requireFeatureFlag middleware), which the client reports as UPSTREAM_ERROR.
+          // Read-back failures never reach here, so this is always the POST.
+          if (err instanceof InioApiError && err.status === 404 && err.code === 'UPSTREAM_ERROR') {
+            return fail('FEATURE_DISABLED: Stop-until dates are not enabled for this tenant.');
+          }
+          return writeFailure(err);
         }
-        return writeFailure(err);
-      }
-    }),
+      },
+      toolLog,
+    ),
   );
 }

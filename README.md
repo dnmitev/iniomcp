@@ -124,7 +124,7 @@ Not available: reversing a payment (the public API does not expose the payment a
 
 ## Logs
 
-The server writes JSON log lines to stderr (stdout carries the MCP protocol). Claude Desktop saves them to `~/Library/Logs/Claude/mcp-server-inio.log`. Each tool call logs its duration, outcome and approximate token cost (`approxTokens`); set `INIO_LOG_LEVEL=debug` to also see every API call and token refresh. Secrets and tokens are never logged.
+The server writes JSON log lines to stderr (stdout carries the MCP protocol). Claude Desktop saves them to `~/Library/Logs/Claude/mcp-server-inio.log`. Each tool call logs its duration, outcome, approximate token cost (`approxTokens`) and the MCP client that called it (name and version, for example Claude Desktop; over HTTP only when the client sends it with each request). Write calls also log `write: true` and the identifiers they changed (`target`: customer, invoice, credit invoice or pause id or number); amounts, contact details and other arguments are not logged. The startup line lists the registered write tools and the payment limit. Set `INIO_LOG_LEVEL=debug` to also see every API call and token refresh. Secrets and tokens are never logged.
 
 ## Troubleshooting
 

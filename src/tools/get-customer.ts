@@ -5,9 +5,14 @@ import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { CustomerRef, customerPath } from './customer-ref.ts';
 import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: Pick<InioClient, 'get'>;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z
   .strictObject({
@@ -39,7 +44,7 @@ function withoutWorkflowSettings(value: unknown): unknown {
 
 export function registerGetCustomer(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'get_customer',
@@ -51,26 +56,31 @@ export function registerGetCustomer(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'get_customer', async ({ id, number, includeWorkflowSettings }) => {
-      try {
-        const path = customerPath({ id, number });
-        const parsed = Payload.safeParse(await client.get(path));
-        if (!parsed.success) {
-          return fail('UPSTREAM_ERROR: Unexpected customer payload from the Inio API.');
+    withToolLogging(
+      logger,
+      'get_customer',
+      async ({ id, number, includeWorkflowSettings }) => {
+        try {
+          const path = customerPath({ id, number });
+          const parsed = Payload.safeParse(await client.get(path));
+          if (!parsed.success) {
+            return fail('UPSTREAM_ERROR: Unexpected customer payload from the Inio API.');
+          }
+          const { externalCustomer, serviceLine, effectivePause } = parsed.data;
+          // workflowsSettings (on customer and service line) is large and rarely relevant; opt-in only.
+          const result = includeWorkflowSettings
+            ? { customer: externalCustomer, serviceLine, effectivePause }
+            : {
+                customer: withoutWorkflowSettings(externalCustomer),
+                serviceLine: withoutWorkflowSettings(serviceLine),
+                effectivePause,
+              };
+          return ok(present(result, revealPii));
+        } catch (err) {
+          return fail(errorText(err));
         }
-        const { externalCustomer, serviceLine, effectivePause } = parsed.data;
-        // workflowsSettings (on customer and service line) is large and rarely relevant; opt-in only.
-        const result = includeWorkflowSettings
-          ? { customer: externalCustomer, serviceLine, effectivePause }
-          : {
-              customer: withoutWorkflowSettings(externalCustomer),
-              serviceLine: withoutWorkflowSettings(serviceLine),
-              effectivePause,
-            };
-        return ok(present(result, revealPii));
-      } catch (err) {
-        return fail(errorText(err));
-      }
-    }),
+      },
+      toolLog,
+    ),
   );
 }

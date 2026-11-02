@@ -6,12 +6,13 @@ import { REDACTION_NOTE, type CustomerKind } from '../redact.ts';
 import { customerPath } from './customer-ref.ts';
 import { BAD_INVOICE_PAYLOAD, InvoiceRef, invoicePath, lookUpInvoiceId } from './invoice-ref.ts';
 import { errorText, EXACTLY_ONE_REF, exactlyOneRef, fail, ok, present } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
 type Deps = {
   client: Pick<InioClient, 'get'>;
   revealPii: boolean;
   logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
   customerTypes?: Map<string, CustomerKind>;
 };
 
@@ -43,7 +44,7 @@ const Invoice = z.record(z.string(), z.unknown());
 
 export function registerGetInvoice(
   server: McpServer,
-  { client, revealPii, logger = noopLogger, customerTypes = new Map() }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog, customerTypes = new Map() }: Deps,
 ): void {
   /** Customer kind for redaction: cached, else looked up; any failure or odd payload means consumer (the strict side). */
   async function kindOf(customerId: unknown): Promise<CustomerKind> {
@@ -97,6 +98,7 @@ export function registerGetInvoice(
           return fail(errorText(err));
         }
       },
+      toolLog,
     ),
   );
 }

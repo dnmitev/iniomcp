@@ -17,9 +17,9 @@ See: .paul/PROJECT.md (updated 2026-11-02)
 
 Milestone: v0.3 Integration Layer
 Phase: 10 of 11 (Write bounds, attribution, release hygiene) — In progress
-Plan: 10-01 complete (1 of 3: 10-02 R8 write attribution, 10-03 R6 CI next)
-Status: Ready to plan 10-02
-Last activity: 2026-11-02 — 10-01 unified (allowlist + payment ceiling)
+Plan: 10-02 complete (2 of 3; 10-03 R6 CI next)
+Status: Ready to plan 10-03
+Last activity: 2026-11-02 — 10-02 unified (write attribution)
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [10-01 complete - ready to plan 10-02]
+  ○        ○        ○     [10-02 complete - ready to plan 10-03]
 ```
 
 ## Accumulated Context
@@ -95,6 +95,7 @@ See PROJECT.md Key Decisions.
 | 2026-11-02: 08-01 deviations: SSN redacted for B too; `note` stays visible (tool status field); errorText strict incl. new keys; customer type read from externalCustomer via zod | Phase 8 | README Data protection has business and consumer blocks |
 | 2026-11-02: Docs = README overview + docs/setup per client + hosting + examples; README links absolute (npm ships README only); Claude Desktop hosted via mcp-remote@0.15.1; docs test guards pins and links | Phase 9 | Release must bump pins in README and docs/ (test enforces) |
 | 2026-11-02: INIO_WRITE_TOOLS (needs INIO_ALLOW_WRITES) and INIO_MAX_PAYMENT_AMOUNT (cents; fullPayment reads remainingAmount as number or numeric string) — both opt-in | Phase 10 | Helm values and v0.4 per-user roles build on them |
+| 2026-11-02: Write log lines carry write:true, target (id keys only) and client when known; client absent over stateless HTTP (SDK per-request server) — documented, no workaround; 401 warn throttled 60 s | Phase 10 | v0.4 OAuth gives per-person attribution |
 | 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
 
 ### Deferred Issues
@@ -108,8 +109,8 @@ See PROJECT.md Key Decisions.
 | Double-signal shutdown tests are race-prone smoke tests; spawned SIGTERM test accepts finished-or-closed (drain proven via close()) | 05-02, 06-01 | S | If shutdown logic changes |
 | 5xx hint punctuation for API messages ending !/?/whitespace/empty | 06-02 | S | Cosmetic; any client touch |
 | Image build provenance (attest-build-provenance) and npm-shrinkwrap for transitive pins | 07-01 | M | R6 |
-| Redundant closeIdleConnections() calls in src/http.ts close() (server.close() already does it on Node ≥ 24; verified 07-02) | 07-02 | S | Next http.ts touch |
-| acceptedUnreadable() echoes no identifier (create_customer_pause gives no pause id to check) | 06-02 | S | With R8 write attribution |
+| Central registerTool wrapper in createServerFactory instead of per-file withToolLogging + toolLog deps (smaller code) | 10-02 | S | Any tool-registration touch |
+| Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
 | Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
@@ -131,9 +132,9 @@ Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-
 ## Session Continuity
 
 Last session: 2026-11-02
-Stopped at: Plan 10-01 complete
-Next action: /paul:plan for 10-02 (R8 write attribution)
-Resume file: .paul/phases/10-write-bounds-attribution-release-hygiene/10-01-SUMMARY.md
+Stopped at: Plan 10-02 complete
+Next action: /paul:plan for 10-03 (R6 release hygiene)
+Resume file: .paul/phases/10-write-bounds-attribution-release-hygiene/10-02-SUMMARY.md
 Resume context:
 - v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
 - Phase 8 done (08-01): customer-type redaction; live suite first runs at the 0.5.0 gate (key-drift check may surface keys to review)

@@ -15,12 +15,13 @@ import {
   present,
   writeFailure,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
 type Deps = {
   client: Pick<InioClient, 'get' | 'post'>;
   revealPii: boolean;
   logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
 };
 
 const Input = z
@@ -63,7 +64,7 @@ const Plan = z.object({
 
 export function registerResetInvoiceStage(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'reset_invoice_stage',
@@ -104,6 +105,7 @@ export function registerResetInvoiceStage(
           return writeFailure(err);
         }
       },
+      toolLog,
     ),
   );
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isLoopbackHost, loadConfig, WRITE_TOOL_NAMES, type Config } from '../../src/config.ts';
+import {
+  isLoopbackHost,
+  loadConfig,
+  startupFields,
+  WRITE_TOOL_NAMES,
+  type Config,
+} from '../../src/config.ts';
 
 const SECRET = 's3cr3t-Zq9xW7-do-not-leak';
 
@@ -634,5 +640,41 @@ describe('isLoopbackHost', () => {
   });
   it.each(['0.0.0.0', 'example.com', ''])('is false for %j', (h) => {
     expect(isLoopbackHost(h)).toBe(false);
+  });
+});
+
+describe('startupFields', () => {
+  const base = loadConfig(env());
+
+  it('lists no write tools and no ceiling when writes are off', () => {
+    expect(startupFields(base)).toEqual({
+      allowWrites: false,
+      revealPii: false,
+      logLevel: 'info',
+      writeTools: [],
+    });
+  });
+
+  it('lists every write tool in registration order when writes are on', () => {
+    const fields = startupFields({ ...base, allowWrites: true });
+    expect(fields).toMatchObject({ allowWrites: true, writeTools: [...WRITE_TOOL_NAMES] });
+    expect(fields).not.toHaveProperty('maxPaymentAmount');
+  });
+
+  it('lists only the allowlisted write tools', () => {
+    const writeTools = new Set(['create_payment', 'cancel_customer_pause']);
+    const fields = startupFields({ ...base, allowWrites: true, writeTools });
+    expect(fields.writeTools).toEqual(['cancel_customer_pause', 'create_payment']);
+  });
+
+  it('includes maxPaymentAmount when set', () => {
+    expect(startupFields({ ...base, allowWrites: true, maxPaymentAmount: 500 })).toMatchObject({
+      maxPaymentAmount: 500,
+    });
+  });
+
+  it('lists no write tools when writes are off even if the allowlist is set', () => {
+    const writeTools = new Set(['create_payment']);
+    expect(startupFields({ ...base, writeTools }).writeTools).toEqual([]);
   });
 });
