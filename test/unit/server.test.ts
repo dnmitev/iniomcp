@@ -7,7 +7,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { createServer, createServerFactory } from '../../src/server.ts';
-import type { Config } from '../../src/config.ts';
+import { WRITE_TOOL_NAMES, type Config } from '../../src/config.ts';
 import { REDACTION_NOTE } from '../../src/redact.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -31,6 +31,7 @@ const CONFIG: Config = {
   transport: 'stdio',
   logLevel: 'info',
   requestTimeoutMs: 30000,
+  writeTools: new Set(WRITE_TOOL_NAMES),
 };
 
 const INVOICE = { id: ID, number: 'INV-1', total: 10, IBAN: 'BG80BNBG96611020345678' };
@@ -414,6 +415,32 @@ describe('write gate', () => {
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...WRITE_TOOLS].sort());
   });
 
+  it('registers only the allowlisted write tools besides the 7 read tools', async () => {
+    const allow = ['create_customer_pause', 'cancel_customer_pause'];
+    const { client } = await connect({ ...CONFIG, allowWrites: true, writeTools: new Set(allow) });
+    const { tools } = await client.listTools();
+    expect(tools).toHaveLength(9);
+    expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...allow].sort());
+  });
+
+  it('states the payment limit in the create_payment description when maxPaymentAmount is set', async () => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true, maxPaymentAmount: 500 });
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === 'create_payment')?.description).toContain(
+      'Payments above 500 are rejected',
+    );
+  });
+
+  it('registers no write tool when writes are off, even with an allowlist', async () => {
+    const { client } = await connect({
+      ...CONFIG,
+      allowWrites: false,
+      writeTools: new Set(['create_payment']),
+    });
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+  });
+
   it.each(WRITE_TOOLS)(
     'annotates %s as a non-read-only, destructive, non-idempotent tool',
     async (name) => {
@@ -513,7 +540,7 @@ describe('write gate', () => {
       cancel_customer_pause: {
         title: 'Cancel customer pause',
         description:
-          'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. ' +
+          'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. Whatever the pause held back (reminders, debt-collection transfers or both) resumes on its normal schedule. ' +
           REDACTION_NOTE,
         inputs: {
           customerId: 'Customer UUID',
@@ -536,7 +563,7 @@ describe('write gate', () => {
       update_customer: {
         title: 'Update customer',
         description:
-          'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. ' +
+          'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. If you change the distribution email addresses or postal address, future invoices and reminders use the new ones. ' +
           REDACTION_NOTE,
         inputs: {
           id: 'Customer UUID',
@@ -557,7 +584,7 @@ describe('write gate', () => {
       reset_invoice_stage: {
         title: 'Reset invoice stage',
         description:
-          'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. ' +
+          'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. The reminder and fee schedule restarts from the new stage. ' +
           REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',
@@ -573,7 +600,7 @@ describe('write gate', () => {
       update_invoice_stop_until_dates: {
         title: 'Update invoice stop-until dates',
         description:
-          'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. ' +
+          'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. Clearing a date lets held-back steps run on their next schedule. ' +
           REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',

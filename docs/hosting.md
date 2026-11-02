@@ -36,6 +36,17 @@ docker run -d --name inio-mcp -p 127.0.0.1:3000:3000 \
 
 Give each user the URL (for example `https://mcp.example.com/mcp`) and the token over a secure channel. The "Hosted" section of each client guide shows the setup: [Claude Desktop](setup/claude-desktop.md#hosted), [Claude Code](setup/claude-code.md#hosted), [VS Code](setup/vscode.md#hosted), [Cursor](setup/cursor.md#hosted).
 
+## Limit what the team can change
+
+Everyone with the token gets the same tools. If the team only needs some writes, register only those and cap payments:
+
+```bash
+INIO_ALLOW_WRITES=true
+INIO_WRITE_TOOLS=create_customer_pause,update_customer_pause,cancel_customer_pause
+# INIO_MAX_PAYMENT_AMOUNT only matters if create_payment is in the list
+INIO_MAX_PAYMENT_AMOUNT=500
+```
+
 ## Security
 
 - Put the server behind a reverse proxy that terminates TLS, and do not expose port 3000 directly. The server has no TLS of its own.

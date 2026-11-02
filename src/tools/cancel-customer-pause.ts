@@ -24,7 +24,7 @@ export function registerCancelCustomerPause(
     {
       title: 'Cancel customer pause',
       description:
-        'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. ' +
+        'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. Whatever the pause held back (reminders, debt-collection transfers or both) resumes on its normal schedule. ' +
         REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,

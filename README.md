@@ -31,6 +31,8 @@ npx -y @dnmitev/inio-mcp@0.4.0
 | `HOST`                    | no        | `127.0.0.1` | HTTP bind address (`0.0.0.0` in the Docker image)                                                                                                                                                                                         |
 | `MCP_ALLOWED_ORIGINS`     | no        |             | Comma-separated browser origins allowed besides localhost, e.g. `https://app.example.com`; matched by hostname                                                                                                                            |
 | `INIO_ALLOW_WRITES`       | no        | `false`     | `true` registers the write tools (see below); off by default                                                                                                                                                                              |
+| `INIO_WRITE_TOOLS`        | no        | all         | Comma-separated write tools to register, e.g. `create_customer_pause,cancel_customer_pause`; needs `INIO_ALLOW_WRITES=true`. Unknown names stop the server at start                                                                       |
+| `INIO_MAX_PAYMENT_AMOUNT` | no        | none        | Largest amount `create_payment` may record in one call, in the invoice currency, e.g. `500`. A full payment above it is refused; pass an explicit amount instead                                                                          |
 
 ### Quick start (Claude Desktop)
 
@@ -98,7 +100,9 @@ If the Inio API rate-limits a request (HTTP 429), the server waits for `Retry-Af
 
 ## Write tools (opt-in)
 
-Write tools are registered only when the server runs with `INIO_ALLOW_WRITES=true`. They are marked as destructive, so MCP clients can ask you to confirm each call (Claude Desktop does unless you allow the tool permanently). Every write is recorded in Inio's audit fields as `inio-mcp`. The Inio API has no roles for API clients: with writes enabled, anything these tools can do is allowed for your credentials.
+Write tools are registered only when the server runs with `INIO_ALLOW_WRITES=true`. They are marked as destructive, so MCP clients can ask you to confirm each call (Claude Desktop does unless you allow the tool permanently). Every write is recorded in Inio's audit fields as `inio-mcp`. The Inio API has no roles for API clients: with writes enabled, anything these tools can do is allowed for your credentials. To narrow it, list only the tools you need in `INIO_WRITE_TOOLS` and cap payments with `INIO_MAX_PAYMENT_AMOUNT`.
+
+Do not permanently allow (auto-approve) write tools in your client. The confirmation step is where you catch a wrong amount, customer or date before it reaches Inio.
 
 | Tool                              | What it changes                                                                                                                                                                                                                                                                                    | Undo                                                                     |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |

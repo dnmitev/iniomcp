@@ -96,7 +96,7 @@ export function registerUpdateCustomer(
     {
       title: 'Update customer',
       description:
-        'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. ' +
+        'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. If you change the distribution email addresses or postal address, future invoices and reminders use the new ones. ' +
         REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,

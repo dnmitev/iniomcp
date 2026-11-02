@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { Client } from '@modelcontextprotocol/client';
 import { createServer } from '../../src/server.ts';
-import type { Config } from '../../src/config.ts';
+import { WRITE_TOOL_NAMES, type Config } from '../../src/config.ts';
 import {
   BUSINESS_SENSITIVE_KEYS,
   REDACTION_NOTE,
@@ -21,6 +21,7 @@ const CONFIG: Config = {
   transport: 'stdio',
   logLevel: 'info',
   requestTimeoutMs: 30000,
+  writeTools: new Set(WRITE_TOOL_NAMES),
 };
 
 async function listTools() {
@@ -42,6 +43,18 @@ describe('tool descriptions', () => {
     for (const t of mentioning) {
       expect(t.description).toContain(REDACTION_NOTE);
     }
+  });
+});
+
+describe('write tool descriptions state later effects', () => {
+  it.each([
+    ['cancel_customer_pause', /resume/i],
+    ['update_invoice_stop_until_dates', /next schedule|run again/i],
+    ['update_customer', /future/i],
+    ['reset_invoice_stage', /restart/i],
+  ])('%s says what happens later', async (name, phrase) => {
+    const tools = await listTools();
+    expect(tools.find((t) => t.name === name)?.description ?? '').toMatch(phrase);
   });
 });
 

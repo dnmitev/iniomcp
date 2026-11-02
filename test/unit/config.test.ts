@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLoopbackHost, loadConfig, type Config } from '../../src/config.ts';
+import { isLoopbackHost, loadConfig, WRITE_TOOL_NAMES, type Config } from '../../src/config.ts';
 
 const SECRET = 's3cr3t-Zq9xW7-do-not-leak';
 
@@ -49,6 +49,7 @@ describe('loadConfig', () => {
         transport: 'stdio',
         logLevel: 'info',
         requestTimeoutMs: 30000,
+        writeTools: new Set(WRITE_TOOL_NAMES),
       });
     });
 
@@ -57,7 +58,8 @@ describe('loadConfig', () => {
         env({ PATH: '/usr/bin', HOME: '/home/x', INIO_UNKNOWN: 'whatever' }),
       );
       expect(config).toEqual(loadConfig(env()));
-      expect(Object.keys(config).sort()).toEqual([
+      const defined = Object.entries(config).filter(([, v]) => v !== undefined);
+      expect(defined.map(([k]) => k).sort()).toEqual([
         'allowWrites',
         'apiUrl',
         'authUrl',
@@ -67,6 +69,7 @@ describe('loadConfig', () => {
         'requestTimeoutMs',
         'revealPii',
         'transport',
+        'writeTools',
       ]);
     });
   });
@@ -328,6 +331,114 @@ describe('loadConfig', () => {
       expect(errorOf(env({ INIO_REQUEST_TIMEOUT_MS: 'abc' })).message).toBe(
         `Invalid Inio MCP configuration:\n- ${MESSAGE}`,
       );
+    });
+  });
+
+  describe('INIO_WRITE_TOOLS', () => {
+    const w = (o: Record<string, string | undefined>) => env({ INIO_ALLOW_WRITES: 'true', ...o });
+    const ALL = [
+      'cancel_customer_pause',
+      'create_credit_invoice',
+      'create_customer',
+      'create_customer_pause',
+      'create_payment',
+      'match_credit_invoice',
+      'reset_invoice_stage',
+      'update_customer',
+      'update_customer_pause',
+      'update_invoice_due_date',
+      'update_invoice_stop_until_dates',
+    ];
+
+    it('exports the 11 write tool names', () => {
+      expect([...WRITE_TOOL_NAMES].sort()).toEqual(ALL);
+    });
+
+    it.each([undefined, '', '   ', ' , ,'])('allows all write tools when it is %j', (v) => {
+      expect(loadConfig(w({ INIO_WRITE_TOOLS: v })).writeTools).toEqual(new Set(ALL));
+    });
+
+    it('allows all write tools by default even when writes are off', () => {
+      expect(loadConfig(env()).writeTools).toEqual(new Set(ALL));
+    });
+
+    it('parses a comma-separated list, trimming names and dropping empty entries', () => {
+      const c = loadConfig(
+        w({ INIO_WRITE_TOOLS: ' create_customer_pause ,, cancel_customer_pause,' }),
+      );
+      expect(c.writeTools).toEqual(new Set(['create_customer_pause', 'cancel_customer_pause']));
+    });
+
+    it('is case-sensitive', () => {
+      const msg = errorOf(w({ INIO_WRITE_TOOLS: 'Create_Payment' })).message;
+      expect(msg).toContain('INIO_WRITE_TOOLS');
+      expect(msg).toContain('Create_Payment');
+    });
+
+    it('rejects an unknown name, listing it and the valid names', () => {
+      const msg = errorOf(w({ INIO_WRITE_TOOLS: 'create_payment,nope' })).message;
+      expect(msg).toContain('INIO_WRITE_TOOLS');
+      expect(msg).toContain('nope');
+      for (const n of ALL) expect(msg).toContain(n);
+    });
+
+    it('joins several unknown names and the valid names with ", "', () => {
+      const msg = errorOf(w({ INIO_WRITE_TOOLS: 'nope1,nope2' })).message;
+      expect(msg).toContain('nope1, nope2');
+      expect(msg).toContain(WRITE_TOOL_NAMES.join(', '));
+    });
+
+    it('rejects a read tool name and lists it as unknown', () => {
+      const msg = errorOf(w({ INIO_WRITE_TOOLS: 'get_invoice' })).message;
+      expect(msg).toContain('INIO_WRITE_TOOLS');
+      expect(msg).toContain('get_invoice');
+    });
+
+    it('needs INIO_ALLOW_WRITES=true', () => {
+      for (const allow of [undefined, 'false']) {
+        expect(
+          errorOf(env({ INIO_ALLOW_WRITES: allow, INIO_WRITE_TOOLS: 'create_payment' })).message,
+        ).toContain('INIO_WRITE_TOOLS needs INIO_ALLOW_WRITES=true');
+      }
+    });
+
+    it('does not need INIO_ALLOW_WRITES when it is empty', () => {
+      expect(() => loadConfig(env({ INIO_WRITE_TOOLS: '' }))).not.toThrow();
+    });
+
+    it('collects its problems with others in one error', () => {
+      const msg = errorOf(env({ INIO_URL: undefined, INIO_WRITE_TOOLS: 'create_payment' })).message;
+      expect(msg).toContain('INIO_URL is required');
+      expect(msg).toContain('INIO_WRITE_TOOLS needs INIO_ALLOW_WRITES=true');
+    });
+  });
+
+  describe('INIO_MAX_PAYMENT_AMOUNT', () => {
+    it.each([undefined, ''])('is undefined when %j', (v) => {
+      expect(loadConfig(env({ INIO_MAX_PAYMENT_AMOUNT: v })).maxPaymentAmount).toBeUndefined();
+      expect('maxPaymentAmount' in loadConfig(env({ INIO_MAX_PAYMENT_AMOUNT: v }))).toBe(false);
+    });
+
+    it.each([
+      ['500', 500],
+      ['0.01', 0.01],
+      ['1234.5', 1234.5],
+      ['99.99', 99.99],
+    ])('accepts %s', (v, n) => {
+      expect(loadConfig(env({ INIO_MAX_PAYMENT_AMOUNT: v })).maxPaymentAmount).toBe(n);
+    });
+
+    it.each(['0', '-5', 'abc', '1.234', 'Infinity', 'NaN', '1e400', '500 EUR', '0.001'])(
+      'rejects %j naming the variable',
+      (v) => {
+        expect(errorOf(env({ INIO_MAX_PAYMENT_AMOUNT: v })).message).toContain(
+          'INIO_MAX_PAYMENT_AMOUNT',
+        );
+      },
+    );
+
+    it('does not echo the rejected value', () => {
+      expect(errorOf(env({ INIO_MAX_PAYMENT_AMOUNT: SECRET })).message).not.toContain(SECRET);
     });
   });
 

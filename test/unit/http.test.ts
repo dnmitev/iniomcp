@@ -7,6 +7,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { createHttpHandler, startHttpServer } from '../../src/http.ts';
 import type { HttpConfig } from '../../src/http.ts';
+import { WRITE_TOOL_NAMES } from '../../src/config.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SECRET = 's3cr3t';
@@ -28,6 +29,7 @@ const CONFIG: HttpConfig = {
   transport: 'http',
   logLevel: 'info',
   requestTimeoutMs: 30000,
+  writeTools: new Set(WRITE_TOOL_NAMES),
   http: {
     port: 0,
     host: '127.0.0.1',

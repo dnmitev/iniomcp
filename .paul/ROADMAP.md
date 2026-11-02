@@ -21,7 +21,7 @@ Focus: Make inio-mcp an easy, trustworthy integration layer for Claude and dev t
 |-------|------|-------|--------|-----------|
 | 8 | Redaction by customer type | 1/1 | ✅ Complete | 2026-11-02 |
 | 9 | Docs overhaul | 1/1 | ✅ Complete | 2026-11-02 |
-| 10 | Write bounds, attribution, release hygiene | TBD | Not started | - |
+| 10 | Write bounds, attribution, release hygiene | 1/3 | In progress | - |
 | 11 | Helm chart and EKS | TBD | Not started | - |
 
 ### Phase 8: Redaction by customer type ✅
