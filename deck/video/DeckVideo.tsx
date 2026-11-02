@@ -4,12 +4,11 @@ import {
   Sequence,
   staticFile,
   useCurrentFrame,
-  interpolate,
 } from 'remotion';
 import { slideRegistry } from '../src/slideRegistry';
 import { slides } from '../src/content';
-import { slideComponents } from './slideComponents';
 import { calculateOpacity } from './timing';
+import { getSlideComponent } from './slideTypes';
 
 export interface SlideTimingProps {
   startFrame: number;
@@ -37,12 +36,7 @@ export const DeckVideo: React.FC<DeckVideoProps> = ({ slideTimings, crossfadeFra
           throw new Error(`No content found for slide ${registryEntry.id}`);
         }
 
-        const component = slideComponents[registryEntry.id as keyof typeof slideComponents];
-        if (!component) {
-          throw new Error(`No component found for slide ${registryEntry.id}`);
-        }
-
-        const SlideComponent = component;
+        const SlideComponent = getSlideComponent(registryEntry.id);
         const audioFilename = `${registryEntry.id}-${registryEntry.slug}.wav`;
         const audioPath = staticFile(audioFilename);
 
