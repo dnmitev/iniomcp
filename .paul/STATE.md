@@ -11,27 +11,27 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.3 Integration Layer — Phase 9 Docs overhaul
+**Current focus:** v0.3 Integration Layer — Phase 10 Write bounds, attribution, release hygiene
 
 ## Current Position
 
 Milestone: v0.3 Integration Layer
-Phase: 9 of 11 (Docs overhaul)
+Phase: 10 of 11 (Write bounds, attribution, release hygiene)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-02 — Phase 8 complete, transitioned to Phase 9
+Last activity: 2026-11-02 — Phase 9 complete, transitioned to Phase 10
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
-- v0.3 Integration Layer: [██▌░░░░░░░] 25% (Phase 8 ✓)
+- v0.3 Integration Layer: [█████░░░░░] 50% (Phases 8, 9 ✓)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Phase 8 complete - ready to plan Phase 9]
+  ○        ○        ○     [Phase 9 complete - ready to plan Phase 10]
 ```
 
 ## Accumulated Context
@@ -93,6 +93,7 @@ See PROJECT.md Key Decisions.
 | 2026-11-02: Hosted auth direction = dedicated MCP Keycloak realm with BoP brokering; per-tenant MCP api2api clients first, APISIX trusting the realm later | v0.4 | `.paul/research/v0.4-hosted-auth.md` |
 | 2026-11-02: Phase 8 = one TDD plan (08-01); customerType B/C per object in redact(); unknown = consumer; get_invoice looks up by customerId with a shared clear-at-1000 cache; write tools keep consumer rules | Phase 8 | Fixture customerType "Company" corrected to "B" |
 | 2026-11-02: 08-01 deviations: SSN redacted for B too; `note` stays visible (tool status field); errorText strict incl. new keys; customer type read from externalCustomer via zod | Phase 8 | README Data protection has business and consumer blocks |
+| 2026-11-02: Docs = README overview + docs/setup per client + hosting + examples; README links absolute (npm ships README only); Claude Desktop hosted via mcp-remote@0.15.1; docs test guards pins and links | Phase 9 | Release must bump pins in README and docs/ (test enforces) |
 | 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
 
 ### Deferred Issues
@@ -129,14 +130,14 @@ Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-
 ## Session Continuity
 
 Last session: 2026-11-02
-Stopped at: Phase 8 complete, ready to plan Phase 9
-Next action: /paul:plan for Phase 9
-Resume file: .paul/phases/08-redaction-by-customer-type/08-01-SUMMARY.md
+Stopped at: Phase 9 complete, ready to plan Phase 10
+Next action: /paul:plan for Phase 10
+Resume file: .paul/phases/09-docs-overhaul/09-01-SUMMARY.md
 Resume context:
 - v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
 - Phase 8 done (08-01): customer-type redaction; live suite first runs at the 0.5.0 gate (key-drift check may surface keys to review)
 - Research inputs: .paul/research/v0.3-helm-chart.md, .paul/research/v0.4-hosted-auth.md
-- Next release must bump the README @0.4.0 pins
+- Next release must bump the @0.4.0 pins in README and docs/ (test/unit/docs.test.ts enforces equality with package.json)
 
 ---
 *STATE.md — Updated after every significant action*

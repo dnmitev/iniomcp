@@ -19,7 +19,7 @@ type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick
 const Input = z
   .strictObject({
     ...InvoiceRef,
-    // The API ignores `page` (same items on every page), so only limit is exposed.
+    // The API ignores `page` (same items on every page), so only limit is exposed (Jira AS-7100).
     limit: z.int().min(1).max(50).default(10).describe('Maximum attempts to return, 1-50'),
   })
   .refine(exactlyOneRef, EXACTLY_ONE_REF);

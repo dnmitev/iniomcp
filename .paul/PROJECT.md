@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.4.0 |
-| Status | v0.3 Integration Layer in progress (Phase 9) |
+| Status | v0.3 Integration Layer in progress (Phase 10) |
 | Last Updated | 2026-11-02 |
 
 ## Requirements
@@ -58,9 +58,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Tool descriptions and README state exactly what is and is not redacted; README Data protection, Release model, Pinning and verification (AEGIS R1) — Phase 7 (0.4.0)
 - ✓ Install examples pinned to the release; plaintext-secret warnings; inspector pinned (AEGIS R7) — Phase 7 (0.4.0)
 - ✓ Redaction by customer type: businesses open except invoice links and SSN; consumers and unknown types also redact name, city, yourReference; get_invoice looks up the type (cached); unreviewed response keys fail tests and the live gate (reworked AEGIS R2) — Phase 8
+- ✓ Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor; local, Docker, hosted), hosting guide, usage examples, troubleshooting; drift fixed and guarded by a docs test (AEGIS R10) — Phase 9
 
 ### Active (In Progress) — v0.3 Integration Layer
-- [ ] Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor), usage examples, doc drift fixed (AEGIS R10) — Phase 9
 - [ ] Opt-in `INIO_WRITE_TOOLS` and `INIO_MAX_PAYMENT_AMOUNT`; write logging with client attribution; SHA-pinned actions and image smoke test (trimmed AEGIS R3, R8, R6) — Phase 10
 - [ ] Helm chart (Ingress and Gateway API) published as OCI; team runs it on EKS via ArgoCD — Phase 11
 
@@ -168,8 +168,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Resource | URL |
 |----------|-----|
 | Repository | https://github.com/dnmitev/iniomcp |
-| Documentation | docs/PLANNING.md |
+| Documentation | README.md, docs/setup/ (per client), docs/hosting.md, docs/examples.md; docs/PLANNING.md is the historical design |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-11-02 after Phase 8*
+*Last updated: 2026-11-02 after Phase 9*

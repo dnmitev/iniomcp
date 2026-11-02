@@ -15,8 +15,8 @@ status = "in_progress"
 phases = 4
 
 [phase]
-number = 9
-name = "Docs overhaul"
+number = 10
+name = "Write bounds, attribution, release hygiene"
 status = "not_started"
 plans_completed = 0
 
@@ -27,6 +27,6 @@ position = "IDLE"
 groom = true
 
 [stats]
-total_plans = 21
-total_phases = 8
-last_activity = "2026-11-02T09:46:43Z"
+total_plans = 22
+total_phases = 9
+last_activity = "2026-11-02T09:56:43Z"

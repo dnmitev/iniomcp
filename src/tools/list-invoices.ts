@@ -106,7 +106,7 @@ export function registerListInvoices(
             customerId,
             customerNo,
             // The API answers a single or comma-separated status with HTTP 500
-            // (parseCommaSeparated in invoices.controller); repeated keys work.
+            // (parseCommaSeparated in invoices.controller); repeated keys work. Jira AS-7100.
             status: status?.length === 1 ? [...status, ...status] : status,
             paymentStatus,
             sort,

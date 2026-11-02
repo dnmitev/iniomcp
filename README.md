@@ -2,7 +2,7 @@
 
 Model Context Protocol (MCP) server for the [Inio](https://inio.com) REST API. Connect AI assistants such as Claude, Cursor or VS Code to your own Inio data: customers, invoices, pauses, retry attempts and payments.
 
-> **Status:** 0.4.0. Read-only by default, with opt-in write tools; stdio or a shared HTTP server. Published as `@dnmitev/inio-mcp` until it moves to the `@inio` scope.
+> **Status:** 0.4.0. Read-only by default, with opt-in write tools; stdio or a [shared HTTP server](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md). Published as `@dnmitev/inio-mcp` until it moves to the `@inio` scope.
 
 ## Install
 
@@ -25,14 +25,14 @@ npx -y @dnmitev/inio-mcp@0.4.0
 | `INIO_REVEAL_PII`         | no        | `false`     | `true` turns off redaction of the fields listed in [Data protection](#data-protection) (both customer types)                                                                                                                              |
 | `INIO_LOG_LEVEL`          | no        | `info`      | `fatal` … `trace`, or `silent`                                                                                                                                                                                                            |
 | `INIO_REQUEST_TIMEOUT_MS` | no        | `30000`     | Timeout per Inio API or token request, 1000–600000 ms. A timeout returns `TIMEOUT` (reported in whole seconds, rounded up). One tool call can take up to about 5 × this value + 5 s if a token refresh and a rate-limit retry both happen |
-| `MCP_TRANSPORT`           | no        | `stdio`     | `stdio`, or `http` for a shared server (see [Shared HTTP server](#shared-http-server))                                                                                                                                                    |
+| `MCP_TRANSPORT`           | no        | `stdio`     | `stdio`, or `http` for a shared server (see [hosting](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md))                                                                                                                      |
 | `MCP_AUTH_TOKEN`          | http only |             | Bearer token every HTTP request must send; at least 32 characters, no whitespace. Generate with `openssl rand -hex 32`                                                                                                                    |
 | `PORT`                    | no        | `3000`      | HTTP port                                                                                                                                                                                                                                 |
 | `HOST`                    | no        | `127.0.0.1` | HTTP bind address (`0.0.0.0` in the Docker image)                                                                                                                                                                                         |
 | `MCP_ALLOWED_ORIGINS`     | no        |             | Comma-separated browser origins allowed besides localhost, e.g. `https://app.example.com`; matched by hostname                                                                                                                            |
 | `INIO_ALLOW_WRITES`       | no        | `false`     | `true` registers the write tools (see below); off by default                                                                                                                                                                              |
 
-### Claude Desktop
+### Quick start (Claude Desktop)
 
 Add this to `~/Library/Application Support/Claude/claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json`) and restart Claude Desktop:
 
@@ -53,77 +53,20 @@ Add this to `~/Library/Application Support/Claude/claude_desktop_config.json` (W
 }
 ```
 
-These config files (Claude Desktop, Cursor and the Docker example below) hold the client secret in plaintext. Keep them readable only by you (`chmod 600` on macOS and Linux), never commit a project `.cursor/mcp.json`, and prefer VS Code's secret prompt below where you can.
+The file holds the client secret in plaintext; keep it readable only by you (`chmod 600`). Then ask, for example: "Which open invoices does customer C-1001 have?" More prompts: [examples](https://github.com/dnmitev/iniomcp/blob/main/docs/examples.md).
 
-### Cursor
+### Set up your client
 
-Add the same `inio` entry to `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one project), under `mcpServers`.
+Each guide covers running the server locally (npx), in Docker, and connecting to a hosted team server:
 
-### VS Code
+| Client         | Guide                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| Claude Desktop | [docs/setup/claude-desktop.md](https://github.com/dnmitev/iniomcp/blob/main/docs/setup/claude-desktop.md) |
+| Claude Code    | [docs/setup/claude-code.md](https://github.com/dnmitev/iniomcp/blob/main/docs/setup/claude-code.md)       |
+| VS Code        | [docs/setup/vscode.md](https://github.com/dnmitev/iniomcp/blob/main/docs/setup/vscode.md)                 |
+| Cursor         | [docs/setup/cursor.md](https://github.com/dnmitev/iniomcp/blob/main/docs/setup/cursor.md)                 |
 
-Add this to `.vscode/mcp.json` in your workspace. VS Code prompts for the secret once and stores it securely:
-
-```json
-{
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "inio-secret",
-      "description": "Inio API client secret",
-      "password": true
-    }
-  ],
-  "servers": {
-    "inio": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@dnmitev/inio-mcp@0.4.0"],
-      "env": {
-        "INIO_CLIENT_ID": "your-client-id",
-        "INIO_CLIENT_SECRET": "${input:inio-secret}",
-        "INIO_AUTH_URL": "https://<your-keycloak>/realms/<realm>/protocol/openid-connect/token",
-        "INIO_URL": "https://<your-inio-api-gateway>/v1"
-      }
-    }
-  }
-}
-```
-
-### Docker
-
-The image runs the same server as a non-root user, over stdio by default (HTTP: see [Shared HTTP server](#shared-http-server)). Pass the variables with `-e` and keep stdin open with `-i`:
-
-```json
-{
-  "mcpServers": {
-    "inio": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "INIO_CLIENT_ID",
-        "-e",
-        "INIO_CLIENT_SECRET",
-        "-e",
-        "INIO_AUTH_URL",
-        "-e",
-        "INIO_URL",
-        "ghcr.io/dnmitev/inio-mcp:0.4.0"
-      ],
-      "env": {
-        "INIO_CLIENT_ID": "your-client-id",
-        "INIO_CLIENT_SECRET": "your-client-secret",
-        "INIO_AUTH_URL": "https://<your-keycloak>/realms/<realm>/protocol/openid-connect/token",
-        "INIO_URL": "https://<your-inio-api-gateway>/v1"
-      }
-    }
-  }
-}
-```
-
-Then ask, for example: "Which open invoices does customer C-1001 have?"
+To run one server for your whole team, see [Hosting a shared server](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md).
 
 ### Pinning and verification
 
@@ -131,80 +74,6 @@ The examples pin version 0.4.0. Change the version on purpose when you upgrade; 
 
 - **npm:** the package is published with npm provenance. The Provenance section on the package's npmjs.com page shows the source repository and workflow that built it; `npm view @dnmitev/inio-mcp@0.4.0 dist.attestations` gives the URL of the attestation bundle that records them. `npm audit signatures`, run in a project that installed the package (for example `npm init -y && npm i --ignore-scripts @dnmitev/inio-mcp@0.4.0 && npm audit signatures`), checks the registry signatures and provenance attestations of everything installed.
 - **Docker:** look up the digest with `docker buildx imagetools inspect ghcr.io/dnmitev/inio-mcp:0.4.0` and use `ghcr.io/dnmitev/inio-mcp@sha256:<digest>`. Pinning the digest stops the tag from changing under you; it does not by itself prove who built the image.
-
-## Shared HTTP server
-
-One server can serve a whole team over Streamable HTTP. It holds the Inio client credentials; team members only get an MCP token. Every request to `/mcp` must send `Authorization: Bearer <MCP_AUTH_TOKEN>`, otherwise it gets 401. Browser requests from origins other than localhost (or `MCP_ALLOWED_ORIGINS`) get 403.
-
-Start it with npx:
-
-```bash
-export MCP_AUTH_TOKEN=$(openssl rand -hex 32)   # share this with your team
-MCP_TRANSPORT=http npx -y @dnmitev/inio-mcp@0.4.0   # plus the four INIO_* variables
-```
-
-Or with Docker (the image listens on `0.0.0.0:3000` in HTTP mode and stops cleanly on `docker stop`):
-
-```bash
-docker run -d --name inio-mcp -p 127.0.0.1:3000:3000 \
-  -e MCP_TRANSPORT=http -e MCP_AUTH_TOKEN \
-  -e INIO_CLIENT_ID -e INIO_CLIENT_SECRET -e INIO_AUTH_URL -e INIO_URL \
-  ghcr.io/dnmitev/inio-mcp:0.4.0
-```
-
-### Connect a client
-
-Claude Code:
-
-```bash
-read -rs INIO_MCP_TOKEN   # paste the token the server admin gave you (MCP_AUTH_TOKEN); not echoed, not in history
-claude mcp add --transport http inio https://mcp.example.com/mcp --header "Authorization: Bearer $INIO_MCP_TOKEN"
-```
-
-Cursor (`~/.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "inio": {
-      "url": "https://mcp.example.com/mcp",
-      "headers": { "Authorization": "Bearer <token>" }
-    }
-  }
-}
-```
-
-VS Code (`.vscode/mcp.json`; VS Code prompts for the token once and stores it securely):
-
-```json
-{
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "inio-token",
-      "description": "inio-mcp token",
-      "password": true
-    }
-  ],
-  "servers": {
-    "inio": {
-      "type": "http",
-      "url": "https://mcp.example.com/mcp",
-      "headers": { "Authorization": "Bearer ${input:inio-token}" }
-    }
-  }
-}
-```
-
-For Claude Desktop, use the local setup [above](#claude-desktop).
-
-### Security
-
-- Put the server behind a reverse proxy that terminates TLS, and do not expose port 3000 directly. The server has no TLS of its own.
-- One server serves one Inio tenant, with that tenant's credentials. Everyone holding the token has the same access, and `INIO_ALLOW_WRITES` and `INIO_REVEAL_PII` apply to all of them.
-- There is one token. To rotate it, change `MCP_AUTH_TOKEN` and restart the server.
-- The token is checked before the request body is read; requests without a valid token get 401 and their body is never read. Authenticated requests larger than 256 KiB get 413.
-- When `HOST` is not a loopback address (the Docker image uses `0.0.0.0`), the server logs a warning at startup: the token is then the only barrier, so keep the port behind the proxy.
 
 ## Tools
 
@@ -252,6 +121,20 @@ Not available: reversing a payment (the public API does not expose the payment a
 ## Logs
 
 The server writes JSON log lines to stderr (stdout carries the MCP protocol). Claude Desktop saves them to `~/Library/Logs/Claude/mcp-server-inio.log`. Each tool call logs its duration, outcome and approximate token cost (`approxTokens`); set `INIO_LOG_LEVEL=debug` to also see every API call and token refresh. Secrets and tokens are never logged.
+
+## Troubleshooting
+
+| Symptom                                                                       | Cause and fix                                                                                         |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| The server exits at start with `INIO_… is required` or `must be an https URL` | A variable is missing or wrong; the message lists every problem. `INIO_URL` must include `/v1`        |
+| A tool returns `Authentication failed (HTTP 401 …)`                           | Wrong `INIO_CLIENT_ID` or `INIO_CLIENT_SECRET`, or `INIO_AUTH_URL` points to the wrong realm          |
+| A tool returns `UNAUTHORIZED`                                                 | The API rejected the token: the realm in `INIO_AUTH_URL` does not belong to the API at `INIO_URL`     |
+| A tool returns `NETWORK_ERROR` (cannot reach the Inio API)                    | `INIO_URL` is wrong or not reachable from where the server runs                                       |
+| Hosted server answers 401                                                     | The `Authorization: Bearer <token>` header is missing or the token is wrong                           |
+| Hosted server answers 403                                                     | A browser-based client's origin is not allowed; the admin adds it to `MCP_ALLOWED_ORIGINS`            |
+| A tool returns `TIMEOUT`                                                      | The Inio API did not answer within `INIO_REQUEST_TIMEOUT_MS` (30 s by default); try again or raise it |
+| A tool returns `RATE_LIMITED`                                                 | The Inio API rate limit was hit twice in a row; wait and try again                                    |
+| Some fields show `[redacted]`                                                 | Personal data of consumers is hidden by default; see [Data protection](#data-protection)              |
 
 ## Data protection
 
