@@ -31,7 +31,7 @@ describe('docs', () => {
     const pins = [readme, ...docs].flatMap((file) =>
       [
         ...readFileSync(file, 'utf8').matchAll(
-          /(?:@dnmitev\/inio-mcp@|ghcr\.io\/dnmitev\/inio-mcp:)(\d+\.\d+\.\d+)/g,
+          /(?:@dnmitev\/inio-mcp@|ghcr\.io\/dnmitev\/inio-mcp:|charts\/inio-mcp --version |targetRevision: )(\d+\.\d+\.\d+)/g,
         ),
       ].map((m) => ({ file: file.slice(root.length), pin: m[1] })),
     );

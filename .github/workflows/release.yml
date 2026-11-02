@@ -222,8 +222,52 @@ jobs:
           provenance: mode=max
           sbom: true
 
+  chart:
+    # After the image, so a published chart never points at a missing image.
+    needs: [verify, live, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    env:
+      CHART_REPO: oci://ghcr.io/dnmitev/charts
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: printf '%s' "$TOKEN" | helm registry login ghcr.io --username "$ACTOR" --password-stdin
+      - id: exists
+        name: Skip if this chart version exists
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          # Only "not found" means the chart is missing; any other error stops the job.
+          if out=$(helm show chart "$CHART_REPO/inio-mcp" --version "$VERSION" 2>&1); then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; echo "chart $VERSION exists; skipping"
+          elif printf '%s' "$out" | grep -qiE 'not found|manifest unknown|name unknown'; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out"; echo "::error::Chart lookup failed"; exit 1
+          fi
+      - name: Package and push the chart
+        if: steps.exists.outputs.skip != 'true'
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          helm package charts/inio-mcp --version "$VERSION" --app-version "$VERSION"
+          helm push "inio-mcp-$VERSION.tgz" "$CHART_REPO"
+          helm show chart "$CHART_REPO/inio-mcp" --version "$VERSION"
+
   release:
-    needs: [verify, npm, image]
+    needs: [verify, npm, image, chart]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

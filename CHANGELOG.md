@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-02
+
+### Added
+
+- Redaction by customer type. Business customers (`customerType` `B`) are returned in full except invoice links and SSNs; consumers (`C`) and unknown types keep the earlier redaction plus customer name, city and `yourReference`. `get_invoice` looks up the invoice's customer to pick the rules (cached; consumer rules if the lookup fails).
+- `INIO_WRITE_TOOLS`: register only the listed write tools (needs `INIO_ALLOW_WRITES=true`).
+- `INIO_MAX_PAYMENT_AMOUNT`: cap a single `create_payment`; a full payment first reads the invoice's remaining amount.
+- Write calls are logged with `write: true`, the identifiers they changed and the outcome, plus the MCP client app where the protocol provides it. The startup line lists the registered write tools and the payment limit.
+- HTTP mode logs requests with a missing or wrong token at `warn` (at most once a minute, with a count of the ones held back) and MCP transport errors.
+- Helm chart, published as `oci://ghcr.io/dnmitev/charts/inio-mcp`: two hardened replicas, secrets from an existing Secret, an optional ingress-nginx Ingress and/or Gateway API HTTPRoute.
+- Setup guides per client (Claude Desktop, Claude Code, VS Code, Cursor), a hosting guide with Kubernetes and ArgoCD examples, usage examples and a troubleshooting table.
+
+### Changed
+
+- Redaction rules (see Added). The tool descriptions and README Data protection section list both sets of fields.
+- Field-level error messages for `customerName`, `city` and `yourReference` are hidden, like other personal fields.
+- Four write tools say what happens afterwards (pause cancel, stop-until clear, customer contact change, stage reset).
+- `create_customer_pause` names the customer to check when a pause was accepted but the answer could not be read.
+- The README is now an overview; client setup moved to `docs/setup/`.
+
+### Security
+
+- GitHub Actions are pinned by commit SHA.
+- The release image is started and checked over HTTP before it is pushed.
+- Release tags and `main` are protected against moves and deletion.
+
 ## [0.4.0] - 2026-10-30
 
 ### Security

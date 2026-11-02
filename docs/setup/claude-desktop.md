@@ -17,7 +17,7 @@ The file holds secrets in plaintext. Keep it readable only by you (`chmod 600` o
   "mcpServers": {
     "inio": {
       "command": "npx",
-      "args": ["-y", "@dnmitev/inio-mcp@0.4.0"],
+      "args": ["-y", "@dnmitev/inio-mcp@0.5.0"],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
         "INIO_CLIENT_SECRET": "your-client-secret",
@@ -52,7 +52,7 @@ The image runs the same server as a non-root user, over stdio by default. `-i` k
         "INIO_AUTH_URL",
         "-e",
         "INIO_URL",
-        "ghcr.io/dnmitev/inio-mcp:0.4.0"
+        "ghcr.io/dnmitev/inio-mcp:0.5.0"
       ],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",

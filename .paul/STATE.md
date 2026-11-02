@@ -17,9 +17,9 @@ See: .paul/PROJECT.md (updated 2026-11-02)
 
 Milestone: v0.3 Integration Layer
 Phase: 11 of 11 (Helm chart and EKS) — In progress
-Plan: 11-01 complete (1 of 2; 11-02 chart publish, release 0.5.0, EKS deploy next)
-Status: Ready to plan 11-02
-Last activity: 2026-11-02 — 11-01 unified (Helm chart)
+Plan: 11-02 created, awaiting approval (chart publish, release 0.5.0, EKS deploy)
+Status: PLAN created, ready for APPLY
+Last activity: 2026-11-02 — Created .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [11-01 complete - ready to plan 11-02]
+  ✓        ○        ○     [Plan 11-02 created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -135,9 +135,9 @@ Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-
 ## Session Continuity
 
 Last session: 2026-11-02
-Stopped at: Plan 11-01 complete
-Next action: /paul:plan for 11-02 (chart publish, release 0.5.0, EKS deploy)
-Resume file: .paul/phases/11-helm-chart-and-eks/11-01-SUMMARY.md
+Stopped at: Plan 11-02 created
+Next action: Review and approve plan, then run /paul:apply .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
+Resume file: .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
 Resume context:
 - v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
 - Phase 8 done (08-01): customer-type redaction; live suite first runs at the 0.5.0 gate (key-drift check may surface keys to review)

@@ -24,7 +24,7 @@ Add the configuration to `.vscode/mcp.json` in your workspace, or run **MCP: Ope
     "inio": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@dnmitev/inio-mcp@0.4.0"],
+      "args": ["-y", "@dnmitev/inio-mcp@0.5.0"],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
         "INIO_CLIENT_SECRET": "${input:inio-secret}",
@@ -62,7 +62,7 @@ Use the same `inputs` block, and this server entry:
         "INIO_AUTH_URL",
         "-e",
         "INIO_URL",
-        "ghcr.io/dnmitev/inio-mcp:0.4.0"
+        "ghcr.io/dnmitev/inio-mcp:0.5.0"
       ],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
