@@ -8,25 +8,34 @@ interface SlideProps {
 export default function Slide08({ content }: SlideProps) {
   return (
     <SlideLayout title={content.title} slideNumber="8 / 11">
-      <ul style={{
-        listStyle: 'none',
-        padding: 0,
-        margin: 0,
-        fontSize: '42px',
-        lineHeight: '1.6',
-      }}>
+      <ul
+        style={{
+          listStyle: 'none',
+          padding: 0,
+          margin: 0,
+          fontSize: '42px',
+          lineHeight: '1.6',
+        }}
+      >
         {content.bullets?.map((bullet, i) => (
-          <li key={i} style={{
-            marginBottom: '30px',
-            paddingLeft: '60px',
-            position: 'relative',
-          }}>
-            <span style={{
-              position: 'absolute',
-              left: '0',
-              color: '#0066cc',
-              fontWeight: '700',
-            }}>•</span>
+          <li
+            key={i}
+            style={{
+              marginBottom: '30px',
+              paddingLeft: '60px',
+              position: 'relative',
+            }}
+          >
+            <span
+              style={{
+                position: 'absolute',
+                left: '0',
+                color: '#0066cc',
+                fontWeight: '700',
+              }}
+            >
+              •
+            </span>
             {bullet}
           </li>
         ))}

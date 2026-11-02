@@ -11,8 +11,9 @@ const deckDir = path.join(__dirname, '..');
 const audioDir = path.join(deckDir, 'audio');
 const narrationDir = path.join(deckDir, 'narration');
 
-const narrationFiles = fs.readdirSync(narrationDir)
-  .filter(f => f.endsWith('.md'))
+const narrationFiles = fs
+  .readdirSync(narrationDir)
+  .filter((f) => f.endsWith('.md'))
   .sort();
 
 const missingFiles = [];
@@ -20,7 +21,7 @@ const missingFiles = [];
 for (const narrationFile of narrationFiles) {
   const slug = narrationFile.replace('.md', '');
   const audioFile = path.join(audioDir, `${slug}.wav`);
-  
+
   if (!fs.existsSync(audioFile)) {
     missingFiles.push(`deck/audio/${slug}.wav`);
   }

@@ -19,7 +19,7 @@ export interface TimingCalculation {
 
 /**
  * Calculate slide timings with crossfade overlap
- * 
+ *
  * @param slides - Array of slide audio durations with padding
  * @param fps - Frames per second
  * @param crossfadeFrames - Number of frames for crossfade overlap
@@ -28,7 +28,7 @@ export interface TimingCalculation {
 export function calculateSlideTimings(
   slides: SlideTimingInput[],
   fps: number,
-  crossfadeFrames: number
+  crossfadeFrames: number,
 ): TimingCalculation {
   const slideTimings: SlideTiming[] = [];
   let currentFrame = 0;
@@ -56,7 +56,7 @@ export function calculateSlideTimings(
 
 /**
  * Calculate opacity for crossfade effect
- * 
+ *
  * @param frame - Current frame within the sequence
  * @param durationFrames - Total duration of the sequence
  * @param crossfadeFrames - Number of frames for crossfade
@@ -67,7 +67,7 @@ export function calculateOpacity(
   frame: number,
   durationFrames: number,
   crossfadeFrames: number,
-  isFirstSlide: boolean
+  isFirstSlide: boolean,
 ): number {
   if (isFirstSlide) {
     return 1.0;

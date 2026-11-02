@@ -1,10 +1,4 @@
-import {
-  AbsoluteFill,
-  Audio,
-  Sequence,
-  staticFile,
-  useCurrentFrame,
-} from 'remotion';
+import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from 'remotion';
 import { slideRegistry } from '../src/slideRegistry';
 import { slides } from '../src/content';
 import { calculateOpacity } from './timing';
@@ -22,9 +16,7 @@ export interface DeckVideoProps {
 
 export const DeckVideo: React.FC<DeckVideoProps> = ({ slideTimings, crossfadeFrames }) => {
   if (slideTimings.length !== slideRegistry.length) {
-    throw new Error(
-      `Mismatch: ${slideTimings.length} timings for ${slideRegistry.length} slides`
-    );
+    throw new Error(`Mismatch: ${slideTimings.length} timings for ${slideRegistry.length} slides`);
   }
 
   return (
@@ -77,9 +69,5 @@ const SlideWithFade: React.FC<SlideWithFadeProps> = ({
   const frame = useCurrentFrame();
   const opacity = calculateOpacity(frame, durationFrames, crossfadeFrames, isFirstSlide);
 
-  return (
-    <AbsoluteFill style={{ opacity }}>
-      {children}
-    </AbsoluteFill>
-  );
+  return <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>;
 };

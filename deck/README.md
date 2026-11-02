@@ -58,6 +58,7 @@ This runs Playwright tests that verify each slide renders correctly and saves PN
 ## URL Navigation
 
 Each slide can be accessed directly via URL hash:
+
 - `#01` - The Problem
 - `#02` - Who Benefits
 - `#03` - Simple Setup
@@ -75,6 +76,7 @@ Each slide can be accessed directly via URL hash:
 ### Slide Components
 
 Each slide is a pure React component located in `src/slides/NN-slug.tsx`:
+
 - Receives content via props
 - No global state or side effects
 - Uses shared `SlideLayout` component for consistent styling
@@ -82,6 +84,7 @@ Each slide is a pure React component located in `src/slides/NN-slug.tsx`:
 ### Content Data
 
 All slide content lives in `src/content.ts` as structured data, separate from the layout components. This makes it easy to:
+
 - Update content without touching components
 - Reuse content in other contexts (e.g., video generation)
 - Validate content against source material
@@ -89,6 +92,7 @@ All slide content lives in `src/content.ts` as structured data, separate from th
 ### Slide Registry
 
 The `src/slideRegistry.ts` file maintains a mapping of:
+
 - Slide ID and slug
 - Component reference
 - Narration file path (for future TTS/video work)
@@ -120,6 +124,7 @@ deck/scripts/tts.sh
 ```
 
 This creates `deck/audio/NN-slug.wav` for each narration file in `deck/narration/`. The script:
+
 - Creates a Python 3.12 virtual environment at `deck/.venv` using uv (recreates if wrong version)
 - Installs pinned dependencies from `scripts/requirements-tts.txt` (mlx-audio, spaCy, misaki)
 - Downloads the spaCy English model (en_core_web_sm)
@@ -130,6 +135,7 @@ This creates `deck/audio/NN-slug.wav` for each narration file in `deck/narration
 The script is idempotent: re-running it only regenerates audio for changed narration files.
 
 **Key dependencies** (pinned for Python 3.12 macOS arm64 wheels):
+
 - `mlx-audio==0.6.3` + `mlx==0.32.4` (requires macOS 14+)
 - `spacy==3.8.18` + `thinc==8.3.14` + `blis==1.3.4`
 - `misaki==0.9.4` + `espeakng-loader==0.2.4`
@@ -155,6 +161,7 @@ Output: `deck/out/inio-mcp-deck.mp4`
 The render script first checks that all required audio files exist and fails with a clear error if any are missing.
 
 The video composition:
+
 - **Resolution**: 1920x1080
 - **Frame rate**: 30 fps
 - **Duration**: Calculated from audio files (each slide = audio duration + 0.5s padding)

@@ -29,10 +29,10 @@ export const Root: React.FC = () => {
             slideRegistry.map(async (entry) => {
               const audioFilename = `${entry.id}-${entry.slug}.wav`;
               const audioPath = staticFile(audioFilename);
-              
+
               try {
                 const audioDurationSeconds = await getAudioDurationInSeconds(audioPath);
-                
+
                 if (!Number.isFinite(audioDurationSeconds) || audioDurationSeconds <= 0) {
                   throw new Error(`Invalid duration: ${audioDurationSeconds}`);
                 }
@@ -46,22 +46,22 @@ export const Root: React.FC = () => {
                   `Failed to get duration for ${audioFilename}: ${
                     error instanceof Error ? error.message : String(error)
                   }`,
-                  { cause: error }
+                  { cause: error },
                 );
               }
-            })
+            }),
           );
 
           // Calculate timings with crossfade
           const { slideTimings, totalDurationFrames } = calculateSlideTimings(
             slideInputs,
             fps,
-            crossfadeFrames
+            crossfadeFrames,
           );
 
           if (!Number.isFinite(totalDurationFrames) || totalDurationFrames <= 0) {
             throw new Error(
-              `Invalid totalDurationFrames: ${totalDurationFrames}, slideInputs: ${JSON.stringify(slideInputs)}`
+              `Invalid totalDurationFrames: ${totalDurationFrames}, slideInputs: ${JSON.stringify(slideInputs)}`,
             );
           }
 

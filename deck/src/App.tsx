@@ -8,7 +8,7 @@ export default function App() {
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash) {
-      const index = slideRegistry.findIndex(s => s.id === hash);
+      const index = slideRegistry.findIndex((s) => s.id === hash);
       if (index !== -1) {
         setCurrentSlide(index);
       }
@@ -59,29 +59,35 @@ export default function App() {
   const SlideComponent = slide.component;
 
   return (
-    <div style={{
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#f0f0f0',
-      overflow: 'hidden',
-    }}>
-      <div style={{
-        width: '100%',
-        height: '100%',
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-      }}>
-        <div style={{
-          width: '1920px',
-          height: '1080px',
-          transform: 'scale(var(--slide-scale))',
-          transformOrigin: 'center center',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
-        }}>
+        backgroundColor: '#f0f0f0',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: '1920px',
+            height: '1080px',
+            transform: 'scale(var(--slide-scale))',
+            transformOrigin: 'center center',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+          }}
+        >
           <SlideComponent content={content} />
         </div>
       </div>

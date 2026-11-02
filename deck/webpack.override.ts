@@ -5,9 +5,7 @@ export const webpackOverride: WebpackOverrideFn = (currentConfiguration) => {
     ...currentConfiguration,
     module: {
       ...currentConfiguration.module,
-      rules: [
-        ...(currentConfiguration.module?.rules || []),
-      ],
+      rules: [...(currentConfiguration.module?.rules || [])],
     },
   };
 };
