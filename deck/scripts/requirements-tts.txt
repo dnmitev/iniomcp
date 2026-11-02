@@ -1,0 +1,9 @@
+# TTS dependencies for macOS arm64 with Python 3.12
+# Resolved versions with wheels available on macOS 14+ arm64
+
+# Core TTS
+mlx-audio==0.6.3
+soundfile==0.12.1
+
+# Phonemization and NLP
+misaki[en]>=0.9.4

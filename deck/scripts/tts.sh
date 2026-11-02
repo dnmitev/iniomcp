@@ -7,20 +7,39 @@ VENV_DIR="$DECK_DIR/.venv"
 NARRATION_DIR="$DECK_DIR/narration"
 AUDIO_DIR="$DECK_DIR/audio"
 TTS_SCRIPT="$SCRIPT_DIR/tts.py"
+REQUIREMENTS="$SCRIPT_DIR/requirements-tts.txt"
 
-echo "==> Setting up Python virtual environment..."
-if [ ! -d "$VENV_DIR" ]; then
-    python3 -m venv "$VENV_DIR"
-    echo "Created virtual environment at $VENV_DIR"
+# Check for uv
+if ! command -v uv &> /dev/null; then
+    echo "Error: uv is not installed. Install it with:"
+    echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "Then restart your shell or run: source ~/.local/bin/env"
+    exit 1
 fi
 
-source "$VENV_DIR/bin/activate"
+echo "==> Setting up Python 3.12 virtual environment with uv..."
 
-echo "==> Installing dependencies..."
-pip install --quiet --upgrade pip
-pip install --quiet 'mlx-audio==0.6.3' soundfile 'misaki[en]'
+# Check if existing venv is Python 3.12
+if [ -d "$VENV_DIR" ]; then
+    VENV_PYTHON_VERSION=$("$VENV_DIR/bin/python" --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+    if [ "$VENV_PYTHON_VERSION" != "3.12" ]; then
+        echo "Existing venv is Python $VENV_PYTHON_VERSION, recreating with Python 3.12..."
+        rm -rf "$VENV_DIR"
+    fi
+fi
 
-echo "==> Loading Kokoro model (shared across all files)..."
+# Create venv with Python 3.12 if it doesn't exist
+if [ ! -d "$VENV_DIR" ]; then
+    uv venv --python 3.12 "$VENV_DIR"
+    echo "Created Python 3.12 virtual environment at $VENV_DIR"
+fi
+
+echo "==> Installing dependencies with uv..."
+uv pip install --python "$VENV_DIR" -r "$REQUIREMENTS"
+
+echo "==> Installing spaCy English model..."
+"$VENV_DIR/bin/python" -m spacy download en_core_web_sm --quiet || true
+
 echo "==> Generating audio files..."
 mkdir -p "$AUDIO_DIR"
 
@@ -36,7 +55,7 @@ for narration_file in "$NARRATION_DIR"/*.md; do
         continue
     fi
     
-    python3 "$TTS_SCRIPT" "$narration_file" "$audio_file"
+    "$VENV_DIR/bin/python" "$TTS_SCRIPT" "$narration_file" "$audio_file"
     generated_count=$((generated_count + 1))
 done
 
