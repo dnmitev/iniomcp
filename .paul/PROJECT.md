@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.4.0 |
-| Status | v0.3 Integration Layer in progress (Phase 10) |
+| Status | v0.3 Integration Layer in progress (Phase 11) |
 | Last Updated | 2026-11-02 |
 
 ## Requirements
@@ -59,9 +59,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Install examples pinned to the release; plaintext-secret warnings; inspector pinned (AEGIS R7) — Phase 7 (0.4.0)
 - ✓ Redaction by customer type: businesses open except invoice links and SSN; consumers and unknown types also redact name, city, yourReference; get_invoice looks up the type (cached); unreviewed response keys fail tests and the live gate (reworked AEGIS R2) — Phase 8
 - ✓ Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor; local, Docker, hosted), hosting guide, usage examples, troubleshooting; drift fixed and guarded by a docs test (AEGIS R10) — Phase 9
+- ✓ Opt-in INIO_WRITE_TOOLS allowlist and INIO_MAX_PAYMENT_AMOUNT; later-effect sentences; write calls attributed in logs (target, outcome, client app when known); throttled 401 warnings; SHA-pinned actions, pre-push image smoke test, rulesets on main and v* tags (trimmed AEGIS R3, R8, R6) — Phase 10
 
 ### Active (In Progress) — v0.3 Integration Layer
-- [ ] Opt-in `INIO_WRITE_TOOLS` and `INIO_MAX_PAYMENT_AMOUNT`; write logging with client attribution; SHA-pinned actions and image smoke test (trimmed AEGIS R3, R8, R6) — Phase 10
 - [ ] Helm chart (Ingress and Gateway API) published as OCI; team runs it on EKS via ArgoCD — Phase 11
 
 ### Planned (Next)
@@ -137,6 +137,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Docker image binds 0.0.0.0, stdio default; no health endpoint; SDK body limit 4 MB | Token still required; no unauthenticated route | 2026-10-30 | Superseded (body limit) |
 | Auth and path checked before the body is read; 256 KiB body cap; 500 ms drain on shutdown | AEGIS F-04-007: pre-auth buffering let unauthenticated clients grow RSS by ~300 MB | 2026-10-30 | Active |
 | Redaction by customer type: B open except invoice links and SSN; C/unknown strict (+ customerName, city, yourReference); `note` visible; errorText strict | Integration layer needs business data; consumer data stays protected (GDPR) | 2026-11-02 | Active |
+| Write bounds are opt-in (INIO_WRITE_TOOLS, INIO_MAX_PAYMENT_AMOUNT); writes logged with target ids and client app; rulesets protect main and v* tags | Ease of use by default, controls for team servers; single-maintainer release safety | 2026-11-02 | Active |
 | Client owns the check-before-retry sentence (status 0 or >= 500 on writes); tools add only a check pointer; accepted-unreadable = ok + note via writeFailure/acceptedUnreadable | AEGIS F-04-002: 8 of 11 write tools reported landed writes as failed | 2026-10-30 | Active |
 
 ## Success Metrics
@@ -172,4 +173,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-11-02 after Phase 9*
+*Last updated: 2026-11-02 after Phase 10*
