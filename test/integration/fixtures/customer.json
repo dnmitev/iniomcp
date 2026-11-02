@@ -10,7 +10,7 @@
   "distributionEmailAddress3": null,
   "mobilePhoneNo": "+46700000000",
   "customerNo": "C-1001",
-  "customerType": "Company",
+  "customerType": "B",
   "customerTag1": "tag-example",
   "customerAddress": {
     "city": "Stockholm",

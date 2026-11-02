@@ -11,7 +11,7 @@ const SUMMARY = {
   id: CID,
   customerNo: 'C-1',
   customerName: 'Acme AB',
-  customerType: 'Company',
+  customerType: 'B',
   serviceLineName: 'Standard',
   directDebit: false,
   orgNr: '556677-8899',
@@ -270,7 +270,7 @@ describe('list_customers output', () => {
         {
           id: CID,
           customerNo: 'C-1',
-          customerName: 'Acme AB',
+          customerName: '[redacted]',
           directDebit: false,
           createdAt: SUMMARY.createdAt,
         },
@@ -282,10 +282,10 @@ describe('list_customers output', () => {
   });
 
   it('redacts an email inside a summary field', async () => {
-    const item = { ...SUMMARY, customerName: 'Jane jane@home.example' };
+    const item = { ...SUMMARY, customerType: 'C', serviceLineName: 'Line jane@home.example' };
     const { call } = await setup(() => Promise.resolve(listPayload([item])));
     const text = textOf(await call({}));
-    expect(text).toContain('"customerName":"Jane [redacted-email]"');
+    expect(text).toContain('"serviceLineName":"Line [redacted-email]"');
     expect(text).not.toContain('jane@home.example');
   });
 
@@ -396,5 +396,20 @@ describe('list_customers tool-call logging', () => {
     expect(logged).not.toContain('Acme');
     expect(logged).not.toContain('19800101-1234');
     expect(logged).not.toContain('C-1');
+  });
+});
+
+describe('list_customers per-item customer type', () => {
+  it('redacts name for a C item and keeps it for a B item in the same page', async () => {
+    const items = [
+      { ...SUMMARY, customerType: 'B', customerName: 'Biz AB' },
+      { ...SUMMARY, customerType: 'C', customerName: 'Jane Doe' },
+    ];
+    const { call } = await setup(() => Promise.resolve(listPayload(items)));
+    const page = JSON.parse(textOf(await call({})));
+    expect(page.items.map((i: { customerName: string }) => i.customerName)).toEqual([
+      'Biz AB',
+      '[redacted]',
+    ]);
   });
 });

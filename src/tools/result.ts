@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { InioApiError } from '../inio-client.ts';
-import { isSensitiveKey, redact, redactText } from '../redact.ts';
+import { isSensitiveKey, redact, redactText, type CustomerKind } from '../redact.ts';
 
 const MAX_FIELD_ERRORS = 10;
 
@@ -49,13 +49,13 @@ export function compact(value: unknown): unknown {
 }
 
 /** JSON text for a tool result, redacted unless revealPii; the caller compacts the parts it wants compacted. */
-export function presentRaw(value: unknown, revealPii: boolean): string {
-  return JSON.stringify(revealPii ? value : redact(value));
+export function presentRaw(value: unknown, revealPii: boolean, type?: CustomerKind): string {
+  return JSON.stringify(revealPii ? value : redact(value, type));
 }
 
 /** JSON text for a tool result: compacted, then redacted unless revealPii. */
-export function present(value: unknown, revealPii: boolean): string {
-  return presentRaw(compact(value), revealPii);
+export function present(value: unknown, revealPii: boolean, type?: CustomerKind): string {
+  return presentRaw(compact(value), revealPii, type);
 }
 
 /** Refine check and message for tools addressed by id or number: exactly one of the two. */

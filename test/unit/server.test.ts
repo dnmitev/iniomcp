@@ -232,7 +232,7 @@ describe('createServer', () => {
       {
         type: 'text',
         text: JSON.stringify({
-          items: [{ id: ID, customerNo: 'C-1', customerName: 'Acme' }],
+          items: [{ id: ID, customerNo: 'C-1', customerName: '[redacted]' }],
           total: 1,
           limit: 25,
           offset: 0,
@@ -265,7 +265,12 @@ describe('createServer', () => {
     const result = await client.callTool({ name: 'get_customer', arguments: { id: ID } });
     expect(result.isError).not.toBe(true);
     expect(result.content).toEqual([
-      { type: 'text', text: JSON.stringify({ customer: { ...CUSTOMER, SSN: '[redacted]' } }) },
+      {
+        type: 'text',
+        text: JSON.stringify({
+          customer: { ...CUSTOMER, customerName: '[redacted]', SSN: '[redacted]' },
+        }),
+      },
     ]);
   });
 
@@ -619,6 +624,48 @@ describe('createServerFactory', () => {
       `${API_URL}/invoices/${ID}`,
       `${API_URL}/invoices/${ID}`,
     ]);
+  });
+
+  it('shares the customer-type cache across instances: one customer GET for two get_invoice calls', async () => {
+    const CID = '7a1d2c3b-0000-4000-8000-00000000c001';
+    const invoice = { id: ID, customerId: CID, city: 'Sofia', pdfURL: 'u' };
+    const fetch = vi.fn<typeof globalThis.fetch>((input) => {
+      const url = urlOf(input);
+      if (url === AUTH_URL) return Promise.resolve(json({ access_token: TOKEN, expires_in: 300 }));
+      if (url === `${API_URL}/invoices/${ID}`) {
+        return Promise.resolve(json({ success: true, status: 200, result: invoice }));
+      }
+      if (url === `${API_URL}/customers/${CID}`) {
+        const result = {
+          externalCustomer: { id: CID, customerType: 'B' },
+          serviceLine: null,
+          effectivePause: null,
+        };
+        return Promise.resolve(json({ success: true, status: 200, result }));
+      }
+      return Promise.reject(new Error(`unexpected fetch ${url}`));
+    });
+    const create = createServerFactory(CONFIG, { fetch, logger: fakeLogger() });
+    const a = await connectTo(create());
+    const b = await connectTo(create());
+    try {
+      const first = await a.callTool({ name: 'get_invoice', arguments: { id: ID } });
+      const second = await b.callTool({ name: 'get_invoice', arguments: { id: ID } });
+      for (const r of [first, second]) {
+        const [item] = z.array(z.object({ text: z.string() })).parse(r.content);
+        expect(JSON.parse(item?.text ?? '')).toEqual({
+          id: ID,
+          customerId: CID,
+          city: 'Sofia',
+          pdfURL: '[redacted]',
+        });
+      }
+    } finally {
+      await a.close();
+      await b.close();
+    }
+    const urls = fetch.mock.calls.map(([url]) => urlOf(url));
+    expect(urls.filter((u) => u === `${API_URL}/customers/${CID}`)).toHaveLength(1);
   });
 
   it('lists exactly the 7 read tools when allowWrites is false', async () => {

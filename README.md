@@ -22,7 +22,7 @@ npx -y @dnmitev/inio-mcp@0.4.0
 | `INIO_CLIENT_SECRET`      | yes       |             | API client secret                                                                                                                                                                                                                         |
 | `INIO_AUTH_URL`           | yes       |             | Token endpoint (or realm issuer URL)                                                                                                                                                                                                      |
 | `INIO_URL`                | yes       |             | API base URL incl. `/v1`, must be `https`                                                                                                                                                                                                 |
-| `INIO_REVEAL_PII`         | no        | `false`     | `true` turns off redaction of the fields listed in [Data protection](#data-protection)                                                                                                                                                    |
+| `INIO_REVEAL_PII`         | no        | `false`     | `true` turns off redaction of the fields listed in [Data protection](#data-protection) (both customer types)                                                                                                                              |
 | `INIO_LOG_LEVEL`          | no        | `info`      | `fatal` … `trace`, or `silent`                                                                                                                                                                                                            |
 | `INIO_REQUEST_TIMEOUT_MS` | no        | `30000`     | Timeout per Inio API or token request, 1000–600000 ms. A timeout returns `TIMEOUT` (reported in whole seconds, rounded up). One tool call can take up to about 5 × this value + 5 s if a token refresh and a rate-limit retry both happen |
 | `MCP_TRANSPORT`           | no        | `stdio`     | `stdio`, or `http` for a shared server (see [Shared HTTP server](#shared-http-server))                                                                                                                                                    |
@@ -208,7 +208,7 @@ For Claude Desktop, use the local setup [above](#claude-desktop).
 
 ## Tools
 
-These tools are read-only. Results are compacted (empty values dropped). Email addresses, phone numbers, address lines, zip codes, SSNs, bank details and invoice links are redacted unless `INIO_REVEAL_PII=true`; names, city, organisation and VAT numbers, references and free text are not. See [Data protection](#data-protection) for the exact list.
+These tools are read-only. Results are compacted (empty values dropped). Redaction depends on the customer type: business customers (`B`) have only invoice links and SSNs redacted; consumers (`C`) and unknown types also have contact details, address, city, name, references, SSNs and bank details redacted. `INIO_REVEAL_PII=true` turns it off. See [Data protection](#data-protection) for the exact lists.
 
 | Tool                         | Purpose                                                                                                   |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -255,21 +255,34 @@ The server writes JSON log lines to stderr (stdout carries the MCP protocol). Cl
 
 ## Data protection
 
-What the server redacts from tool results (unless `INIO_REVEAL_PII=true`):
+What the server redacts from tool results (unless `INIO_REVEAL_PII=true`) depends on the customer type (`customerType`). Each object in a result uses its own type; an object without one (an invoice, a pause) follows the object it sits in.
 
-<!-- redacted-fields -->
+**Business customers (`B`).** Company and contact details are business data, often public, so only the invoice links (anyone holding the link can open the invoice) and a personal identity number (a sole trader's SSN) are redacted:
 
-- any field whose name contains `email`, and email addresses inside any text
-- any field whose name contains `phone`
+<!-- redacted-fields:business -->
+
+- `pdfURL`, `digitalInvoiceURL`, `ssn`
+
+<!-- /redacted-fields:business -->
+
+**Consumers (`C`) and unknown types.** A private person's details are personal data:
+
+<!-- redacted-fields:consumer -->
+
+- any field whose name contains `email` (e.g. `distributionEmailAddress`), and email addresses inside any text
+- any field whose name contains `phone` (e.g. `mobilePhoneNo`)
 - address lines: `addressLine`, `addressLine1`, `addressLine2`, …
-- `zipCode`
+- `zipCode`, `city`
+- `customerName`, `yourReference`
 - `ssn`
 - `iban`, `bankAccount`, `accountNumber`
-- invoice links: `pdfURL`, `digitalInvoiceURL` (anyone holding the link can open the invoice)
+- invoice links: `pdfURL`, `digitalInvoiceURL`
 
-<!-- /redacted-fields -->
+<!-- /redacted-fields:consumer -->
 
-Error messages always hide email addresses, and the per-field error messages for the fields listed above, even with `INIO_REVEAL_PII=true`. Other error text is returned as the API gives it. Everything else is returned as the API gives it, including customer names, city, organisation and VAT numbers, references, free-text fields, amounts and invoice stages. For consumers (customer type `C`) a name, or a sole trader's organisation number, is personal data.
+Invoices carry no customer type, so `get_invoice` looks up the invoice's customer once (cached until the server restarts, so a customer whose type changes keeps the old rules until then) and uses consumer rules if that lookup fails. Invoices returned by write tools always use consumer rules.
+
+Error messages always hide email addresses, and the per-field error messages for the consumer fields listed above (for both customer types), even with `INIO_REVEAL_PII=true`. Other error text is returned as the API gives it. Everything else is returned as the API gives it, including organisation and VAT numbers, notes and other free text, invoice descriptions, amounts and invoice stages.
 
 - Tool results go to the LLM provider behind your assistant (for example Anthropic for Claude, or the model provider you chose in Cursor or VS Code). Your organisation needs a data processing agreement with that provider that covers your customers' data.
 - Arguments of write tools, such as the SSN, contact details and addresses in `create_customer` and `update_customer`, are in your prompt and in the tool call. They reach the provider whatever `INIO_REVEAL_PII` says.

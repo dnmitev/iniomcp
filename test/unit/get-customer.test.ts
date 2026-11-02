@@ -30,13 +30,13 @@ const PAYLOAD = {
 const CUSTOMER_REDACTED = {
   id: CID,
   customerNo: 'C-1',
-  customerName: 'Acme AB',
+  customerName: '[redacted]',
   directDebit: false,
   SSN: '[redacted]',
   email: '[redacted]',
   addressLine1: '[redacted]',
   zipCode: '[redacted]',
-  city: 'Stockholm',
+  city: '[redacted]',
   contact: { name: 'Jane' },
 };
 
@@ -457,5 +457,44 @@ describe('get_customer includeWorkflowSettings', () => {
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain('includeWorkflowSettings');
     expect(inio.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('get_customer by customer type', () => {
+  it('returns a type B customer unredacted except invoice links', async () => {
+    const business = {
+      ...PAYLOAD,
+      externalCustomer: {
+        ...PAYLOAD.externalCustomer,
+        customerType: 'B',
+        pdfURL: 'https://x.example/a.pdf',
+      },
+    };
+    const { call } = await setup(() => Promise.resolve(business));
+    const { customer } = JSON.parse(textOf(await call({ id: CID })));
+    expect(customer).toEqual({
+      id: CID,
+      customerNo: 'C-1',
+      customerName: 'Acme AB',
+      directDebit: false,
+      SSN: '[redacted]',
+      email: 'ap@acme.example',
+      addressLine1: '1 Main St',
+      zipCode: '11122',
+      city: 'Stockholm',
+      contact: { name: 'Jane' },
+      customerType: 'B',
+      pdfURL: '[redacted]',
+    });
+  });
+
+  it('returns a type C customer with consumer redaction', async () => {
+    const consumer = {
+      ...PAYLOAD,
+      externalCustomer: { ...PAYLOAD.externalCustomer, customerType: 'C' },
+    };
+    const { call } = await setup(() => Promise.resolve(consumer));
+    const { customer } = JSON.parse(textOf(await call({ id: CID })));
+    expect(customer).toEqual({ ...CUSTOMER_REDACTED, customerType: 'C' });
   });
 });

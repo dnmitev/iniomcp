@@ -11,27 +11,27 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.3 Integration Layer — Phase 8 Redaction by customer type
+**Current focus:** v0.3 Integration Layer — Phase 9 Docs overhaul
 
 ## Current Position
 
 Milestone: v0.3 Integration Layer
-Phase: 8 of 11 (Redaction by customer type)
+Phase: 9 of 11 (Docs overhaul)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-02 — Milestone created
+Last activity: 2026-11-02 — Phase 8 complete, transitioned to Phase 9
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
-- v0.3 Integration Layer: [░░░░░░░░░░] 0%
+- v0.3 Integration Layer: [██▌░░░░░░░] 25% (Phase 8 ✓)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Ready for first PLAN]
+  ○        ○        ○     [Phase 8 complete - ready to plan Phase 9]
 ```
 
 ## Accumulated Context
@@ -91,6 +91,8 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: Client appends check-before-retry to write 5xx; write tools catch via writeFailure, shape failures → acceptedUnreadable (ok + note) | Phase 6 | New write tools inherit it; tools add only a check pointer |
 | 2026-11-02: v0.3 = customer-type redaction (B open except bearer links; C strict + names/address/city), docs per client, trimmed opt-in R3, R8, small R6, Helm chart; ChatGPT deferred to the hosted server (OAuth) | v0.3 | Ease of use first; AEGIS R2/R3 reworked |
 | 2026-11-02: Hosted auth direction = dedicated MCP Keycloak realm with BoP brokering; per-tenant MCP api2api clients first, APISIX trusting the realm later | v0.4 | `.paul/research/v0.4-hosted-auth.md` |
+| 2026-11-02: Phase 8 = one TDD plan (08-01); customerType B/C per object in redact(); unknown = consumer; get_invoice looks up by customerId with a shared clear-at-1000 cache; write tools keep consumer rules | Phase 8 | Fixture customerType "Company" corrected to "B" |
+| 2026-11-02: 08-01 deviations: SSN redacted for B too; `note` stays visible (tool status field); errorText strict incl. new keys; customer type read from externalCustomer via zod | Phase 8 | README Data protection has business and consumer blocks |
 | 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
 
 ### Deferred Issues
@@ -106,6 +108,7 @@ See PROJECT.md Key Decisions.
 | Image build provenance (attest-build-provenance) and npm-shrinkwrap for transitive pins | 07-01 | M | R6 |
 | Redundant closeIdleConnections() calls in src/http.ts close() (server.close() already does it on Node ≥ 24; verified 07-02) | 07-02 | S | Next http.ts touch |
 | acceptedUnreadable() echoes no identifier (create_customer_pause gives no pause id to check) | 06-02 | S | With R8 write attribution |
+| Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
@@ -126,12 +129,12 @@ Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-
 ## Session Continuity
 
 Last session: 2026-11-02
-Stopped at: Milestone v0.3 Integration Layer created, ready to plan
-Next action: /paul:plan for Phase 8
-Resume file: .paul/ROADMAP.md
+Stopped at: Phase 8 complete, ready to plan Phase 9
+Next action: /paul:plan for Phase 9
+Resume file: .paul/phases/08-redaction-by-customer-type/08-01-SUMMARY.md
 Resume context:
 - v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
-- Phase 8 note: invoices have no customerType (spec Invoices_Read: customerNo/customerId only); get_invoice needs a cached customer lookup, consumer fallback
+- Phase 8 done (08-01): customer-type redaction; live suite first runs at the 0.5.0 gate (key-drift check may surface keys to review)
 - Research inputs: .paul/research/v0.3-helm-chart.md, .paul/research/v0.4-hosted-auth.md
 - Next release must bump the README @0.4.0 pins
 

@@ -426,3 +426,26 @@ at = "2026-11-02T07:11:31Z"
 action = "milestone_create"
 phase = 8
 at = "2026-11-02T09:02:37Z"
+
+[[entry]]
+action = "plan"
+phase = 8
+plan = "08-01"
+at = "2026-11-02T09:12:09Z"
+
+[[entry]]
+action = "apply"
+phase = 8
+plan = "08-01"
+at = "2026-11-02T09:44:33Z"
+
+[[entry]]
+action = "unify"
+phase = 8
+plan = "08-01"
+at = "2026-11-02T09:46:43Z"
+
+[[entry]]
+action = "transition"
+phase = 8
+at = "2026-11-02T09:46:43Z"

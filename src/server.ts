@@ -5,6 +5,7 @@ import { createTokenProvider } from './auth.ts';
 import { noopLogger, type Logger } from './logger.ts';
 import type { Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
+import type { CustomerKind } from './redact.ts';
 import { registerCancelCustomerPause } from './tools/cancel-customer-pause.ts';
 import { registerCreateCreditInvoice } from './tools/create-credit-invoice.ts';
 import { registerCreateCustomer } from './tools/create-customer.ts';
@@ -51,10 +52,11 @@ export function createServerFactory(
     logger,
     timeoutMs: config.requestTimeoutMs,
   });
+  const customerTypes = new Map<string, CustomerKind>();
   return () => {
     const server = new McpServer({ name: 'inio-mcp', version });
     const deps = { client, revealPii: config.revealPii, logger };
-    registerGetInvoice(server, deps);
+    registerGetInvoice(server, { ...deps, customerTypes });
     registerGetInvoiceRetryAttempts(server, deps);
     registerListCustomers(server, deps);
     registerListInvoices(server, deps);

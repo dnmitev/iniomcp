@@ -8,6 +8,8 @@ import {
   ok,
   PageInput,
   present,
+  presentPage,
+  presentRaw,
   toPage,
 } from '../../src/tools/result.ts';
 
@@ -387,5 +389,66 @@ describe('toPage', () => {
     expect(err.message).toBe('Unexpected list payload from the Inio API.');
     expect(err.correlationId).toBeUndefined();
     expect(errorText(err)).toBe('UPSTREAM_ERROR: Unexpected list payload from the Inio API.');
+  });
+});
+
+describe('type pass-through', () => {
+  const ITEM = { city: 'Sofia', pdfURL: 'u', email: 'a@b.example' };
+  const BUSINESS_OUT = '{"city":"Sofia","pdfURL":"[redacted]","email":"a@b.example"}';
+  const CONSUMER_OUT = '{"city":"[redacted]","pdfURL":"[redacted]","email":"[redacted]"}';
+
+  it('present and presentRaw default to consumer rules', () => {
+    expect(present(ITEM, false)).toBe(CONSUMER_OUT);
+    expect(presentRaw(ITEM, false)).toBe(CONSUMER_OUT);
+  });
+
+  it('present and presentRaw apply a business type', () => {
+    expect(present(ITEM, false, 'business')).toBe(BUSINESS_OUT);
+    expect(presentRaw(ITEM, false, 'business')).toBe(BUSINESS_OUT);
+  });
+
+  it('present and presentRaw apply an explicit consumer type', () => {
+    expect(present(ITEM, false, 'consumer')).toBe(CONSUMER_OUT);
+  });
+
+  it('ignores the type when revealPii is true', () => {
+    expect(present(ITEM, true, 'consumer')).toBe(JSON.stringify(ITEM));
+  });
+
+  it('presentPage redacts with consumer rules by default', () => {
+    const payload = { data: [{ city: 'Sofia', x: 1 }], total: 1, limit: 25, offset: 0 };
+    expect(presentPage(payload, ['city'], false)).toBe(
+      '{"items":[{"city":"[redacted]"}],"total":1,"limit":25,"offset":0}',
+    );
+  });
+
+  it('presentPage lets each item customerType win over the argument', () => {
+    const payload = {
+      data: [
+        { customerType: 'B', city: 'a' },
+        { customerType: 'C', city: 'b' },
+      ],
+      total: 2,
+      limit: 25,
+      offset: 0,
+    };
+    expect(JSON.parse(presentPage(payload, ['customerType', 'city'], false))).toMatchObject({
+      items: [
+        { customerType: 'B', city: 'a' },
+        { customerType: 'C', city: '[redacted]' },
+      ],
+    });
+  });
+
+  it('errorText stays strict: emails in messages are redacted whatever customers look like', () => {
+    const err = new InioApiError(400, 'X', 'bad a@b.example', 'c', [
+      { fieldName: 'customerAddress.city', message: 'bad Sofia' },
+      { fieldName: 'customerName', message: 'bad Jane' },
+      { fieldName: 'yourReference', message: 'bad ref' },
+      { fieldName: 'note', message: 'bad text' },
+    ]);
+    expect(errorText(err)).toBe(
+      'X: bad [redacted-email] (correlationId c) Fields: customerAddress.city: [redacted]; customerName: [redacted]; yourReference: [redacted]; note: bad text',
+    );
   });
 });
