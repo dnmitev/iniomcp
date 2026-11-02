@@ -19,9 +19,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.3.1 |
-| Status | v0.2 Audit Quick Wins in progress (Phase 6 of 7 done); 0.3.1 released |
-| Last Updated | 2026-10-30 |
+| Version | 0.4.0 |
+| Status | v0.2 Audit Quick Wins complete (0.4.0 released); awaiting next milestone |
+| Last Updated | 2026-11-02 |
 
 ## Requirements
 
@@ -53,14 +53,19 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Docker HTTP mode with graceful shutdown; README setup for Claude Code, Cursor and VS Code; 0.3.0 released — Phase 5
 
 - ✓ Distribution emails capped at 150 characters; npm audit clean — Phase 5 (0.3.1)
-- ✓ HTTP mode answers 404/401 before reading the body; 256 KiB body cap; non-loopback warning; drain-then-force shutdown (AEGIS F-04-007) — Phase 6 (unreleased)
-- ✓ Write 5xx carries the check-before-retry hint; accepted-but-unreadable = success + note in all 11 write tools (AEGIS F-04-002) — Phase 6 (unreleased)
+- ✓ HTTP mode answers 404/401 before reading the body; 256 KiB body cap; non-loopback warning; drain-then-force shutdown (AEGIS F-04-007) — Phase 6 (0.4.0)
+- ✓ Write 5xx carries the check-before-retry hint; accepted-but-unreadable = success + note in all 11 write tools (AEGIS F-04-002) — Phase 6 (0.4.0)
+- ✓ Tool descriptions and README state exactly what is and is not redacted; README Data protection, Release model, Pinning and verification (AEGIS R1) — Phase 7 (0.4.0)
+- ✓ Install examples pinned to the release; plaintext-secret warnings; inspector pinned (AEGIS R7) — Phase 7 (0.4.0)
 
 ### Active (In Progress)
-- [ ] Privacy claim matches redaction; README Data protection section (AEGIS R1) — Phase 7
-- [ ] Pinned install configs, no plaintext secret in examples, release-model note (AEGIS R7) — Phase 7
+- None (v0.2 complete)
 
 ### Planned (Next)
+- AEGIS R2: redact orgNr, address, city and free text for everyone, names for consumers only (update `REDACTION_NOTE`, `SENSITIVE_KEYS` and README together)
+- AEGIS R3: write-tool allowlist (`INIO_WRITE_TOOLS`) and payment ceiling (`INIO_MAX_PAYMENT_AMOUNT`)
+- AEGIS R6: release-path hardening (SHA-pinned actions, image build provenance, packed tarball publish, sandbox live gate)
+- AEGIS R8: write attribution in logs
 - Move to the `@inio` npm scope and the company GitHub org when they exist
 - Per-user tokens or MCP OAuth for the HTTP server, only if teams ask
 
@@ -136,10 +141,10 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Mutation score | ≥ 80 break, 90 target | ≥ 90 on every changed file through v0.1 | Met |
-| Unit + integration tests | all green in CI | 1788 unit + 47 integration + 11 Docker green | Met |
+| Mutation score | ≥ 80 break, 90 target | ≥ 91.7 on every changed file in v0.2 | Met |
+| Unit + integration tests | all green in CI | 1895 unit + 47 integration + 27 Docker green (0.4.0) | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
-| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); 0.3.1 published with provenance | Met |
+| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); `npx -y @dnmitev/inio-mcp@0.4.0` starts; 0.4.0 published with provenance | Met |
 
 ## Tech Stack / Tools
 
@@ -165,4 +170,4 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-10-30 after Phase 6*
+*Last updated: 2026-11-02 after v0.2 Audit Quick Wins*

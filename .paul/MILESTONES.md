@@ -5,6 +5,46 @@ Completed milestone log for this project.
 | Milestone | Completed | Duration | Stats |
 |-----------|-----------|----------|-------|
 | v0.1 Initial Release | 2026-10-30 | 3 days | 5 phases, 16 plans |
+| v0.2 Audit Quick Wins | 2026-10-30 | 1 day | 2 phases, 4 plans |
+
+---
+
+## ✅ v0.2 Audit Quick Wins
+
+**Completed:** 2026-10-30 (archived 2026-11-02)
+**Duration:** 1 day (2026-10-30)
+**Released as:** 0.4.0 (npm `@dnmitev/inio-mcp` with provenance, `ghcr.io/dnmitev/inio-mcp` sha256:c7c188c1…6dfcf)
+**Source:** AEGIS audit `aegis-iniomcp-20261030`, remediation items R1, R4, R5, R7
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 2 |
+| Plans | 4 |
+| Files changed | 62 (+2,651 / −255, v0.3.1..v0.4.0) |
+| Tests | 1895 unit, 47 integration, 27 Docker |
+| Mutation | ≥ 91.7 on every changed file |
+| Releases | 0.4.0 |
+
+### Key Accomplishments
+
+- HTTP mode answers 404/401 before reading the body, caps bodies at 256 KiB, warns on non-loopback bind, and drains for 500 ms on shutdown. RSS under unauthenticated 4 MiB uploads went from +298 MB to flat (F-04-007).
+- No write tool reports a landed write as failed. The client appends a check-before-retry hint to write 5xx, and accepted-but-unreadable writes return success plus a note in all 11 write tools (F-04-002).
+- Tool descriptions and the README state exactly which fields are redacted (`REDACTION_NOTE`), and a test guards the README list against `SENSITIVE_KEYS` (R1).
+- Install examples are pinned to the release, plaintext-secret warnings are added, and the README gains Data protection, Release model and Pinning sections (R7).
+
+### Key Decisions
+
+- Auth and path checked before the body is read; body cap 256 KiB (supersedes the SDK 4 MB limit)
+- The client owns the check-before-retry sentence; tools use `writeFailure` / `acceptedUnreadable`
+- Docs claim npm provenance only; image provenance moves to R6
+- v0.2 released as 0.4.0; README pins bumped before the tag
+
+### Deferred to later
+
+- R2 redaction (consumer-only names), R3 write allowlist and payment ceiling, R6 release-path hardening, R8 write attribution, R10 docs drift
+- Redundant `closeIdleConnections()` in `src/http.ts`; 5xx hint punctuation; pause id in `acceptedUnreadable()`
 
 ---
 
