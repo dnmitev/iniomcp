@@ -123,7 +123,7 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/milestone-v0.3 (from main 3151511 = PR #39 squash; last commit eaef211 Phase 8, not pushed); tag v0.4.0 on 1ddab79 (pushed)
+Branch: paul/milestone-v0.3 (from main 3151511 = PR #39 squash; last commit 09fa266 Phase 9, not pushed); tag v0.4.0 on 1ddab79 (pushed)
 Previous: paul/milestone-v0.1; milestone tags milestone-v0.1, milestone-v0.2 (local, not pushed)
 Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-30; v0.2 Audit Quick Wins); v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
 
