@@ -4,9 +4,14 @@ import { pathSegment, type InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { compact, errorText, fail, ok, presentRaw } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: Pick<InioClient, 'get'>;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z.strictObject({
   customerId: z.uuid().describe('Customer UUID'),
@@ -21,7 +26,7 @@ const Payload = z.array(z.record(z.string(), z.unknown()));
 
 export function registerListCustomerPauses(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'list_customer_pauses',
@@ -33,23 +38,28 @@ export function registerListCustomerPauses(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'list_customer_pauses', async ({ customerId, status }) => {
-      try {
-        const parsed = Payload.safeParse(
-          await client.get(`/customers/${pathSegment(customerId)}/pauses`, { query: { status } }),
-        );
-        if (!parsed.success) {
-          return fail('UPSTREAM_ERROR: Unexpected pause payload from the Inio API.');
+    withToolLogging(
+      logger,
+      'list_customer_pauses',
+      async ({ customerId, status }) => {
+        try {
+          const parsed = Payload.safeParse(
+            await client.get(`/customers/${pathSegment(customerId)}/pauses`, { query: { status } }),
+          );
+          if (!parsed.success) {
+            return fail('UPSTREAM_ERROR: Unexpected pause payload from the Inio API.');
+          }
+          // temporalWorkflowId is internal plumbing; compact each pause, not the wrapper.
+          const pauses = parsed.data.map((raw) => {
+            const { temporalWorkflowId: _, ...pause } = raw;
+            return compact(pause);
+          });
+          return ok(presentRaw({ pauses }, revealPii));
+        } catch (err) {
+          return fail(errorText(err));
         }
-        // temporalWorkflowId is internal plumbing; compact each pause, not the wrapper.
-        const pauses = parsed.data.map((raw) => {
-          const { temporalWorkflowId: _, ...pause } = raw;
-          return compact(pause);
-        });
-        return ok(presentRaw({ pauses }, revealPii));
-      } catch (err) {
-        return fail(errorText(err));
-      }
-    }),
+      },
+      toolLog,
+    ),
   );
 }

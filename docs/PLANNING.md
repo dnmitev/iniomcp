@@ -1,5 +1,7 @@
 # inio-mcp: Design and Plan
 
+> **Historical document.** This is the original design from 2026-10-28, kept for context; parts of it no longer match the code. For current behaviour see the [README](../README.md), the setup guides in `docs/setup/`, [hosting](hosting.md) and [examples](examples.md) and the [CHANGELOG](../CHANGELOG.md). Notable differences: the package is `@dnmitev/inio-mcp`, the SDK is `@modelcontextprotocol/server` 2.x, there are 18 tools (7 read, 11 opt-in write), and invoices are not created through this server.
+
 > Public Model Context Protocol (MCP) server that lets Inio clients connect AI assistants to their own Inio data through the official Inio REST API, authenticated with their OAuth2 client credentials.
 
 **Stack:** TypeScript 7 (Node 24, ESM), `@modelcontextprotocol/sdk`, npm, Vitest, StrykerJS, oxlint. No database. Distributed via npm (`@inio/mcp`) and a GHCR Docker image. CI on GitHub Actions.

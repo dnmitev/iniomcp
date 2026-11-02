@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { redact } from '../../src/redact.ts';
+import {
+  BUSINESS_SENSITIVE_KEYS,
+  SENSITIVE_KEYS,
+  isSensitiveKey,
+  redact,
+} from '../../src/redact.ts';
 
 describe('redact', () => {
   it.each(['IBAN', 'SSN', 'bankAccount', 'accountNumber'])('redacts the %s key', (key) => {
@@ -156,7 +161,7 @@ describe('redact', () => {
       },
     );
 
-    it('redacts address lines inside a nested shippingAddress but keeps city and countryCode', () => {
+    it('redacts address lines and city inside a nested shippingAddress but keeps countryCode', () => {
       expect(
         redact({
           shippingAddress: {
@@ -172,15 +177,15 @@ describe('redact', () => {
           addressLine1: '[redacted]',
           addressLine5: '[redacted]',
           zipCode: '[redacted]',
-          city: 'Sofia',
+          city: '[redacted]',
           countryCode: 'BG',
         },
       });
     });
 
-    it('keeps city and countryCode visible at the top level', () => {
+    it('redacts city but keeps countryCode at the top level', () => {
       expect(redact({ city: 'Sofia', countryCode: 'BG' })).toEqual({
-        city: 'Sofia',
+        city: '[redacted]',
         countryCode: 'BG',
       });
     });
@@ -221,5 +226,181 @@ describe('redact', () => {
         handle: '@acme',
       });
     });
+  });
+});
+
+const PERSON = {
+  customerName: 'Jane Doe',
+  city: 'Sofia',
+  yourReference: 'Jane',
+  note: 'call a@b.example',
+  addressLine1: 'Main St 1',
+  zipCode: '1000',
+  email: 'a@b.example',
+  orgNr: '123',
+};
+
+describe('redact customer-type modes', () => {
+  it('exports the business key set as the two invoice links and ssn', () => {
+    expect([...BUSINESS_SENSITIVE_KEYS].sort((a, b) => a.localeCompare(b))).toEqual([
+      'digitalinvoiceurl',
+      'pdfurl',
+      'ssn',
+    ]);
+  });
+
+  it.each(['customername', 'city', 'yourreference'])(
+    'adds %s to SENSITIVE_KEYS and the strict predicate',
+    (key) => {
+      expect(SENSITIVE_KEYS.has(key)).toBe(true);
+      expect(isSensitiveKey(key)).toBe(true);
+    },
+  );
+
+  it.each(['customerName', 'city', 'yourReference'])(
+    'redacts %s for consumers by default, at any depth and case-insensitively',
+    (key) => {
+      expect(redact({ [key]: 'x' })).toEqual({ [key]: '[redacted]' });
+      expect(redact({ a: [{ [key.toUpperCase()]: 'x' }] })).toEqual({
+        a: [{ [key.toUpperCase()]: '[redacted]' }],
+      });
+    },
+  );
+
+  it('defaults to consumer rules when no type is given', () => {
+    expect(redact({ city: 'x' })).toEqual(redact({ city: 'x' }, 'consumer'));
+  });
+
+  it('leaves everything but invoice links alone for a business argument', () => {
+    expect(
+      redact(
+        { ...PERSON, pdfURL: 'u', pdfUrl: 'u', digitalInvoiceURL: 'u', IBAN: 'BG' },
+        'business',
+      ),
+    ).toEqual({
+      ...PERSON,
+      pdfURL: '[redacted]',
+      pdfUrl: '[redacted]',
+      digitalInvoiceURL: '[redacted]',
+      IBAN: 'BG',
+    });
+  });
+
+  it('keeps emails inside strings in business mode', () => {
+    expect(redact({ text: 'mail a@b.example', list: ['x@y.example'] }, 'business')).toEqual({
+      text: 'mail a@b.example',
+      list: ['x@y.example'],
+    });
+  });
+
+  it('treats customerType B as business even with a consumer argument', () => {
+    expect(redact({ customerType: 'B', ...PERSON, DigitalInvoiceUrl: 'u' })).toEqual({
+      customerType: 'B',
+      ...PERSON,
+      DigitalInvoiceUrl: '[redacted]',
+    });
+  });
+
+  it('treats customerType B as business for nested objects and arrays', () => {
+    expect(
+      redact({
+        customerType: 'B',
+        customerAddress: { city: 'Sofia' },
+        list: [{ note: 'a@b.example' }],
+      }),
+    ).toEqual({
+      customerType: 'B',
+      customerAddress: { city: 'Sofia' },
+      list: [{ note: 'a@b.example' }],
+    });
+  });
+
+  it('treats customerType C as consumer even with a business argument', () => {
+    expect(redact({ customerType: 'C', city: 'Sofia', email: 'a@b.example' }, 'business')).toEqual({
+      customerType: 'C',
+      city: '[redacted]',
+      email: '[redacted]',
+    });
+  });
+
+  it.each(['Company', '', 1, null, 'b'])('treats customerType %j as consumer', (type) => {
+    expect(redact({ customerType: type, city: 'Sofia' }, 'business')).toEqual({
+      customerType: type,
+      city: '[redacted]',
+    });
+  });
+
+  it('inherits the argument mode when customerType is absent', () => {
+    expect(redact({ city: 'Sofia' }, 'business')).toEqual({ city: 'Sofia' });
+  });
+
+  it('lets a nested customerType override its parent, both directions', () => {
+    const out = redact({
+      customerType: 'B',
+      city: 'Sofia',
+      payer: { customerType: 'C', city: 'Varna', deep: { city: 'Ruse' } },
+    });
+    expect(out).toEqual({
+      customerType: 'B',
+      city: 'Sofia',
+      payer: { customerType: 'C', city: '[redacted]', deep: { city: '[redacted]' } },
+    });
+    expect(
+      redact({ customerType: 'C', city: 'x', other: { customerType: 'B', city: 'Varna' } }),
+    ).toEqual({
+      customerType: 'C',
+      city: '[redacted]',
+      other: { customerType: 'B', city: 'Varna' },
+    });
+  });
+
+  it("applies each list item's own customerType", () => {
+    expect(
+      redact([{ customerType: 'B', city: 'a' }, { customerType: 'C', city: 'b' }, { city: 'c' }]),
+    ).toEqual([
+      { customerType: 'B', city: 'a' },
+      { customerType: 'C', city: '[redacted]' },
+      { city: '[redacted]' },
+    ]);
+  });
+
+  it("does not leak a sibling's type to the next sibling", () => {
+    expect(redact({ a: { customerType: 'B', city: 'x' }, b: { city: 'y' } })).toEqual({
+      a: { customerType: 'B', city: 'x' },
+      b: { city: '[redacted]' },
+    });
+  });
+
+  it('still redacts emails in text and email keys for consumers', () => {
+    expect(redact({ customerType: 'C', t: 'a@b.example', e: 1, Email: 'x' })).toEqual({
+      customerType: 'C',
+      t: '[redacted-email]',
+      e: 1,
+      Email: '[redacted]',
+    });
+  });
+});
+
+describe('note is not a sensitive key', () => {
+  it('is not in SENSITIVE_KEYS and is returned as is for consumers', () => {
+    expect(SENSITIVE_KEYS.has('note')).toBe(false);
+    expect(isSensitiveKey('note')).toBe(false);
+    expect(redact({ note: 'The change was accepted' })).toEqual({
+      note: 'The change was accepted',
+    });
+  });
+});
+
+describe('business mode redacts SSN', () => {
+  it.each(['SSN', 'ssn', 'Ssn'])('redacts %s for a type B customer at any depth', (key) => {
+    expect(redact({ customerType: 'B', [key]: '19800101-1234', a: { [key]: 'x' } })).toEqual({
+      customerType: 'B',
+      [key]: '[redacted]',
+      a: { [key]: '[redacted]' },
+    });
+  });
+
+  it('redacts SSN with a business argument and keeps IBAN', () => {
+    expect(redact({ SSN: '1', IBAN: 'BG' }, 'business')).toEqual({ SSN: '[redacted]', IBAN: 'BG' });
   });
 });

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { REDACTION_NOTE } from '../../src/redact.ts';
 import { registerCreatePayment } from '../../src/tools/create-payment.ts';
 import { createInioClient, InioApiError } from '../../src/inio-client.ts';
 import {
@@ -31,14 +32,17 @@ const NOTE =
   'The payment was recorded, but the API answer could not be read. Do not retry; check the invoice first.';
 
 let token = TOKEN;
+let maxPaymentAmount: number | undefined;
 const { setup, close } = makeHarness((server, deps) => {
   registerCreatePayment(server, {
     ...deps,
     tokens: { getToken: () => Promise.resolve(token) },
+    ...(maxPaymentAmount === undefined ? {} : { maxPaymentAmount }),
   });
 }, 'create_payment');
 afterEach(async () => {
   token = TOKEN;
+  maxPaymentAmount = undefined;
   await close();
 });
 
@@ -733,4 +737,219 @@ describe('create_payment through the real client', () => {
     expect(textOf(result)).toContain('remainingAmount');
     expect(f).toHaveBeenCalledTimes(1);
   });
+});
+
+describe('create_payment ceiling (INIO_MAX_PAYMENT_AMOUNT)', () => {
+  const BY_NUMBER = '/invoices/by-number/INV-1001';
+  const full = { number: 'INV-1001', transactionType: 'bank', fullPayment: true };
+  const withRemaining = (remainingAmount: unknown) => ({
+    post: () => Promise.resolve([PAYMENT_ID]),
+    get: () => Promise.resolve({ ...INVOICE, remainingAmount }),
+  });
+
+  it('makes no extra call before the POST when no limit is set', async () => {
+    const { inio, call } = await setup(impl());
+    await call({ ...full });
+    expect(inio.post).toHaveBeenCalledTimes(1);
+    expect(inio.get).toHaveBeenCalledTimes(1);
+    expect(inio.post.mock.invocationCallOrder[0]).toBeLessThan(
+      inio.get.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('does not describe a limit when none is set', async () => {
+    const { client } = await setup(impl());
+    const { tools } = await client.listTools();
+    expect(tools[0]?.description ?? '').not.toContain('are rejected');
+    expect(tools[0]?.description ?? '').not.toContain('Payments above');
+    expect(tools[0]?.description).toBe(
+      'Registers a payment on an invoice, by invoice number (number). This records a new payment each time it is called, so never retry without checking the invoice with get_invoice and comparing remainingAmount. Pass exactly one of amount (more than 0, at most 2 decimals; direct_payment and good_will also accept {capital, fee}) or fullPayment true to pay the whole remaining amount. Nothing is sent to the end customer. This cannot be undone with these tools. Returns the payment id, plus the invoice remaining amount and payment status read back after the payment. ' +
+        REDACTION_NOTE,
+    );
+  });
+
+  it('states the limit in the description when set', async () => {
+    maxPaymentAmount = 500;
+    const { client } = await setup(impl());
+    const { tools } = await client.listTools();
+    expect(tools[0]?.description ?? '').toContain('Payments above 500 are rejected');
+  });
+
+  it('rejects an amount above the limit before any POST', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: 600 });
+    expect(res.isError).toBe(true);
+    const text = textOf(res);
+    expect(text).toContain('600');
+    expect(text).toContain('500');
+    expect(text).toContain('Nothing was recorded.');
+    expect(text).toContain('INIO_MAX_PAYMENT_AMOUNT');
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it('allows an amount equal to the limit', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: 500 });
+    expect(res.isError).not.toBe(true);
+    expect(inio.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not read the invoice first for an explicit amount', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(impl());
+    await call({ ...ARGS, amount: 400 });
+    expect(inio.post.mock.invocationCallOrder[0]).toBeLessThan(
+      inio.get.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('rejects a breakdown whose sum is above the limit', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: { capital: 400, fee: 100.01 } });
+    expect(res.isError).toBe(true);
+    expect(textOf(res)).toContain('INIO_MAX_PAYMENT_AMOUNT');
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it('allows a breakdown whose sum equals the limit', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: { capital: 400, fee: 100 } });
+    expect(res.isError).not.toBe(true);
+    expect(inio.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts a capital-only breakdown', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: { capital: 600 } });
+    expect(res.isError).toBe(true);
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it('counts a fee-only breakdown', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: { fee: 600 } });
+    expect(res.isError).toBe(true);
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it('compares in cents, so 0.1 + 0.2 is allowed under a 0.3 limit', async () => {
+    maxPaymentAmount = 0.3;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: { capital: 0.1, fee: 0.2 } });
+    expect(res.isError).not.toBe(true);
+    expect(inio.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects one cent above a 0.3 limit', async () => {
+    maxPaymentAmount = 0.3;
+    const { inio, call } = await setup(impl());
+    const res = await call({ ...ARGS, amount: 0.31 });
+    expect(res.isError).toBe(true);
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it('reads the invoice before the POST for fullPayment', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(withRemaining(450));
+    const res = await call(full);
+    expect(res.isError).not.toBe(true);
+    expect(inio.get.mock.calls[0]).toStrictEqual([BY_NUMBER]);
+    expect(inio.get.mock.invocationCallOrder[0]).toBeLessThan(
+      inio.post.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('allows fullPayment when remainingAmount equals the limit', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(withRemaining(500));
+    const res = await call(full);
+    expect(res.isError).not.toBe(true);
+    expect(inio.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects fullPayment when remainingAmount is above the limit, asking for an explicit amount', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(withRemaining(500.01));
+    const res = await call(full);
+    expect(res.isError).toBe(true);
+    const text = textOf(res);
+    expect(text).toContain('500.01');
+    expect(text).toContain('INIO_MAX_PAYMENT_AMOUNT');
+    expect(text).toContain('pass an explicit amount of at most 500');
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it('rejects fullPayment when the invoice cannot be read', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup({
+      post: () => Promise.resolve([PAYMENT_ID]),
+      get: () => Promise.reject(new Error('boom')),
+    });
+    const res = await call(full);
+    expect(res.isError).toBe(true);
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it('includes the underlying error text when the invoice cannot be read', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup({
+      post: () => Promise.resolve([PAYMENT_ID]),
+      get: () => Promise.reject(new InioApiError(404, 'NOT_FOUND', 'No such invoice', 'c-2')),
+    });
+    const res = await call(full);
+    expect(res.isError).toBe(true);
+    expect(textOf(res)).toContain('No such invoice');
+    expect(textOf(res)).toContain('Could not read the invoice');
+    expect(textOf(res)).toContain('Nothing was recorded');
+    expect(inio.post).not.toHaveBeenCalled();
+  });
+
+  it.each([['450.00'], ['500.00'], ['100.50']])(
+    'proceeds for fullPayment when remainingAmount is the numeric string %j',
+    async (remaining) => {
+      maxPaymentAmount = 500;
+      const { inio, call } = await setup(withRemaining(remaining));
+      const res = await call(full);
+      expect(res.isError).not.toBe(true);
+      expect(inio.post).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('accepts a plain numeric string without decimals', async () => {
+    maxPaymentAmount = 500;
+    const { inio, call } = await setup(withRemaining('450'));
+    const res = await call(full);
+    expect(res.isError).not.toBe(true);
+    expect(inio.post).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([['450abc'], ['abc450'], [[450]], [{}]])(
+    'refuses fullPayment when remainingAmount is the malformed value %j',
+    async (remaining) => {
+      maxPaymentAmount = 500;
+      const { inio, call } = await setup(withRemaining(remaining));
+      const res = await call(full);
+      expect(res.isError).toBe(true);
+      expect(textOf(res)).toContain('INIO_MAX_PAYMENT_AMOUNT');
+      expect(textOf(res)).toContain('Nothing was recorded.');
+      expect(inio.post).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([['500.01'], ['abc'], [''], [null], [undefined]])(
+    'rejects fullPayment when remainingAmount is %j',
+    async (remaining) => {
+      maxPaymentAmount = 500;
+      const { inio, call } = await setup(withRemaining(remaining));
+      const res = await call(full);
+      expect(res.isError).toBe(true);
+      expect(inio.post).not.toHaveBeenCalled();
+    },
+  );
 });

@@ -7,7 +7,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { createServer, createServerFactory } from '../../src/server.ts';
-import type { Config } from '../../src/config.ts';
+import { WRITE_TOOL_NAMES, type Config } from '../../src/config.ts';
 import { REDACTION_NOTE } from '../../src/redact.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -31,6 +31,7 @@ const CONFIG: Config = {
   transport: 'stdio',
   logLevel: 'info',
   requestTimeoutMs: 30000,
+  writeTools: new Set(WRITE_TOOL_NAMES),
 };
 
 const INVOICE = { id: ID, number: 'INV-1', total: 10, IBAN: 'BG80BNBG96611020345678' };
@@ -232,7 +233,7 @@ describe('createServer', () => {
       {
         type: 'text',
         text: JSON.stringify({
-          items: [{ id: ID, customerNo: 'C-1', customerName: 'Acme' }],
+          items: [{ id: ID, customerNo: 'C-1', customerName: '[redacted]' }],
           total: 1,
           limit: 25,
           offset: 0,
@@ -265,7 +266,12 @@ describe('createServer', () => {
     const result = await client.callTool({ name: 'get_customer', arguments: { id: ID } });
     expect(result.isError).not.toBe(true);
     expect(result.content).toEqual([
-      { type: 'text', text: JSON.stringify({ customer: { ...CUSTOMER, SSN: '[redacted]' } }) },
+      {
+        type: 'text',
+        text: JSON.stringify({
+          customer: { ...CUSTOMER, customerName: '[redacted]', SSN: '[redacted]' },
+        }),
+      },
     ]);
   });
 
@@ -409,6 +415,32 @@ describe('write gate', () => {
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...WRITE_TOOLS].sort());
   });
 
+  it('registers only the allowlisted write tools besides the 7 read tools', async () => {
+    const allow = ['create_customer_pause', 'cancel_customer_pause'];
+    const { client } = await connect({ ...CONFIG, allowWrites: true, writeTools: new Set(allow) });
+    const { tools } = await client.listTools();
+    expect(tools).toHaveLength(9);
+    expect(tools.map((t) => t.name).sort()).toEqual([...TOOLS, ...allow].sort());
+  });
+
+  it('states the payment limit in the create_payment description when maxPaymentAmount is set', async () => {
+    const { client } = await connect({ ...CONFIG, allowWrites: true, maxPaymentAmount: 500 });
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === 'create_payment')?.description).toContain(
+      'Payments above 500 are rejected',
+    );
+  });
+
+  it('registers no write tool when writes are off, even with an allowlist', async () => {
+    const { client } = await connect({
+      ...CONFIG,
+      allowWrites: false,
+      writeTools: new Set(['create_payment']),
+    });
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+  });
+
   it.each(WRITE_TOOLS)(
     'annotates %s as a non-read-only, destructive, non-idempotent tool',
     async (name) => {
@@ -508,7 +540,7 @@ describe('write gate', () => {
       cancel_customer_pause: {
         title: 'Cancel customer pause',
         description:
-          'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. ' +
+          'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. Whatever the pause held back (reminders, debt-collection transfers or both) resumes on its normal schedule. ' +
           REDACTION_NOTE,
         inputs: {
           customerId: 'Customer UUID',
@@ -531,7 +563,7 @@ describe('write gate', () => {
       update_customer: {
         title: 'Update customer',
         description:
-          'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. ' +
+          'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. If you change the distribution email addresses or postal address, future invoices and reminders use the new ones. ' +
           REDACTION_NOTE,
         inputs: {
           id: 'Customer UUID',
@@ -552,7 +584,7 @@ describe('write gate', () => {
       reset_invoice_stage: {
         title: 'Reset invoice stage',
         description:
-          'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. ' +
+          'Reset an invoice back to an earlier stage (invoiced or reminded), by UUID (id) or invoice number (number); pass exactly one. Starts a workflow: outstanding fees may be waived, and redistribute: true re-sends the invoice or reminder to the end customer. This cannot be undone with these tools. Returns the plan the API made: planned steps, fees waived or kept, and whether it redistributes. The reminder and fee schedule restarts from the new stage. ' +
           REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',
@@ -568,7 +600,7 @@ describe('write gate', () => {
       update_invoice_stop_until_dates: {
         title: 'Update invoice stop-until dates',
         description:
-          'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. ' +
+          'Set or clear (null) the dates until which reminders (invoicing1-4) and debt-collection steps (collection1-5) are held back for an invoice, by UUID (id) or invoice number (number); pass exactly one. Needs the stop-until feature enabled for the tenant. Dates must be in the future and on or after the due date; steps that have already passed are ignored. The invoice must be open or paused, unpaid and not in debt collection. Returns whether it was updated, plus the invoice number and stop-until dates read back after the change. Clearing a date lets held-back steps run on their next schedule. ' +
           REDACTION_NOTE,
         inputs: {
           id: 'Invoice UUID',
@@ -619,6 +651,48 @@ describe('createServerFactory', () => {
       `${API_URL}/invoices/${ID}`,
       `${API_URL}/invoices/${ID}`,
     ]);
+  });
+
+  it('shares the customer-type cache across instances: one customer GET for two get_invoice calls', async () => {
+    const CID = '7a1d2c3b-0000-4000-8000-00000000c001';
+    const invoice = { id: ID, customerId: CID, city: 'Sofia', pdfURL: 'u' };
+    const fetch = vi.fn<typeof globalThis.fetch>((input) => {
+      const url = urlOf(input);
+      if (url === AUTH_URL) return Promise.resolve(json({ access_token: TOKEN, expires_in: 300 }));
+      if (url === `${API_URL}/invoices/${ID}`) {
+        return Promise.resolve(json({ success: true, status: 200, result: invoice }));
+      }
+      if (url === `${API_URL}/customers/${CID}`) {
+        const result = {
+          externalCustomer: { id: CID, customerType: 'B' },
+          serviceLine: null,
+          effectivePause: null,
+        };
+        return Promise.resolve(json({ success: true, status: 200, result }));
+      }
+      return Promise.reject(new Error(`unexpected fetch ${url}`));
+    });
+    const create = createServerFactory(CONFIG, { fetch, logger: fakeLogger() });
+    const a = await connectTo(create());
+    const b = await connectTo(create());
+    try {
+      const first = await a.callTool({ name: 'get_invoice', arguments: { id: ID } });
+      const second = await b.callTool({ name: 'get_invoice', arguments: { id: ID } });
+      for (const r of [first, second]) {
+        const [item] = z.array(z.object({ text: z.string() })).parse(r.content);
+        expect(JSON.parse(item?.text ?? '')).toEqual({
+          id: ID,
+          customerId: CID,
+          city: 'Sofia',
+          pdfURL: '[redacted]',
+        });
+      }
+    } finally {
+      await a.close();
+      await b.close();
+    }
+    const urls = fetch.mock.calls.map(([url]) => urlOf(url));
+    expect(urls.filter((u) => u === `${API_URL}/customers/${CID}`)).toHaveLength(1);
   });
 
   it('lists exactly the 7 read tools when allowWrites is false', async () => {
@@ -859,4 +933,60 @@ describe('stdio entry point (spawned process)', () => {
     },
     SPAWN_TIMEOUT,
   );
+});
+
+describe('client attribution in tool call logs', () => {
+  async function connectAs(config: Config) {
+    const logger = fakeLogger();
+    const fetch = vi.fn<typeof globalThis.fetch>((input) => {
+      const url = urlOf(input);
+      if (url === AUTH_URL) return Promise.resolve(json({ access_token: TOKEN, expires_in: 300 }));
+      if (url === `${API_URL}/invoices/${ID}`) {
+        return Promise.resolve(json({ success: true, status: 200, result: INVOICE }));
+      }
+      return Promise.resolve(json({ success: false, status: 400, error: 'nope' }, 400));
+    });
+    const server = createServer(config, { fetch, logger });
+    const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '9.9.9' });
+    mcpClient = client;
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    return { client, logger };
+  }
+  const toolLines = (logger: ReturnType<typeof fakeLogger>) =>
+    logger.info.mock.calls.filter(([, msg]) => msg === 'tool call').map(([obj]) => obj);
+
+  it('adds the MCP client name and version to a read tool line without write or target', async () => {
+    const { client, logger } = await connectAs(CONFIG);
+    await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    const [line] = toolLines(logger);
+    expect(line).toMatchObject({
+      tool: 'get_invoice',
+      client: { name: 'test-client', version: '9.9.9' },
+    });
+    expect(line).not.toHaveProperty('write');
+    expect(line).not.toHaveProperty('target');
+  });
+
+  it('marks a write tool line with write, client and only the identifiers as target', async () => {
+    const { client, logger } = await connectAs({ ...CONFIG, allowWrites: true });
+    await client.callTool({
+      name: 'create_customer_pause',
+      arguments: {
+        customerId: ID,
+        scope: 'reminders',
+        startAt: '2099-12-01',
+        reason: 'Payment plan secret-reason',
+      },
+    });
+    const lines = toolLines(logger);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      tool: 'create_customer_pause',
+      write: true,
+      target: { customerId: ID },
+      client: { name: 'test-client', version: '9.9.9' },
+    });
+    expect(JSON.stringify(lines[0])).not.toContain('secret-reason');
+  });
 });

@@ -3,8 +3,9 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { createTokenProvider } from './auth.ts';
 import { noopLogger, type Logger } from './logger.ts';
-import type { Config } from './config.ts';
+import { WRITE_TOOL_NAMES, type Config } from './config.ts';
 import { createInioClient } from './inio-client.ts';
+import type { CustomerKind } from './redact.ts';
 import { registerCancelCustomerPause } from './tools/cancel-customer-pause.ts';
 import { registerCreateCreditInvoice } from './tools/create-credit-invoice.ts';
 import { registerCreateCustomer } from './tools/create-customer.ts';
@@ -51,29 +52,45 @@ export function createServerFactory(
     logger,
     timeoutMs: config.requestTimeoutMs,
   });
+  const customerTypes = new Map<string, CustomerKind>();
   return () => {
     const server = new McpServer({ name: 'inio-mcp', version });
-    const deps = { client, revealPii: config.revealPii, logger };
-    registerGetInvoice(server, deps);
+    const deps = {
+      client,
+      revealPii: config.revealPii,
+      logger,
+      toolLog: { client: () => server.server.getClientVersion() },
+    };
+    registerGetInvoice(server, { ...deps, customerTypes });
     registerGetInvoiceRetryAttempts(server, deps);
     registerListCustomers(server, deps);
     registerListInvoices(server, deps);
     registerGetCustomer(server, deps);
     registerListCustomerPauses(server, deps);
     registerGetCustomerPause(server, deps);
-    // Write tools exist only when explicitly enabled (INIO_ALLOW_WRITES=true).
+    // Write tools exist only when explicitly enabled (INIO_ALLOW_WRITES=true), narrowed by INIO_WRITE_TOOLS.
     if (config.allowWrites) {
-      registerCreateCustomerPause(server, deps);
-      registerUpdateCustomerPause(server, deps);
-      registerCancelCustomerPause(server, deps);
-      registerUpdateInvoiceDueDate(server, deps);
-      registerUpdateInvoiceStopUntilDates(server, deps);
-      registerUpdateCustomer(server, deps);
-      registerResetInvoiceStage(server, deps);
-      registerCreateCreditInvoice(server, deps);
-      registerMatchCreditInvoice(server, deps);
-      registerCreatePayment(server, { ...deps, tokens });
-      registerCreateCustomer(server, { ...deps, tokens });
+      const writeDeps = { ...deps, toolLog: { ...deps.toolLog, write: true } };
+      const writers: Record<(typeof WRITE_TOOL_NAMES)[number], () => void> = {
+        create_customer_pause: () => registerCreateCustomerPause(server, writeDeps),
+        update_customer_pause: () => registerUpdateCustomerPause(server, writeDeps),
+        cancel_customer_pause: () => registerCancelCustomerPause(server, writeDeps),
+        update_invoice_due_date: () => registerUpdateInvoiceDueDate(server, writeDeps),
+        update_invoice_stop_until_dates: () =>
+          registerUpdateInvoiceStopUntilDates(server, writeDeps),
+        update_customer: () => registerUpdateCustomer(server, writeDeps),
+        reset_invoice_stage: () => registerResetInvoiceStage(server, writeDeps),
+        create_credit_invoice: () => registerCreateCreditInvoice(server, writeDeps),
+        match_credit_invoice: () => registerMatchCreditInvoice(server, writeDeps),
+        create_payment: () =>
+          registerCreatePayment(server, {
+            ...writeDeps,
+            tokens,
+            maxPaymentAmount: config.maxPaymentAmount,
+          }),
+        create_customer: () => registerCreateCustomer(server, { ...writeDeps, tokens }),
+      };
+      for (const name of WRITE_TOOL_NAMES) if (config.writeTools.has(name)) writers[name]();
     }
     return server;
   };

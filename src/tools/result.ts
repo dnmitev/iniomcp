@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { InioApiError } from '../inio-client.ts';
-import { isSensitiveKey, redact, redactText } from '../redact.ts';
+import { isSensitiveKey, redact, redactText, type CustomerKind } from '../redact.ts';
 
 const MAX_FIELD_ERRORS = 10;
 
@@ -49,13 +49,13 @@ export function compact(value: unknown): unknown {
 }
 
 /** JSON text for a tool result, redacted unless revealPii; the caller compacts the parts it wants compacted. */
-export function presentRaw(value: unknown, revealPii: boolean): string {
-  return JSON.stringify(revealPii ? value : redact(value));
+export function presentRaw(value: unknown, revealPii: boolean, type?: CustomerKind): string {
+  return JSON.stringify(revealPii ? value : redact(value, type));
 }
 
 /** JSON text for a tool result: compacted, then redacted unless revealPii. */
-export function present(value: unknown, revealPii: boolean): string {
-  return presentRaw(compact(value), revealPii);
+export function present(value: unknown, revealPii: boolean, type?: CustomerKind): string {
+  return presentRaw(compact(value), revealPii, type);
 }
 
 /** Refine check and message for tools addressed by id or number: exactly one of the two. */
@@ -117,14 +117,14 @@ export const isUnreadableSuccess = (err: unknown): boolean =>
   err instanceof InioApiError && err.status >= 200 && err.status < 300;
 
 /** Success result for a write the API accepted (2xx) but whose answer could not be read. */
-export const acceptedUnreadable = () =>
+export const acceptedUnreadable = (check = 'the current state') =>
   ok(
-    'The change was accepted, but the API answer could not be read. Do not retry; check the current state first.',
+    `The change was accepted, but the API answer could not be read. Do not retry; check ${check} first.`,
   );
 
 /** Tool result for an error thrown around a write: an unreadable 2xx means it landed, so it is not a failure. */
-export const writeFailure = (err: unknown) =>
-  isUnreadableSuccess(err) ? acceptedUnreadable() : fail(errorText(err));
+export const writeFailure = (err: unknown, check?: string) =>
+  isUnreadableSuccess(err) ? acceptedUnreadable(check) : fail(errorText(err));
 
 /** True when the outcome of a write is unknown: no response (status 0) or a server error. */
 export const isUncertainOutcome = (err: unknown): boolean =>

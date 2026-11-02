@@ -18,12 +18,13 @@ import {
   present,
   writeFailure,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
 type Deps = {
   client: Pick<InioClient, 'get' | 'post'>;
   revealPii: boolean;
   logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
   now?: () => number;
 };
 
@@ -51,7 +52,7 @@ const Invoice = z.object({
 
 export function registerMatchCreditInvoice(
   server: McpServer,
-  { client, revealPii, logger = noopLogger, now = Date.now }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog, now = Date.now }: Deps,
 ): void {
   server.registerTool(
     'match_credit_invoice',
@@ -68,25 +69,30 @@ export function registerMatchCreditInvoice(
       },
       inputSchema: inputSchema(now),
     },
-    withToolLogging(logger, 'match_credit_invoice', async ({ id, number, ...body }) => {
-      try {
-        const path = invoicePath({ id, number });
-        const creditInvoiceId = await client.post(`${path}/match-credit-invoice`, body);
-        if (typeof creditInvoiceId !== 'string') {
-          return acceptedUnreadable();
+    withToolLogging(
+      logger,
+      'match_credit_invoice',
+      async ({ id, number, ...body }) => {
+        try {
+          const path = invoicePath({ id, number });
+          const creditInvoiceId = await client.post(`${path}/match-credit-invoice`, body);
+          if (typeof creditInvoiceId !== 'string') {
+            return acceptedUnreadable();
+          }
+          const result = {
+            matched: true,
+            invoice: id ?? number,
+            creditInvoiceNo: body.creditInvoiceNo,
+            amount: body.amount,
+            creditInvoiceId,
+            ...(await readBackInvoice(client, path, Invoice)),
+          };
+          return ok(present(result, revealPii));
+        } catch (err) {
+          return writeFailure(err);
         }
-        const result = {
-          matched: true,
-          invoice: id ?? number,
-          creditInvoiceNo: body.creditInvoiceNo,
-          amount: body.amount,
-          creditInvoiceId,
-          ...(await readBackInvoice(client, path, Invoice)),
-        };
-        return ok(present(result, revealPii));
-      } catch (err) {
-        return writeFailure(err);
-      }
-    }),
+      },
+      toolLog,
+    ),
   );
 }

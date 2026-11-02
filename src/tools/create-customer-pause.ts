@@ -5,9 +5,14 @@ import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { PauseReason, pauseResult, PauseScope } from './pauses.ts';
 import { IsoDate, writeFailure } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: InioClient;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z
   .strictObject({
@@ -28,7 +33,7 @@ const Input = z
 
 export function registerCreateCustomerPause(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'create_customer_pause',
@@ -45,13 +50,23 @@ export function registerCreateCustomerPause(
       },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'create_customer_pause', async ({ customerId, ...body }) => {
-      try {
-        const path = `/customers/${pathSegment(customerId)}/pauses`;
-        return pauseResult(await client.post(path, body), revealPii, true);
-      } catch (err) {
-        return writeFailure(err);
-      }
-    }),
+    withToolLogging(
+      logger,
+      'create_customer_pause',
+      async ({ customerId, ...body }) => {
+        try {
+          const path = `/customers/${pathSegment(customerId)}/pauses`;
+          return pauseResult(
+            await client.post(path, body),
+            revealPii,
+            true,
+            `customer ${customerId}`,
+          );
+        } catch (err) {
+          return writeFailure(err, `customer ${customerId}`);
+        }
+      },
+      toolLog,
+    ),
   );
 }

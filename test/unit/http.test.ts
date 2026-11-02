@@ -7,6 +7,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { createHttpHandler, startHttpServer } from '../../src/http.ts';
 import type { HttpConfig } from '../../src/http.ts';
+import { WRITE_TOOL_NAMES } from '../../src/config.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SECRET = 's3cr3t';
@@ -28,6 +29,7 @@ const CONFIG: HttpConfig = {
   transport: 'http',
   logLevel: 'info',
   requestTimeoutMs: 30000,
+  writeTools: new Set(WRITE_TOOL_NAMES),
   http: {
     port: 0,
     host: '127.0.0.1',
@@ -768,4 +770,170 @@ describe('startHttpServer shutdown timing', () => {
     agent.destroy();
     expect(Date.now() - started).toBeLessThan(250);
   }, 5_000);
+});
+
+describe('client attribution over HTTP', () => {
+  it('logs the tool call WITHOUT client: the SDK serves each request on a fresh stateless server', async () => {
+    // createMcpHandler builds a new server per request (createLegacyStatelessFallback for 2025-era
+    // clients), so the tools/call server never saw initialize and getClientVersion() is empty.
+    const lines: object[] = [];
+    const logger = {
+      debug: vi.fn<(obj: object, msg?: string) => void>(),
+      info: vi.fn<(obj: object, msg?: string) => void>((obj, msg) => {
+        if (msg === 'tool call') lines.push(obj);
+      }),
+      warn: vi.fn<(obj: object, msg?: string) => void>(),
+    };
+    const handler = createHttpHandler(CONFIG, { fetch: fakeFetch(), logger });
+    const transport = new StreamableHTTPClientTransport(new URL(URL_MCP), {
+      requestInit: { headers: { authorization: `Bearer ${BEARER}` } },
+      fetch: (input, init) => handler(new Request(input, init)),
+    });
+    const client = new Client({ name: 'http-test', version: '1.2.3' });
+    await client.connect(transport);
+    await client.callTool({ name: 'get_invoice', arguments: { id: ID } });
+    await client.close();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ tool: 'get_invoice', outcome: 'ok' });
+    expect(lines[0]).not.toHaveProperty('client');
+  });
+});
+
+describe('401 and transport error logging', () => {
+  const opened: Array<{ close(): Promise<void> }> = [];
+  afterEach(async () => {
+    await Promise.all(opened.splice(0).map((s) => s.close()));
+  });
+
+  function fakeLogger() {
+    return {
+      debug: vi.fn<(obj: object, msg?: string) => void>(),
+      info: vi.fn<(obj: object, msg?: string) => void>(),
+      warn: vi.fn<(obj: object, msg?: string) => void>(),
+    };
+  }
+
+  async function start(now?: () => number) {
+    const logger = fakeLogger();
+    const server = await startHttpServer(CONFIG, { fetch: fakeFetch(), logger, now });
+    opened.push(server);
+    const url = (path = '/mcp') => `http://127.0.0.1:${server.port}${path}`;
+    return { logger, url };
+  }
+
+  const unauthorized = (logger: ReturnType<typeof fakeLogger>) =>
+    logger.warn.mock.calls.filter(([, msg]) => msg === 'unauthorized request');
+
+  it('logs a warn with remote address and path on a 401, without the query string', async () => {
+    const { logger, url } = await start(() => 0);
+    const res = await fetch(url('/mcp?x=1'), { headers: { authorization: `Bearer ${WRONG}` } });
+    expect(res.status).toBe(401);
+    expect(unauthorized(logger)).toEqual([
+      [{ remoteAddress: '127.0.0.1', path: '/mcp' }, 'unauthorized request'],
+    ]);
+  });
+
+  it('never logs the Authorization header value', async () => {
+    const { logger, url } = await start(() => 0);
+    await fetch(url(), { headers: { authorization: `Bearer ${WRONG}` } });
+    await fetch(url(), { headers: { authorization: `Token ${BEARER}` } });
+    const all = JSON.stringify([
+      logger.debug.mock.calls,
+      logger.info.mock.calls,
+      logger.warn.mock.calls,
+    ]);
+    expect(all).not.toContain(WRONG);
+    expect(all).not.toContain(BEARER);
+  });
+
+  it('does not log a 404', async () => {
+    const { logger, url } = await start(() => 0);
+    const res = await fetch(url('/other'), { headers: { authorization: `Bearer ${BEARER}` } });
+    expect(res.status).toBe(404);
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.info).not.toHaveBeenCalled();
+  });
+
+  it('does not log an authorized request', async () => {
+    const { logger, url } = await start(() => 0);
+    await fetch(url(), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${BEARER}`,
+      },
+      body: INIT_BODY,
+    });
+    expect(unauthorized(logger)).toEqual([]);
+  });
+
+  it('logs at most one line per 60 s and reports the suppressed count afterwards', async () => {
+    let t = 1_000_000;
+    const { logger, url } = await start(() => t);
+    const hit = () => fetch(url(), { headers: { authorization: `Bearer ${WRONG}` } });
+    await hit();
+    t += 1_000;
+    await hit();
+    t += 58_999; // 59_999 ms after the first line
+    await hit();
+    expect(unauthorized(logger)).toHaveLength(1);
+    expect(unauthorized(logger)[0]?.[0]).not.toHaveProperty('suppressed');
+    t += 1_001; // past the window
+    await hit();
+    expect(unauthorized(logger)).toHaveLength(2);
+    expect(unauthorized(logger)[1]?.[0]).toEqual({
+      remoteAddress: '127.0.0.1',
+      path: '/mcp',
+      suppressed: 2,
+    });
+  });
+
+  it('resets the suppressed count after reporting it', async () => {
+    let t = 1_000_000;
+    const { logger, url } = await start(() => t);
+    const hit = () => fetch(url(), { headers: { authorization: `Bearer ${WRONG}` } });
+    await hit();
+    t += 1_000;
+    await hit();
+    t += 60_000;
+    await hit();
+    t += 60_000;
+    await hit();
+    expect(unauthorized(logger)).toHaveLength(3);
+    expect(unauthorized(logger)[2]?.[0]).not.toHaveProperty('suppressed');
+  });
+
+  it('does not count 404s as suppressed 401s', async () => {
+    let t = 1_000_000;
+    const { logger, url } = await start(() => t);
+    const hit = () => fetch(url(), { headers: { authorization: `Bearer ${WRONG}` } });
+    await hit();
+    await fetch(url('/other'), { headers: { authorization: `Bearer ${BEARER}` } });
+    t += 60_000;
+    await hit();
+    expect(unauthorized(logger)[1]?.[0]).not.toHaveProperty('suppressed');
+  });
+
+  it('logs a transport error at warn with only the message, not the request body', async () => {
+    const { logger, url } = await start();
+    // Relies on the SDK path: valid JSON that is not JSON-RPC is rejected by the handler as
+    // invalid-json-rpc-body, which calls onerror. Malformed JSON gets a 400 parse error without onerror.
+    const body = '{"secret-body": 1}';
+    await fetch(url(), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${BEARER}`,
+      },
+      body,
+    });
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalled());
+    const [obj] = logger.warn.mock.calls[0] ?? [];
+    expect(Object.keys(obj ?? {})).toEqual(['err']);
+    expect(obj).toEqual({ err: expect.any(String) });
+    expect(logger.warn.mock.calls[0]?.[1]).toBe('mcp handler error');
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('secret-body');
+  });
 });

@@ -244,7 +244,8 @@ export async function startFakeInioApi(): Promise<FakeInioApi> {
       if (a === 'by-number' && b === customerNo && c === undefined) {
         return ok({ externalCustomer: customer, serviceLine, effectivePause: { isPaused: false } });
       }
-      if (a === customerId && b === undefined) {
+      // The invoice fixture's customer is served too, so get_invoice can look up its type.
+      if ((a === customerId || a === String(invoice.customerId)) && b === undefined) {
         return ok({ externalCustomer: customer, serviceLine, effectivePause: { isPaused: false } });
       }
       if (a === customerId && b === 'pauses' && c === undefined) return ok(pauses);

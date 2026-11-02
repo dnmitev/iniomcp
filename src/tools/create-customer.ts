@@ -23,12 +23,13 @@ import {
   ok,
   present,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
 type Deps = {
   client: Pick<InioClient, 'post'>;
   revealPii: boolean;
   logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
   tokens: Pick<TokenProvider, 'getToken'>;
 };
 
@@ -104,7 +105,7 @@ const UNREADABLE =
 
 export function registerCreateCustomer(
   server: McpServer,
-  { client, revealPii, logger = noopLogger, tokens }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog, tokens }: Deps,
 ): void {
   server.registerTool(
     'create_customer',
@@ -121,27 +122,34 @@ export function registerCreateCustomer(
       },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'create_customer', async (input) => {
-      const summary = { created: true, customerNo: input.customerNo };
-      try {
-        const clientId = clientIdOf(await tokens.getToken());
-        const answer = Answer.safeParse(await client.post('/customers', [{ ...input, clientId }]));
-        // The customer exists once the POST resolves, so an unreadable answer is still success.
-        if (!answer.success) return ok(present({ ...summary, note: UNREADABLE }, revealPii));
-        return ok(
-          present({ created: true, id: answer.data[0], customerNo: input.customerNo }, revealPii),
-        );
-      } catch (err) {
-        // A 2xx the client could not parse (no result envelope) also means the customer exists.
-        if (isUnreadableSuccess(err))
-          return ok(present({ ...summary, note: UNREADABLE }, revealPii));
-        if (err instanceof InioApiError && err.status === 409)
-          return fail(
-            `${errorText(err)} A customer with this customerNo already exists; call get_customer by number to see it.`,
+    withToolLogging(
+      logger,
+      'create_customer',
+      async (input) => {
+        const summary = { created: true, customerNo: input.customerNo };
+        try {
+          const clientId = clientIdOf(await tokens.getToken());
+          const answer = Answer.safeParse(
+            await client.post('/customers', [{ ...input, clientId }]),
           );
-        const hint = ` Call get_customer with number ${input.customerNo} first.`;
-        return fail(errorText(err) + (isUncertainOutcome(err) ? hint : ''));
-      }
-    }),
+          // The customer exists once the POST resolves, so an unreadable answer is still success.
+          if (!answer.success) return ok(present({ ...summary, note: UNREADABLE }, revealPii));
+          return ok(
+            present({ created: true, id: answer.data[0], customerNo: input.customerNo }, revealPii),
+          );
+        } catch (err) {
+          // A 2xx the client could not parse (no result envelope) also means the customer exists.
+          if (isUnreadableSuccess(err))
+            return ok(present({ ...summary, note: UNREADABLE }, revealPii));
+          if (err instanceof InioApiError && err.status === 409)
+            return fail(
+              `${errorText(err)} A customer with this customerNo already exists; call get_customer by number to see it.`,
+            );
+          const hint = ` Call get_customer with number ${input.customerNo} first.`;
+          return fail(errorText(err) + (isUncertainOutcome(err) ? hint : ''));
+        }
+      },
+      toolLog,
+    ),
   );
 }

@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.4.0 |
-| Status | v0.2 Audit Quick Wins complete (0.4.0 released); awaiting next milestone |
+| Status | v0.3 Integration Layer in progress (Phase 11) |
 | Last Updated | 2026-11-02 |
 
 ## Requirements
@@ -57,22 +57,23 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Write 5xx carries the check-before-retry hint; accepted-but-unreadable = success + note in all 11 write tools (AEGIS F-04-002) — Phase 6 (0.4.0)
 - ✓ Tool descriptions and README state exactly what is and is not redacted; README Data protection, Release model, Pinning and verification (AEGIS R1) — Phase 7 (0.4.0)
 - ✓ Install examples pinned to the release; plaintext-secret warnings; inspector pinned (AEGIS R7) — Phase 7 (0.4.0)
+- ✓ Redaction by customer type: businesses open except invoice links and SSN; consumers and unknown types also redact name, city, yourReference; get_invoice looks up the type (cached); unreviewed response keys fail tests and the live gate (reworked AEGIS R2) — Phase 8
+- ✓ Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor; local, Docker, hosted), hosting guide, usage examples, troubleshooting; drift fixed and guarded by a docs test (AEGIS R10) — Phase 9
+- ✓ Opt-in INIO_WRITE_TOOLS allowlist and INIO_MAX_PAYMENT_AMOUNT; later-effect sentences; write calls attributed in logs (target, outcome, client app when known); throttled 401 warnings; SHA-pinned actions, pre-push image smoke test, rulesets on main and v* tags (trimmed AEGIS R3, R8, R6) — Phase 10
 
-### Active (In Progress)
-- None (v0.2 complete)
+### Active (In Progress) — v0.3 Integration Layer
+- [ ] Helm chart (Ingress and Gateway API) published as OCI; team runs it on EKS via ArgoCD — Phase 11
 
 ### Planned (Next)
-- AEGIS R2: redact orgNr, address, city and free text for everyone, names for consumers only (update `REDACTION_NOTE`, `SENSITIVE_KEYS` and README together)
-- AEGIS R3: write-tool allowlist (`INIO_WRITE_TOOLS`) and payment ceiling (`INIO_MAX_PAYMENT_AMOUNT`)
-- AEGIS R6: release-path hardening (SHA-pinned actions, image build provenance, packed tarball publish, sandbox live gate)
-- AEGIS R8: write attribution in logs
+- v0.4 Hosted: MCP Keycloak realm (BoP brokering), OAuth resource server, per-user write roles and audit, multi-tenant (`.paul/research/v0.4-hosted-auth.md`)
+- AEGIS R6 remainder: pack-once publish with `--ignore-scripts`, image build provenance, sandbox-tenant live gate
+- ChatGPT support: deferred until the hosted server has OAuth (v0.4 or later); ChatGPT connectors need a remote server with OAuth
 - Move to the `@inio` npm scope and the company GitHub org when they exist
-- Per-user tokens or MCP OAuth for the HTTP server, only if teams ask
 
 ### Out of Scope
 - Internal MCP for dev/QA/business (DB access, internal services) — separate future project
 - Bulk `PATCH /customers` and `PUT` variants — PATCH covers updates; bulk LLM updates too risky
-- Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard
+- Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard (per-user roles come with the v0.4 MCP realm)
 - `reverse_payment` — the public API exposes no paymentAllocationId (payment id is not one; live probe 2026-10-29)
 - `create_invoice` in v0.1 — sends to the end customer at once and needs full calcInput (revisit after usage)
 - Health endpoint for HTTP mode — would be the only unauthenticated route; discovered during v0.1 (add if an orchestrator needs it)
@@ -109,7 +110,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | TypeScript, Node 24 | Mature MCP SDK and StrykerJS; npx distribution | 2026-10-28 | Active |
 | Hand-curated tools | No operationIds; avoid 33 noisy tools | 2026-10-28 | Active |
 | Read-only default, `INIO_ALLOW_WRITES` | No upstream roles; smallest blast radius | 2026-10-28 | Active |
-| PII redacted by default | GDPR, third-party LLMs | 2026-10-28 | Active |
+| PII redacted by default | GDPR, third-party LLMs | 2026-10-28 | Revised (Phase 8) |
 | Testcontainers Keycloak + node:http fake API with synthetic fixtures (not an OpenAPI mock); live tests opt-in, pre-release only | Spec envelopes are wrong; envs off overnight; no creds in PRs | 2026-10-28 | Active |
 | Stryker break 80 / high 90 | Test-quality gate, adversarial mutation agent | 2026-10-28 | Active |
 | Apache-2.0 | Free use, patent grant, trademark protection | 2026-10-28 | Active |
@@ -135,6 +136,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | @modelcontextprotocol/node (toNodeHandler) for the Node bridge | Official adapter; streaming handled | 2026-10-30 | Active |
 | Docker image binds 0.0.0.0, stdio default; no health endpoint; SDK body limit 4 MB | Token still required; no unauthenticated route | 2026-10-30 | Superseded (body limit) |
 | Auth and path checked before the body is read; 256 KiB body cap; 500 ms drain on shutdown | AEGIS F-04-007: pre-auth buffering let unauthenticated clients grow RSS by ~300 MB | 2026-10-30 | Active |
+| Redaction by customer type: B open except invoice links and SSN; C/unknown strict (+ customerName, city, yourReference); `note` visible; errorText strict | Integration layer needs business data; consumer data stays protected (GDPR) | 2026-11-02 | Active |
+| Write bounds are opt-in (INIO_WRITE_TOOLS, INIO_MAX_PAYMENT_AMOUNT); writes logged with target ids and client app; rulesets protect main and v* tags | Ease of use by default, controls for team servers; single-maintainer release safety | 2026-11-02 | Active |
 | Client owns the check-before-retry sentence (status 0 or >= 500 on writes); tools add only a check pointer; accepted-unreadable = ok + note via writeFailure/acceptedUnreadable | AEGIS F-04-002: 8 of 11 write tools reported landed writes as failed | 2026-10-30 | Active |
 
 ## Success Metrics
@@ -166,8 +169,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Resource | URL |
 |----------|-----|
 | Repository | https://github.com/dnmitev/iniomcp |
-| Documentation | docs/PLANNING.md |
+| Documentation | README.md, docs/setup/ (per client), docs/hosting.md, docs/examples.md; docs/PLANNING.md is the historical design |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-11-02 after v0.2 Audit Quick Wins*
+*Last updated: 2026-11-02 after Phase 10*

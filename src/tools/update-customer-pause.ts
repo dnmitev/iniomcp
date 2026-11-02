@@ -5,9 +5,14 @@ import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { PauseReason, pauseResult, PauseScope } from './pauses.ts';
 import { IsoDate, writeFailure } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: InioClient;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z
   .strictObject({
@@ -32,7 +37,7 @@ const Input = z
 
 export function registerUpdateCustomerPause(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'update_customer_pause',
@@ -50,13 +55,18 @@ export function registerUpdateCustomerPause(
       inputSchema: Input,
     },
     // Absent keys stay absent in the parsed input, so the body carries only what is changed.
-    withToolLogging(logger, 'update_customer_pause', async ({ customerId, pauseId, ...body }) => {
-      try {
-        const path = `/customers/${pathSegment(customerId)}/pauses/${pathSegment(pauseId)}`;
-        return pauseResult(await client.patch(path, body), revealPii, true);
-      } catch (err) {
-        return writeFailure(err);
-      }
-    }),
+    withToolLogging(
+      logger,
+      'update_customer_pause',
+      async ({ customerId, pauseId, ...body }) => {
+        try {
+          const path = `/customers/${pathSegment(customerId)}/pauses/${pathSegment(pauseId)}`;
+          return pauseResult(await client.patch(path, body), revealPii, true);
+        } catch (err) {
+          return writeFailure(err);
+        }
+      },
+      toolLog,
+    ),
   );
 }

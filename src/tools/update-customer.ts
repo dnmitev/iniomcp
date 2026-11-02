@@ -21,12 +21,13 @@ import {
   present,
   writeFailure,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
 type Deps = {
   client: Pick<InioClient, 'patch'>;
   revealPii: boolean;
   logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
 };
 
 const optionalLine = line.nullable().optional();
@@ -89,14 +90,14 @@ const Payload = z.tuple([z.record(z.string(), z.unknown())]);
 
 export function registerUpdateCustomer(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'update_customer',
     {
       title: 'Update customer',
       description:
-        'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. ' +
+        'Update a customer by UUID (id) or customer number (number); pass exactly one. Only the fields you give are changed: null clears an optional field, and customerAddress and shippingAddress are merged field by field. Customer type, SSN, organisation number, VAT number and workflow settings cannot be changed with this tool. Changes the customer record only; nothing is sent to the customer. Returns the updated customer. If you change the distribution email addresses or postal address, future invoices and reminders use the new ones. ' +
         REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
@@ -106,18 +107,23 @@ export function registerUpdateCustomer(
       },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'update_customer', async ({ id, number, ...body }) => {
-      try {
-        const parsed = Payload.safeParse(await client.patch(customerPath({ id, number }), body));
-        if (!parsed.success) {
-          return acceptedUnreadable();
+    withToolLogging(
+      logger,
+      'update_customer',
+      async ({ id, number, ...body }) => {
+        try {
+          const parsed = Payload.safeParse(await client.patch(customerPath({ id, number }), body));
+          if (!parsed.success) {
+            return acceptedUnreadable();
+          }
+          // workflowsSettings is large and not editable here; leave it out as get_customer does.
+          const [{ workflowsSettings: _, ...customer }] = parsed.data;
+          return ok(present(customer, revealPii));
+        } catch (err) {
+          return writeFailure(err);
         }
-        // workflowsSettings is large and not editable here; leave it out as get_customer does.
-        const [{ workflowsSettings: _, ...customer }] = parsed.data;
-        return ok(present(customer, revealPii));
-      } catch (err) {
-        return writeFailure(err);
-      }
-    }),
+      },
+      toolLog,
+    ),
   );
 }

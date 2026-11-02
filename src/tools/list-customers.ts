@@ -4,9 +4,14 @@ import type { InioClient } from '../inio-client.ts';
 import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { errorText, fail, ok, PageInput, presentPage } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: Pick<InioClient, 'get'>; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: Pick<InioClient, 'get'>;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z
   .strictObject({
@@ -47,7 +52,7 @@ const SUMMARY_FIELDS = [
 
 export function registerListCustomers(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'list_customers',
@@ -59,24 +64,29 @@ export function registerListCustomers(
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'list_customers', async (args) => {
-      const { limit, offset, customerNo, directDebit, serviceLineId, sort, order } = args;
-      try {
-        const payload = await client.get('/customers', {
-          query: {
-            limit,
-            offset,
-            customerNo,
-            directDebit,
-            serviceLineId,
-            sort,
-            order: sort === undefined ? undefined : (order ?? 'asc'),
-          },
-        });
-        return ok(presentPage(payload, SUMMARY_FIELDS, revealPii));
-      } catch (err) {
-        return fail(errorText(err));
-      }
-    }),
+    withToolLogging(
+      logger,
+      'list_customers',
+      async (args) => {
+        const { limit, offset, customerNo, directDebit, serviceLineId, sort, order } = args;
+        try {
+          const payload = await client.get('/customers', {
+            query: {
+              limit,
+              offset,
+              customerNo,
+              directDebit,
+              serviceLineId,
+              sort,
+              order: sort === undefined ? undefined : (order ?? 'asc'),
+            },
+          });
+          return ok(presentPage(payload, SUMMARY_FIELDS, revealPii));
+        } catch (err) {
+          return fail(errorText(err));
+        }
+      },
+      toolLog,
+    ),
   );
 }

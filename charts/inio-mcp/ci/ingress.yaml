@@ -1,0 +1,15 @@
+existingSecret: inio-mcp-test
+inio:
+  url: https://example.invalid/v1
+  authUrl: https://example.invalid/token
+  clientId: ci
+ingress:
+  enabled: true
+  host: mcp.example.com
+  tls:
+    secretName: mcp-example-tls
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 256k
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '120'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '120'
+    nginx.ingress.kubernetes.io/proxy-buffering: 'off'

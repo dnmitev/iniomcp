@@ -5,6 +5,8 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { createTokenProvider } from '../../src/auth.ts';
 import { loadConfig } from '../../src/config.ts';
+import { createInioClient } from '../../src/inio-client.ts';
+import { CUSTOMER_KEYS, INVOICE_KEYS, unreviewedKeys } from '../response-keys.ts';
 
 // Never log payloads or env here: test output must not contain credentials or invoice data.
 // The MCP client's default request timeout is 60 s; stay above the server's request timeout.
@@ -38,6 +40,41 @@ async function pickInvoiceNo(): Promise<string> {
   return first.invoiceNo;
 }
 
+/** Raw (unredacted) result of an API GET through the real client, wired as in src/server.ts; never printed. */
+async function rawGet(path: string): Promise<unknown> {
+  const config = loadConfig(process.env);
+  const tokens = createTokenProvider({
+    authUrl: config.authUrl,
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
+    timeoutMs: config.requestTimeoutMs,
+  });
+  const api = createInioClient({
+    apiUrl: config.apiUrl,
+    tokens,
+    timeoutMs: config.requestTimeoutMs,
+  });
+  return api.get(path);
+}
+
+/** customerType of a customer ("B", "C", ...), or undefined; the value is not sensitive. */
+async function customerTypeOf(customerId: string): Promise<unknown> {
+  const { externalCustomer } = z
+    .object({ externalCustomer: z.record(z.string(), z.unknown()) })
+    .parse(await rawGet(`/customers/${encodeURIComponent(customerId)}`));
+  return externalCustomer.customerType;
+}
+
+/** Every [key, value] pair at any depth. */
+function flatEntries(value: unknown): Array<[string, unknown]> {
+  if (Array.isArray(value)) return value.flatMap(flatEntries);
+  if (value === null || typeof value !== 'object') return [];
+  return Object.entries(value).flatMap(([k, v]): Array<[string, unknown]> => [
+    [k, v],
+    ...flatEntries(v),
+  ]);
+}
+
 describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () => {
   let client: Client;
   let invoiceNo: string;
@@ -69,11 +106,25 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     return page;
   }
 
-  /** True when every PII-looking key in the customer carries "[redacted]"; never returns values. */
-  function piiRedacted(customer: Record<string, unknown>): boolean {
-    return Object.entries(customer)
-      .filter(([k]) => /^(ssn|iban|zipcode|addressline\d*)$|email/i.test(k))
-      .every(([, v]) => v === '[redacted]');
+  /** Booleans only. B: PII keys unredacted (invoice links aside). C or unknown: PII keys redacted and no emails. */
+  function redactionMatchesType(customer: Record<string, unknown>, text: string): boolean {
+    const entries = flatEntries(customer);
+    const pii = entries.filter(([k]) =>
+      /^(iban|zipcode|addressline\d*|customername|city)$|email|phone/i.test(k),
+    );
+    if (customer.customerType === 'B') {
+      return (
+        pii.every(([, v]) => v !== '[redacted]') &&
+        entries.filter(([k]) => /^ssn$/i.test(k)).every(([, v]) => v === '[redacted]') &&
+        entries
+          .filter(([k]) => /^(pdfurl|digitalinvoiceurl)$/i.test(k))
+          .every(([, v]) => v === '[redacted]')
+      );
+    }
+    return (
+      [...pii, ...entries.filter(([k]) => /^ssn$/i.test(k))].every(([, v]) => v === '[redacted]') &&
+      !text.includes('@')
+    );
   }
 
   beforeAll(async () => {
@@ -106,7 +157,10 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(Object.keys(inv)).not.toContain('success');
     // Compare booleans, not values, so a mismatch never prints invoice data.
     expect(inv.invoiceNo === invoiceNo).toBe(true);
-    expect('IBAN' in inv ? inv.IBAN === '[redacted]' : true).toBe(true);
+    // IBAN is shown for business customers and redacted otherwise.
+    const customerId = typeof inv.customerId === 'string' ? inv.customerId : undefined;
+    const business = customerId !== undefined && (await customerTypeOf(customerId)) === 'B';
+    expect(business || !('IBAN' in inv) || inv.IBAN === '[redacted]').toBe(true);
   }, 120_000);
 
   it('returns NOT_FOUND for an unknown invoice number', async () => {
@@ -148,8 +202,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(body.customer.id === id).toBe(true);
     expect(Object.keys(body)).not.toContain('externalCustomer');
     expect(text?.includes(':null')).toBe(false);
-    expect(text?.includes('@')).toBe(false);
-    expect(piiRedacted(body.customer)).toBe(true);
+    expect(redactionMatchesType(body.customer, text ?? '')).toBe(true);
   }, 120_000);
 
   it('gets the first listed customer by number', async () => {
@@ -162,8 +215,7 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
       .object({ customer: z.record(z.string(), z.unknown()) })
       .parse(JSON.parse(text ?? ''));
     expect(body.customer.id === id).toBe(true);
-    expect(text?.includes('@')).toBe(false);
-    expect(piiRedacted(body.customer)).toBe(true);
+    expect(redactionMatchesType(body.customer, text ?? '')).toBe(true);
   }, 120_000);
 
   const INVOICE_SUMMARY_KEYS = [
@@ -218,8 +270,21 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect({ isError, count }).toEqual({ isError: false, count: 1 });
     const inv = z.record(z.string(), z.unknown()).parse(JSON.parse(text ?? ''));
     expect(inv.invoiceNo === number).toBe(true);
-    expect('IBAN' in inv ? inv.IBAN === '[redacted]' : true).toBe(true);
-    expect(text?.includes('@')).toBe(false);
+    expect(
+      Object.entries(inv)
+        .filter(([k]) => /^(pdfurl|digitalinvoiceurl)$/i.test(k))
+        .every(([, v]) => v === '[redacted]'),
+    ).toBe(true);
+    // Not a business customer: consumer rules, so address data and emails must be gone.
+    const customerId = typeof inv.customerId === 'string' ? inv.customerId : undefined;
+    const business = customerId !== undefined && (await customerTypeOf(customerId)) === 'B';
+    const addressRedacted = flatEntries(inv)
+      .filter(([k]) => /^(city|addressline\d*)$/i.test(k))
+      .every(([, v]) => v === '[redacted]');
+    const ibanRedacted = !('IBAN' in inv) || inv.IBAN === '[redacted]';
+    expect(business || (addressRedacted && ibanRedacted && text?.includes('@') === false)).toBe(
+      true,
+    );
   }, 120_000);
 
   it('gets retry attempts by invoice number', async () => {
@@ -262,5 +327,20 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect([plain.isError, flagged.isError]).toEqual([false, false]);
     expect(plain.text?.includes('"workflowsSettings"')).toBe(false);
     expect(flagged.text?.includes('"workflowsSettings"')).toBe(true);
+  }, 120_000);
+
+  it('returns no response keys that have not been reviewed for personal data', async () => {
+    const rawInvoice = await rawGet(`/invoices/by-number/${encodeURIComponent(invoiceNo)}`);
+    const customerId = z.object({ customerId: z.string() }).parse(rawInvoice).customerId;
+    const rawCustomer = z
+      .object({ externalCustomer: z.unknown() })
+      .parse(await rawGet(`/customers/${encodeURIComponent(customerId)}`)).externalCustomer;
+    // Key names only: a new key must be reviewed (consumer personal data?) in test/response-keys.ts.
+    expect(`unreviewed invoice keys: ${unreviewedKeys(rawInvoice, INVOICE_KEYS).join(', ')}`).toBe(
+      'unreviewed invoice keys: ',
+    );
+    expect(
+      `unreviewed customer keys: ${unreviewedKeys(rawCustomer, CUSTOMER_KEYS).join(', ')}`,
+    ).toBe('unreviewed customer keys: ');
   }, 120_000);
 });

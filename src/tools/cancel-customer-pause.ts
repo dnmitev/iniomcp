@@ -5,9 +5,14 @@ import { noopLogger, type Logger } from '../logger.ts';
 import { REDACTION_NOTE } from '../redact.ts';
 import { PauseReason, pauseResult } from './pauses.ts';
 import { writeFailure } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
-type Deps = { client: InioClient; revealPii: boolean; logger?: Pick<Logger, 'info'> };
+type Deps = {
+  client: InioClient;
+  revealPii: boolean;
+  logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
+};
 
 const Input = z.strictObject({
   customerId: z.uuid().describe('Customer UUID'),
@@ -17,14 +22,14 @@ const Input = z.strictObject({
 
 export function registerCancelCustomerPause(
   server: McpServer,
-  { client, revealPii, logger = noopLogger }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog }: Deps,
 ): void {
   server.registerTool(
     'cancel_customer_pause',
     {
       title: 'Cancel customer pause',
       description:
-        'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. ' +
+        'Cancel a scheduled or active customer pause. This cannot be undone with these tools; create a new pause instead. Returns the cancelled pause. Whatever the pause held back (reminders, debt-collection transfers or both) resumes on its normal schedule. ' +
         REDACTION_NOTE,
       annotations: {
         readOnlyHint: false,
@@ -34,13 +39,18 @@ export function registerCancelCustomerPause(
       },
       inputSchema: Input,
     },
-    withToolLogging(logger, 'cancel_customer_pause', async ({ customerId, pauseId, reason }) => {
-      try {
-        const path = `/customers/${pathSegment(customerId)}/pauses/${pathSegment(pauseId)}/cancel`;
-        return pauseResult(await client.post(path, { reason }), revealPii, true);
-      } catch (err) {
-        return writeFailure(err);
-      }
-    }),
+    withToolLogging(
+      logger,
+      'cancel_customer_pause',
+      async ({ customerId, pauseId, reason }) => {
+        try {
+          const path = `/customers/${pathSegment(customerId)}/pauses/${pathSegment(pauseId)}/cancel`;
+          return pauseResult(await client.post(path, { reason }), revealPii, true);
+        } catch (err) {
+          return writeFailure(err);
+        }
+      },
+      toolLog,
+    ),
   );
 }
