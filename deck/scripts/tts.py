@@ -7,7 +7,9 @@ Strips markdown formatting and non-spoken content before synthesis.
 import re
 import sys
 from pathlib import Path
-import mlx_audio
+import numpy as np
+import soundfile as sf
+from mlx_audio.tts.utils import load_model
 
 
 def strip_markdown_and_non_spoken(text: str) -> str:
@@ -64,19 +66,21 @@ def strip_markdown_and_non_spoken(text: str) -> str:
     return ' '.join(spoken_lines)
 
 
-def generate_audio(text: str, output_path: Path, model: str = "mlx-community/Kokoro-82M-bf16", 
-                   voice: str = "af_heart", speed: float = 1.0) -> None:
-    """Generate audio from text using Kokoro TTS model."""
+def generate_audio_with_model(text: str, output_path: Path, model, 
+                               voice: str = "af_heart", speed: float = 1.0) -> None:
+    """Generate audio from text using a loaded Kokoro model."""
     
-    audio_data = mlx_audio.generate(
-        text=text,
-        model=model,
-        voice=voice,
-        lang='a',
-        speed=speed
-    )
+    audio_chunks = []
+    for result in model.generate(text=text, voice=voice, speed=speed, lang_code='a'):
+        if result.audio is not None:
+            audio_chunks.append(np.array(result.audio))
     
-    mlx_audio.save(str(output_path), audio_data)
+    if not audio_chunks:
+        raise ValueError(f"No audio generated for text: {text[:50]}...")
+    
+    audio = np.concatenate(audio_chunks, axis=0) if len(audio_chunks) > 1 else audio_chunks[0]
+    
+    sf.write(str(output_path), audio, model.sample_rate)
 
 
 def main():
@@ -99,7 +103,10 @@ def main():
         sys.exit(1)
     
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    generate_audio(spoken_text, output_path)
+    
+    model = load_model("mlx-community/Kokoro-82M-bf16")
+    generate_audio_with_model(spoken_text, output_path, model, voice="af_heart", speed=1.0)
+    
     print(f"Generated: {output_path}")
 
 

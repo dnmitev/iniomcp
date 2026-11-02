@@ -18,8 +18,9 @@ source "$VENV_DIR/bin/activate"
 
 echo "==> Installing dependencies..."
 pip install --quiet --upgrade pip
-pip install --quiet mlx-audio soundfile
+pip install --quiet 'mlx-audio==0.6.3' soundfile 'misaki[en]'
 
+echo "==> Loading Kokoro model (shared across all files)..."
 echo "==> Generating audio files..."
 mkdir -p "$AUDIO_DIR"
 

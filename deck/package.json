@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "screenshots": "playwright test",
     "video:studio": "remotion studio video/index.ts --public-dir=audio",
-    "video:render": "remotion render video/index.ts DeckVideo out/inio-mcp-deck.mp4 --public-dir=audio"
+    "video:render": "node scripts/check-audio.cjs && remotion render video/index.ts DeckVideo out/inio-mcp-deck.mp4 --public-dir=audio"
   },
   "dependencies": {
     "react": "^18.3.1",

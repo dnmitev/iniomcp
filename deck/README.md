@@ -120,12 +120,17 @@ deck/scripts/tts.sh
 
 This creates `deck/audio/NN-slug.wav` for each narration file in `deck/narration/`. The script:
 - Sets up a Python virtual environment at `deck/.venv`
-- Installs `mlx-audio` and dependencies
-- Uses the Kokoro TTS model (mlx-community/Kokoro-82M-bf16)
+- Installs `mlx-audio==0.6.3`, `soundfile`, and `misaki[en]` (for English phonemization)
+- Uses the Kokoro TTS model (mlx-community/Kokoro-82M-bf16, voice `af_heart`, 24kHz output)
 - Strips markdown formatting and non-spoken content
 - Skips audio files that are already up-to-date
 
 The script is idempotent: re-running it only regenerates audio for changed narration files.
+
+**Note**: The TTS script requires **espeak-ng** for phonemization. On macOS, install with:
+```bash
+brew install espeak-ng
+```
 
 ### Preview Video
 
@@ -137,7 +142,7 @@ npm --prefix deck run video:studio
 
 ### Render Video
 
-Render the final video:
+Render the final video (requires audio files to exist):
 
 ```bash
 npm --prefix deck run video:render
@@ -145,12 +150,32 @@ npm --prefix deck run video:render
 
 Output: `deck/out/inio-mcp-deck.mp4`
 
+The render script first checks that all required audio files exist and fails with a clear error if any are missing.
+
 The video composition:
 - **Resolution**: 1920x1080
 - **Frame rate**: 30 fps
 - **Duration**: Calculated from audio files (each slide = audio duration + 0.5s padding)
 - **Transitions**: 0.4s crossfades between slides
-- **Audio**: Synchronized per-slide narration
+- **Audio**: Synchronized per-slide narration at 24kHz
+
+### Complete Workflow
+
+From the repository root, run these commands in sequence:
+
+```bash
+# 1. Checkout and install dependencies
+git fetch && git checkout deck/story-2026-11-02
+npm --prefix deck ci
+
+# 2. Generate TTS audio (Apple Silicon Mac only)
+deck/scripts/tts.sh
+
+# 3. Render video (fails fast if audio files missing)
+npm --prefix deck run video:render
+```
+
+Stop if `tts.sh` fails. The output video will be at `deck/out/inio-mcp-deck.mp4`.
 
 ### Video Architecture
 
