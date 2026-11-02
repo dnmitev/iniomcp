@@ -13,12 +13,13 @@ import {
   ok,
   present,
 } from './result.ts';
-import { withToolLogging } from '../tool-logging.ts';
+import { withToolLogging, type ToolLogOptions } from '../tool-logging.ts';
 
 type Deps = {
   client: Pick<InioClient, 'post'>;
   revealPii: boolean;
   logger?: Pick<Logger, 'info'>;
+  toolLog?: ToolLogOptions;
   now?: () => number;
 };
 
@@ -80,7 +81,7 @@ const Created = z.object({
 
 export function registerCreateCreditInvoice(
   server: McpServer,
-  { client, revealPii, logger = noopLogger, now = Date.now }: Deps,
+  { client, revealPii, logger = noopLogger, toolLog, now = Date.now }: Deps,
 ): void {
   server.registerTool(
     'create_credit_invoice',
@@ -126,6 +127,7 @@ export function registerCreateCreditInvoice(
           return fail(errorText(err));
         }
       },
+      toolLog,
     ),
   );
 }

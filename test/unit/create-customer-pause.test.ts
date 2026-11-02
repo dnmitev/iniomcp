@@ -273,6 +273,19 @@ describe('create_customer_pause accepted write with an unreadable answer', () =>
     },
   );
 
+  it('names the customer to check', async () => {
+    const err = new InioApiError(201, 'UPSTREAM_ERROR', 'Unexpected response');
+    const { call } = await setup({ post: () => Promise.reject(err) });
+    expect(textOf(await call(ARGS))).toMatch(new RegExp(`check customer ${CID} first\\.$`));
+  });
+
+  it('names the customer to check when the POST resolves with a malformed pause payload', async () => {
+    const { call } = await setup({ post: () => Promise.resolve('not a pause') });
+    const result = await call(ARGS);
+    expect(result.isError).not.toBe(true);
+    expect(textOf(result)).toMatch(new RegExp(`check customer ${CID} first\\.$`));
+  });
+
   it('still reports a non-2xx client error as an error', async () => {
     const err = new InioApiError(400, 'BAD_REQUEST', 'Nope', 'c-1');
     const { call } = await setup({ post: () => Promise.reject(err) });

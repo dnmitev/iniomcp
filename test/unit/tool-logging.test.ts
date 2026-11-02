@@ -128,6 +128,25 @@ describe('withToolLogging response size', () => {
     expect(await sizeOf(result)).toMatchObject({ responseBytes: 2, approxTokens: 1 });
   });
 
+  async function sizeOfLoose(content: Array<{ type: string; text?: string }>) {
+    const logger = fakeLogger();
+    await withToolLogging(logger, 't', () => Promise.resolve({ content }))({}, {});
+    return logger.info.mock.calls[0]?.[0];
+  }
+
+  it('does not count the text field of a non-text item', async () => {
+    const size = await sizeOfLoose([
+      { type: 'text', text: 'ab' },
+      { type: 'image', text: 'ignored-text' },
+    ]);
+    expect(size).toMatchObject({ responseBytes: 2, approxTokens: 1 });
+  });
+
+  it('counts a text item without text as 0 bytes', async () => {
+    const size = await sizeOfLoose([{ type: 'text' }, { type: 'text', text: 'abcde' }]);
+    expect(size).toMatchObject({ responseBytes: 5, approxTokens: 2 });
+  });
+
   it('reports zero bytes and zero tokens for empty content', async () => {
     expect(await sizeOf({ content: [] })).toMatchObject({ responseBytes: 0, approxTokens: 0 });
   });
@@ -170,5 +189,131 @@ describe('withToolLogging when the handler throws', () => {
         'tool call',
       ],
     ]);
+  });
+});
+
+describe('withToolLogging attribution', () => {
+  const lineOf = (logger: ReturnType<typeof fakeLogger>) => logger.info.mock.calls[0]?.[0];
+  const SENSITIVE = {
+    id: 'i-1',
+    number: 'N-1',
+    customerId: 'c-1',
+    customerNo: 'CN-1',
+    pauseId: 'p-1',
+    invoiceNo: 'INV-1',
+    creditInvoiceNo: 'CR-1',
+    amount: 123.45,
+    email: 'a@b.example',
+    ssn: '19800101-1234',
+    reason: 'free text',
+  };
+
+  it('logs write: true and only the identifier args as target for a write', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), { write: true });
+    await wrapped(SENSITIVE, {});
+    expect(lineOf(logger)).toMatchObject({
+      write: true,
+      target: {
+        id: 'i-1',
+        number: 'N-1',
+        customerId: 'c-1',
+        customerNo: 'CN-1',
+        pauseId: 'p-1',
+        invoiceNo: 'INV-1',
+        creditInvoiceNo: 'CR-1',
+      },
+    });
+  });
+
+  it('never logs amounts, emails, SSN or free text', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), { write: true });
+    await wrapped(SENSITIVE, {});
+    const logged = JSON.stringify(lineOf(logger));
+    for (const v of ['123.45', 'a@b.example', '19800101-1234', 'free text']) {
+      expect(logged).not.toContain(v);
+    }
+  });
+
+  it('includes only the identifier keys present in the args', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), { write: true });
+    await wrapped({ customerId: 'c-1', amount: 5 }, {});
+    expect(lineOf(logger)).toHaveProperty('target', { customerId: 'c-1' });
+  });
+
+  it('includes both identifiers of a credit-invoice call', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), { write: true });
+    await wrapped({ number: 'N-1', creditInvoiceNo: 'CR-1', amount: 5 }, {});
+    expect(lineOf(logger)).toHaveProperty('target', { number: 'N-1', creditInvoiceNo: 'CR-1' });
+  });
+
+  it('omits target when no identifier is present', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), { write: true });
+    await wrapped({ amount: 5 }, {});
+    expect(lineOf(logger)).toHaveProperty('write', true);
+    expect(lineOf(logger)).not.toHaveProperty('target');
+  });
+
+  it('logs the write line on a handler error too, still once', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.reject(new Error('boom')), {
+      write: true,
+    });
+    await expect(wrapped({ id: 'i-1' }, {})).rejects.toThrow('boom');
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(lineOf(logger)).toMatchObject({ outcome: 'error', write: true, target: { id: 'i-1' } });
+  });
+
+  it('adds no write or target for a read tool', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')));
+    await wrapped({ id: 'i-1' }, {});
+    expect(lineOf(logger)).not.toHaveProperty('write');
+    expect(lineOf(logger)).not.toHaveProperty('target');
+  });
+
+  it('adds no write or target when write is false', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), {
+      write: false,
+    });
+    await wrapped({ id: 'i-1' }, {});
+    expect(lineOf(logger)).not.toHaveProperty('write');
+    expect(lineOf(logger)).not.toHaveProperty('target');
+  });
+
+  it('adds the client name and version when the getter returns them', async () => {
+    const logger = fakeLogger();
+    const client = () => ({ name: 'claude', version: '1.2.3' });
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), { client });
+    await wrapped({}, {});
+    expect(lineOf(logger)).toMatchObject({ client: { name: 'claude', version: '1.2.3' } });
+  });
+
+  it('logs only name and version of the client', async () => {
+    const logger = fakeLogger();
+    const client = () => ({ name: 'claude', version: '1.2.3', title: 'extra' });
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), { client });
+    await wrapped({}, {});
+    expect(lineOf(logger)).toHaveProperty('client', { name: 'claude', version: '1.2.3' });
+  });
+
+  it('omits client when the getter returns undefined', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), {
+      client: () => undefined,
+    });
+    await wrapped({}, {});
+    expect(lineOf(logger)).not.toHaveProperty('client');
+  });
+
+  it('omits client when no getter is given', async () => {
+    const logger = fakeLogger();
+    await withToolLogging(logger, 't', () => Promise.resolve(text('x')))({}, {});
+    expect(lineOf(logger)).not.toHaveProperty('client');
   });
 });

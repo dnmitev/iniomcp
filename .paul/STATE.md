@@ -11,26 +11,27 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** Awaiting next milestone (v0.2 archived; 0.4.0 released)
+**Current focus:** v0.3 Integration Layer — Phase 11 Helm chart and EKS
 
 ## Current Position
 
-Milestone: Awaiting next milestone
-Phase: None active
-Plan: None
-Status: Milestone v0.2 Audit Quick Wins complete — ready for next
-Last activity: 2026-11-02 — Milestone v0.2 archived
+Milestone: v0.3 Integration Layer
+Phase: 11 of 11 (Helm chart and EKS) — In progress
+Plan: 11-02 applying — waiting at checkpoint: owner merges PR #41, then tag v0.5.0 and approve release
+Status: APPLY in progress (tasks 1-2 done; PR #41 CI green; live suite 14/14 locally)
+Last activity: 2026-11-02 — Created .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
+- v0.3 Integration Layer: [███████▌░░] 75% (Phases 8, 9, 10 ✓)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone complete - ready for next]
+  ✓        ◐        ○     [11-02 at checkpoint: merge PR #41]
 ```
 
 ## Accumulated Context
@@ -88,6 +89,16 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: REDACTION_NOTE next to SENSITIVE_KEYS; README field list guarded by test; docs claim npm provenance only (image provenance → R6) | Phase 7 | R2 must update note, keys and README together |
 | 2026-10-30: v0.2 releases as 0.4.0; README pins 0.4.0 before the tag; merge → tag → publish back to back (release.yml requires the tag on main) | Phase 7 | Brief window where main's README pins an unpublished version |
 | 2026-10-30: Client appends check-before-retry to write 5xx; write tools catch via writeFailure, shape failures → acceptedUnreadable (ok + note) | Phase 6 | New write tools inherit it; tools add only a check pointer |
+| 2026-11-02: v0.3 = customer-type redaction (B open except bearer links; C strict + names/address/city), docs per client, trimmed opt-in R3, R8, small R6, Helm chart; ChatGPT deferred to the hosted server (OAuth) | v0.3 | Ease of use first; AEGIS R2/R3 reworked |
+| 2026-11-02: Hosted auth direction = dedicated MCP Keycloak realm with BoP brokering; per-tenant MCP api2api clients first, APISIX trusting the realm later | v0.4 | `.paul/research/v0.4-hosted-auth.md` |
+| 2026-11-02: Phase 8 = one TDD plan (08-01); customerType B/C per object in redact(); unknown = consumer; get_invoice looks up by customerId with a shared clear-at-1000 cache; write tools keep consumer rules | Phase 8 | Fixture customerType "Company" corrected to "B" |
+| 2026-11-02: 08-01 deviations: SSN redacted for B too; `note` stays visible (tool status field); errorText strict incl. new keys; customer type read from externalCustomer via zod | Phase 8 | README Data protection has business and consumer blocks |
+| 2026-11-02: Docs = README overview + docs/setup per client + hosting + examples; README links absolute (npm ships README only); Claude Desktop hosted via mcp-remote@0.15.1; docs test guards pins and links | Phase 9 | Release must bump pins in README and docs/ (test enforces) |
+| 2026-11-02: INIO_WRITE_TOOLS (needs INIO_ALLOW_WRITES) and INIO_MAX_PAYMENT_AMOUNT (cents; fullPayment reads remainingAmount as number or numeric string) — both opt-in | Phase 10 | Helm values and v0.4 per-user roles build on them |
+| 2026-11-02: Write log lines carry write:true, target (id keys only) and client when known; client absent over stateless HTTP (SDK per-request server) — documented, no workaround; 401 warn throttled 60 s | Phase 10 | v0.4 OAuth gives per-person attribution |
+| 2026-11-02: actions/* SHA-pinned; release smoke-tests an amd64 load build before multi-arch push; rulesets main (no delete/force-push) and v* tags (no delete/move), no bypass | Phase 10 | First smoke run at 0.5.0; fixing a bad tag means disabling the rule briefly |
+| 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
+| 2026-11-02: Chart pod runs as uid/gid 1000 (image USER node is non-numeric); secrets only via existingSecret; CI chart job pins Helm 4.3.1, kind 0.33.0, kubeconform 0.8.0 | Phase 11 | kind smoke caught the runAsNonRoot failure |
 
 ### Deferred Issues
 
@@ -100,8 +111,10 @@ See PROJECT.md Key Decisions.
 | Double-signal shutdown tests are race-prone smoke tests; spawned SIGTERM test accepts finished-or-closed (drain proven via close()) | 05-02, 06-01 | S | If shutdown logic changes |
 | 5xx hint punctuation for API messages ending !/?/whitespace/empty | 06-02 | S | Cosmetic; any client touch |
 | Image build provenance (attest-build-provenance) and npm-shrinkwrap for transitive pins | 07-01 | M | R6 |
-| Redundant closeIdleConnections() calls in src/http.ts close() (server.close() already does it on Node ≥ 24; verified 07-02) | 07-02 | S | Next http.ts touch |
-| acceptedUnreadable() echoes no identifier (create_customer_pause gives no pause id to check) | 06-02 | S | With R8 write attribution |
+| Central registerTool wrapper in createServerFactory instead of per-file withToolLogging + toolLog deps (smaller code) | 10-02 | S | Any tool-registration touch |
+| Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
+| Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
+| Optional PodDisruptionBudget and topology spread in the Helm chart | 11-01 | S | First node-drain incident or more replicas |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
@@ -115,22 +128,21 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/milestone-v0.2-close (from main 1ddab79 = PR #38 squash); tag v0.4.0 on 1ddab79 (pushed)
+Branch: paul/milestone-v0.3 (from main 3151511 = PR #39 squash; last commit Phase 10, not pushed); tag v0.4.0 on 1ddab79 (pushed)
 Previous: paul/milestone-v0.1; milestone tags milestone-v0.1, milestone-v0.2 (local, not pushed)
 Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-30; v0.2 Audit Quick Wins); v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
 
 ## Session Continuity
 
 Last session: 2026-11-02
-Stopped at: Milestone v0.2 Audit Quick Wins complete and archived
-Next action: /paul:discuss-milestone (R2, R3, R6, R8 candidates)
-Resume file: .paul/MILESTONES.md
+Stopped at: Plan 11-02 created
+Next action: Review and approve plan, then run /paul:apply .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
+Resume file: .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
 Resume context:
-- v0.2 shipped as 0.4.0 (R4, R5, R1, R7 done) and archived to .paul/milestones/v0.2-ROADMAP.md
-- paul/milestone-v0.2-close: .paul-only commits; PR to main like #37
-- Next milestone candidates: R2 (consumer-only names; update REDACTION_NOTE + SENSITIVE_KEYS + README together), R3, R6, R8, R10
-- Owner action: re-confirm bounded F-00-002 acceptance (D-006: release structure only; not F-04-006/008/009; re-confirm before org transfer)
-- Next release must bump the README @0.4.0 pins
+- v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
+- Phase 8 done (08-01): customer-type redaction; live suite first runs at the 0.5.0 gate (key-drift check may surface keys to review)
+- Research inputs: .paul/research/v0.3-helm-chart.md, .paul/research/v0.4-hosted-auth.md
+- Next release must bump the @0.4.0 pins in README and docs/ (test/unit/docs.test.ts enforces equality with package.json)
 
 ---
 *STATE.md — Updated after every significant action*

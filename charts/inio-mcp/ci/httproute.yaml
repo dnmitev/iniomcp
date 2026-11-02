@@ -1,0 +1,17 @@
+existingSecret: inio-mcp-test
+inio:
+  url: https://example.invalid/v1
+  authUrl: https://example.invalid/token
+  clientId: ci
+  allowWrites: true
+  writeTools: [create_customer_pause, cancel_customer_pause]
+  maxPaymentAmount: '500'
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-system
+      sectionName: https
+  hostnames: [mcp.example.com]
+  timeouts:
+    request: 120s

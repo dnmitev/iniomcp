@@ -4,6 +4,7 @@ import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainer
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { startHttpServer } from '../../src/http.ts';
 import type { HttpConfig } from '../../src/http.ts';
+import { WRITE_TOOL_NAMES } from '../../src/config.ts';
 import { invoice, startFakeInioApi, type FakeInioApi } from './fake-inio-api.ts';
 
 const REALM_FILE = fileURLToPath(new URL('./keycloak-realm.json', import.meta.url));
@@ -44,6 +45,7 @@ beforeAll(async () => {
     transport: 'http',
     logLevel: 'info',
     requestTimeoutMs: 30000,
+    writeTools: new Set(WRITE_TOOL_NAMES),
     http: { port: 0, host: '127.0.0.1', authToken: BEARER, allowedOrigins: [] },
   };
   server = await startHttpServer(config);

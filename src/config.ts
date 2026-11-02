@@ -9,7 +9,23 @@ export type Config = {
   http?: { port: number; host: string; authToken: string; allowedOrigins: string[] };
   logLevel: LogLevel;
   requestTimeoutMs: number;
+  writeTools: ReadonlySet<string>;
+  maxPaymentAmount?: number;
 };
+
+export const WRITE_TOOL_NAMES = [
+  'create_customer_pause',
+  'update_customer_pause',
+  'cancel_customer_pause',
+  'update_invoice_due_date',
+  'update_invoice_stop_until_dates',
+  'update_customer',
+  'reset_invoice_stage',
+  'create_credit_invoice',
+  'match_credit_invoice',
+  'create_payment',
+  'create_customer',
+] as const;
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -20,6 +36,23 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
 export const isLoopbackHost = (host: string): boolean => LOCAL_HOSTS.has(host);
 const TOKEN_PATH = '/protocol/openid-connect/token';
+
+/** Settings shown on the 'server started' line. */
+export function startupFields({
+  allowWrites,
+  revealPii,
+  logLevel,
+  writeTools,
+  maxPaymentAmount,
+}: Config) {
+  return {
+    allowWrites,
+    revealPii,
+    logLevel,
+    writeTools: allowWrites ? WRITE_TOOL_NAMES.filter((n) => writeTools.has(n)) : [],
+    ...(allowWrites && maxPaymentAmount !== undefined && { maxPaymentAmount }),
+  };
+}
 
 /** Parses and validates Inio MCP settings. Error messages name vars only, never values. */
 export function loadConfig(env: Env): Config {
@@ -82,6 +115,33 @@ export function loadConfig(env: Env): Config {
 
   const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
 
+  const writeTools = (): ReadonlySet<string> => {
+    const names = (env.INIO_WRITE_TOOLS ?? '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    if (names.length === 0) return new Set(WRITE_TOOL_NAMES);
+    const unknown = names.filter((n) => !(WRITE_TOOL_NAMES as readonly string[]).includes(n));
+    if (unknown.length > 0) {
+      problems.push(
+        `INIO_WRITE_TOOLS has unknown tool names: ${unknown.join(', ')}. Valid names: ${WRITE_TOOL_NAMES.join(', ')}`,
+      );
+    }
+    if (env.INIO_ALLOW_WRITES !== 'true') {
+      problems.push('INIO_WRITE_TOOLS needs INIO_ALLOW_WRITES=true');
+    }
+    return new Set(names);
+  };
+
+  const maxPaymentAmount = (): number | undefined => {
+    const raw = env.INIO_MAX_PAYMENT_AMOUNT;
+    if (!raw) return undefined;
+    const value = Number(raw);
+    if (Number.isFinite(value) && value > 0 && /^\d+(\.\d{1,2})?$/.test(raw)) return value;
+    problems.push('INIO_MAX_PAYMENT_AMOUNT must be a positive number with at most 2 decimals');
+    return undefined;
+  };
+
   const config: Config = {
     clientId: required('INIO_CLIENT_ID'),
     clientSecret: required('INIO_CLIENT_SECRET'),
@@ -92,7 +152,10 @@ export function loadConfig(env: Env): Config {
     transport,
     logLevel: oneOf('INIO_LOG_LEVEL', LOG_LEVELS, 'info'),
     requestTimeoutMs: integer('INIO_REQUEST_TIMEOUT_MS', 30_000, 1000, 600_000),
+    writeTools: writeTools(),
   };
+  const limit = maxPaymentAmount();
+  if (limit !== undefined) config.maxPaymentAmount = limit;
   if (transport === 'http') {
     config.http = {
       port: integer('PORT', 3000, 1, 65_535),

@@ -8,3 +8,6 @@ openapi
 LICENSE
 NOTICE
 .claude/settings.local.json
+
+# Helm templates are Go templates, not YAML
+charts/*/templates/

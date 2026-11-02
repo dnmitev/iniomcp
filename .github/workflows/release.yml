@@ -25,11 +25,11 @@ jobs:
       prerelease: ${{ steps.version.outputs.prerelease }}
       newest: ${{ steps.version.outputs.newest }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
       - id: version
@@ -77,10 +77,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
       - run: npm ci --ignore-scripts
@@ -101,10 +101,10 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
       - name: Check npm supports trusted publishing
@@ -143,7 +143,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
@@ -183,6 +183,34 @@ jobs:
             org.opencontainers.image.title=inio-mcp
             org.opencontainers.image.description=MCP server for the Inio REST API (stdio and HTTP)
             org.opencontainers.image.licenses=Apache-2.0
+      # Build and run the amd64 image before pushing anything, so a broken image is never published.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        if: steps.exists.outputs.skip != 'true'
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: inio-mcp:smoke
+      - name: Smoke-test the image over HTTP
+        if: steps.exists.outputs.skip != 'true'
+        run: |
+          token=$(openssl rand -hex 20)
+          trap 'docker logs smoke || true; docker rm -f smoke >/dev/null 2>&1 || true' EXIT
+          docker run -d --name smoke -p 127.0.0.1:3000:3000 \
+            -e MCP_TRANSPORT=http -e MCP_AUTH_TOKEN="$token" \
+            -e INIO_URL=https://example.invalid/v1 -e INIO_AUTH_URL=https://example.invalid/token \
+            -e INIO_CLIENT_ID=smoke -e INIO_CLIENT_SECRET=smoke \
+            inio-mcp:smoke
+          ready=false
+          for _ in $(seq 30); do curl -s -o /dev/null http://127.0.0.1:3000/ && { ready=true; break; }; sleep 1; done
+          [ "$ready" = true ] || { echo "::error::Image did not start listening within 30 s"; exit 1; }
+          unauth=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp)
+          init=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp \
+            -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}')
+          echo "unauthenticated: $unauth, initialize: $init"
+          [ "$unauth" = 401 ] && [ "$init" = 200 ]
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         if: steps.exists.outputs.skip != 'true'
         with:
@@ -194,14 +222,58 @@ jobs:
           provenance: mode=max
           sbom: true
 
+  chart:
+    # After the image, so a published chart never points at a missing image.
+    needs: [verify, live, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    env:
+      CHART_REPO: oci://ghcr.io/dnmitev/charts
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: printf '%s' "$TOKEN" | helm registry login ghcr.io --username "$ACTOR" --password-stdin
+      - id: exists
+        name: Skip if this chart version exists
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          # Only "not found" means the chart is missing; any other error stops the job.
+          if out=$(helm show chart "$CHART_REPO/inio-mcp" --version "$VERSION" 2>&1); then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; echo "chart $VERSION exists; skipping"
+          elif printf '%s' "$out" | grep -qiE 'not found|manifest unknown|name unknown'; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out"; echo "::error::Chart lookup failed"; exit 1
+          fi
+      - name: Package and push the chart
+        if: steps.exists.outputs.skip != 'true'
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          helm package charts/inio-mcp --version "$VERSION" --app-version "$VERSION"
+          helm push "inio-mcp-$VERSION.tgz" "$CHART_REPO"
+          helm show chart "$CHART_REPO/inio-mcp" --version "$VERSION"
+
   release:
-    needs: [verify, npm, image]
+    needs: [verify, npm, image, chart]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Create GitHub Release from the CHANGELOG section

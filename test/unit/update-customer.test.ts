@@ -29,10 +29,11 @@ const API_CUSTOMER = {
 };
 const REDACTED = {
   ...CUSTOMER,
+  customerName: '[redacted]',
   distributionEmailAddress: '[redacted]',
   mobilePhoneNo: '[redacted]',
   customerAddress: {
-    city: 'Stockholm',
+    city: '[redacted]',
     zipCode: '[redacted]',
     countryCode: 'SE',
     addressLine1: '[redacted]',
@@ -319,6 +320,14 @@ describe('update_customer output', () => {
     expect(textOf(result)).not.toContain('workflowsSettings');
   });
 
+  it('returns a type B customer with only invoice links redacted', async () => {
+    const business = { ...API_CUSTOMER, customerType: 'B' };
+    const { call } = await setup({ patch: () => Promise.resolve([business]) });
+    const result = await call({ id: CID, customerName: 'Example Customer AB' });
+    const { workflowsSettings: _, ...expected } = business;
+    expect(JSON.parse(textOf(result))).toStrictEqual(expected);
+  });
+
   it('keeps personal data when revealPii is true', async () => {
     const { call } = await setup({ patch: updated }, true);
     const text = textOf(await call({ id: CID, customerName: 'Example Customer AB' }));
@@ -355,7 +364,7 @@ describe('update_customer errors', () => {
         ),
     });
     expect(textOf(await call({ id: CID, customerName: 'Name AB' }))).toBe(
-      'VALIDATION_ERROR: Bad input (correlationId c-1) Fields: customerAddress.zipCode: [redacted]; customerName: Too short',
+      'VALIDATION_ERROR: Bad input (correlationId c-1) Fields: customerAddress.zipCode: [redacted]; customerName: [redacted]',
     );
   });
 

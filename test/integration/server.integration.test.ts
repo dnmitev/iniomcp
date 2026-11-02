@@ -123,7 +123,9 @@ async function closedPort(): Promise<number> {
   return address.port;
 }
 
-const EXPECTED = present(omit(invoice, 'workflowsSettings'), false);
+// The invoice's customer is type B (customer fixture), so only the invoice links are redacted.
+const EXPECTED = present(omit(invoice, 'workflowsSettings'), false, 'business');
+const INVOICE_CUSTOMER_PATH = `/v1/customers/${String(invoice.customerId)}`;
 
 function pick(source: Record<string, unknown>, keys: string[]): Record<string, unknown> {
   return Object.fromEntries(keys.map((k) => [k, source[k]]));
@@ -166,11 +168,27 @@ function urlsSince(before: number): string[] {
 }
 
 describe('built server over stdio with real Keycloak and fake Inio API', () => {
-  it('returns the redacted invoice by id', async () => {
+  it('returns a business customer invoice with only the invoice links redacted, by id', async () => {
     const { call } = await spawnServer();
     const result = await call({ id: String(invoice.id) });
     expect(result).toEqual({ isError: false, text: EXPECTED });
-    expect(z.object({ IBAN: z.unknown() }).parse(JSON.parse(result.text)).IBAN).toBe('[redacted]');
+    const body = z
+      .object({ addressLine1: z.string(), pdfURL: z.string(), digitalInvoiceURL: z.string() })
+      .parse(JSON.parse(result.text));
+    expect(body).toEqual({
+      addressLine1: String(invoice.addressLine1),
+      pdfURL: '[redacted]',
+      digitalInvoiceURL: '[redacted]',
+    });
+  });
+
+  it('looks the invoice customer up once and reuses the type on the next get_invoice', async () => {
+    const before = api.requests.length;
+    const { call } = await spawnServer();
+    await call({ id: String(invoice.id) });
+    const second = await call({ number: String(invoice.invoiceNo) });
+    expect(second).toEqual({ isError: false, text: EXPECTED });
+    expect(urlsSince(before).filter((u) => u === INVOICE_CUSTOMER_PATH)).toHaveLength(1);
   });
 
   it('returns the redacted invoice by number', async () => {
@@ -191,7 +209,10 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
     const { call } = await spawnServer();
     await call({ id: String(invoice.id) });
     const sent = api.requests.slice(before);
-    expect(sent).toHaveLength(1);
+    expect(sent.map((r) => r.url)).toEqual([
+      `/v1/invoices/${String(invoice.id)}`,
+      INVOICE_CUSTOMER_PATH,
+    ]);
     expect(sent[0]?.authorization).toMatch(/^Bearer [\w-]+\.[\w-]+\.[\w-]+$/);
     const payload = jwtPayload(sent[0]?.authorization);
     expect(payload.iss.endsWith(`/realms/${REALM}`)).toBe(true);
@@ -216,7 +237,8 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
     await call({ number: String(invoice.invoiceNo) });
     const msgs = lines(stderr()).map((l) => LogLine.parse(JSON.parse(l)).msg);
     expect(msgs.filter((m) => m === 'token fetched')).toHaveLength(1);
-    expect(msgs.filter((m) => m === 'token cache hit')).toHaveLength(1);
+    // Three API requests (invoice, its customer, invoice by number) share the one token.
+    expect(msgs.filter((m) => m === 'token cache hit')).toHaveLength(2);
   });
 
   it('reports wrong client credentials as an authentication error', async () => {
@@ -278,13 +300,14 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
     const address = z
       .object({ zipCode: z.string(), addressLine1: z.string() })
       .parse(customer.customerAddress);
+    // customer fixture is type B: contact data comes back as the API gave it.
     for (const raw of [
       String(customer.mobilePhoneNo),
       String(customer.distributionEmailAddress),
       address.zipCode,
       address.addressLine1,
     ]) {
-      expect(result.text).not.toContain(raw);
+      expect(result.text).toContain(raw);
     }
   });
 
@@ -348,6 +371,7 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
     expect(urlsSince(before)).toEqual([
       `/v1/invoices/by-number/${encodeURIComponent(String(invoice.invoiceNo))}`,
       `/v1/invoices/${String(invoice.id)}/with-inherited`,
+      INVOICE_CUSTOMER_PATH,
     ]);
   });
 
@@ -378,6 +402,7 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
     expect(urlsSince(before)).toEqual([
       `/v1/invoices/by-number/${RATE_ONCE}`,
       `/v1/invoices/by-number/${RATE_ONCE}`,
+      INVOICE_CUSTOMER_PATH,
     ]);
   });
 
@@ -947,7 +972,10 @@ describe('built server over stdio with real Keycloak and fake Inio API', () => {
       const before = api.requests.length;
       const { call } = await spawnServer(WRITES);
       await call({ id: String(invoice.id) }, 'get_invoice');
-      expect(sent(before).map((r) => r.userRealName)).toEqual([undefined]);
+      const reads = sent(before);
+      // get_invoice reads the invoice and then its customer; neither carries the audit header.
+      expect(reads.map((r) => r.method)).toEqual(['GET', 'GET']);
+      expect(reads.map((r) => r.userRealName)).toEqual([undefined, undefined]);
     });
   });
 
