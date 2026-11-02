@@ -17,8 +17,8 @@ phases = 4
 [phase]
 number = 11
 name = "Helm chart and EKS"
-status = "not_started"
-plans_completed = 0
+status = "in_progress"
+plans_completed = 1
 
 [loop]
 position = "IDLE"
@@ -27,6 +27,6 @@ position = "IDLE"
 groom = true
 
 [stats]
-total_plans = 25
+total_plans = 26
 total_phases = 10
-last_activity = "2026-11-02T11:36:34Z"
+last_activity = "2026-11-02T12:07:29Z"

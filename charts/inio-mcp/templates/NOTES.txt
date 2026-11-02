@@ -1,0 +1,12 @@
+inio-mcp {{ .Chart.AppVersion }} is running as a shared HTTP server.
+
+Endpoint: /mcp on service {{ include "inio-mcp.fullname" . }}:{{ .Values.service.port }}
+{{- if .Values.ingress.enabled }}
+  {{ if .Values.ingress.tls.secretName }}https{{ else }}http{{ end }}://{{ .Values.ingress.host }}/mcp (Ingress)
+{{- end }}
+{{- range .Values.httpRoute.hostnames }}
+  {{ . }}/mcp (HTTPRoute; scheme set by the Gateway listener)
+{{- end }}
+
+Clients send "Authorization: Bearer <MCP_AUTH_TOKEN from secret {{ include "inio-mcp.secretName" . }}>".
+Setup per client: https://github.com/dnmitev/iniomcp#set-up-your-client

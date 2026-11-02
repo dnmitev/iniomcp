@@ -89,3 +89,69 @@ jobs:
       - run: npx vitest run --dir test/package docker
         env:
           DOCKER_IMAGE: inio-mcp:ci
+
+  chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      KUBECONFORM_VERSION: v0.8.0
+      KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+      # The chart is installed with the last published image (0.4.0, by digest); a PR's own image is tested in the docker job.
+      SMOKE_IMAGE_DIGEST: sha256:c7c188c13fc23b2ddefc2fbc7dddf304468b0072f08994304ca7bb466aa6dfcf
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - name: Lint
+        run: |
+          for f in charts/inio-mcp/ci/*.yaml; do helm lint --strict charts/inio-mcp -f "$f"; done
+      - name: Install kubeconform
+        run: |
+          curl -sSLo kubeconform.tgz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tgz" | sha256sum -c -
+          tar -xzf kubeconform.tgz kubeconform && sudo mv kubeconform /usr/local/bin/
+      - name: Validate rendered manifests (Ingress, HTTPRoute, both)
+        run: |
+          for f in charts/inio-mcp/ci/*.yaml; do
+            echo "== $f"
+            helm template inio charts/inio-mcp -f "$f" | kubeconform -strict -summary \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/63669a570e231d4f1f8396d229a1de512bcf0a34/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          done
+      - name: Rendering without a Secret source fails
+        run: |
+          if helm template inio charts/inio-mcp --set inio.url=a,inio.authUrl=b,inio.clientId=c 2>err.txt; then
+            echo "::error::Chart rendered without existingSecret or secret.create"; exit 1
+          fi
+          grep -q 'Set existingSecret' err.txt
+      - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+        with:
+          version: v0.33.0
+          cluster_name: inio-smoke
+      - name: Install on kind and smoke-test over HTTP
+        run: |
+          token=$(openssl rand -hex 20)
+          kubectl create secret generic inio-mcp-test \
+            --from-literal=INIO_CLIENT_SECRET=ci --from-literal=MCP_AUTH_TOKEN="$token"
+          helm install smoke charts/inio-mcp -f charts/inio-mcp/ci/ingress.yaml \
+            --set image.digest="$SMOKE_IMAGE_DIGEST" --wait --timeout 180s \
+            || { kubectl describe pods; kubectl logs deploy/smoke-inio-mcp --tail=50 || true; exit 1; }
+          kubectl port-forward svc/smoke-inio-mcp 3000:3000 >port-forward.log 2>&1 &
+          for _ in $(seq 20); do curl -s -o /dev/null http://127.0.0.1:3000/ && break; sleep 1; done
+          unauth=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp)
+          init=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp \
+            -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}')
+          echo "unauthenticated: $unauth, initialize: $init"
+          [ "$unauth" = 401 ] && [ "$init" = 200 ]
+      - name: Show cluster state on failure
+        if: failure()
+        run: |
+          kubectl get pods -o wide || true
+          kubectl describe pods || true
+          kubectl logs deploy/smoke-inio-mcp --tail=100 || true
+          cat port-forward.log || true

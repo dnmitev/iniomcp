@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "inio-mcp.fullname" . }}
+  labels:
+    {{- include "inio-mcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "inio-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "inio-mcp.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        # The image's USER is "node" (uid/gid 1000 in node:alpine, see Dockerfile); Kubernetes needs the numeric id to verify non-root.
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: inio-mcp
+          image: {{ include "inio-mcp.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: MCP_TRANSPORT
+              value: http
+            - name: HOST
+              value: 0.0.0.0
+            - name: INIO_URL
+              value: {{ required "inio.url is required" .Values.inio.url | quote }}
+            - name: INIO_AUTH_URL
+              value: {{ required "inio.authUrl is required" .Values.inio.authUrl | quote }}
+            - name: INIO_CLIENT_ID
+              value: {{ required "inio.clientId is required" .Values.inio.clientId | quote }}
+            - name: INIO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "inio-mcp.secretName" . }}
+                  key: INIO_CLIENT_SECRET
+            - name: MCP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "inio-mcp.secretName" . }}
+                  key: MCP_AUTH_TOKEN
+            {{- with include "inio-mcp.allowedOrigins" . }}
+            - name: MCP_ALLOWED_ORIGINS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.inio.allowWrites }}
+            - name: INIO_ALLOW_WRITES
+              value: "true"
+            {{- end }}
+            {{- with .Values.inio.writeTools }}
+            - name: INIO_WRITE_TOOLS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with .Values.inio.maxPaymentAmount }}
+            - name: INIO_MAX_PAYMENT_AMOUNT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.inio.revealPii }}
+            - name: INIO_REVEAL_PII
+              value: "true"
+            {{- end }}
+            {{- with .Values.inio.logLevel }}
+            - name: INIO_LOG_LEVEL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.inio.requestTimeoutMs }}
+            - name: INIO_REQUEST_TIMEOUT_MS
+              value: {{ . | quote }}
+            {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          lifecycle:
+            preStop:
+              exec:
+                command: [sleep, {{ .Values.preStopSleepSeconds | quote }}]
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

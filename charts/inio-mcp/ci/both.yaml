@@ -1,0 +1,18 @@
+secret:
+  create: true
+  clientSecret: ci-secret
+  authToken: ci-token-0123456789012345678901234567
+image:
+  digest: sha256:c7c188c13fc23b2ddefc2fbc7dddf304468b0072f08994304ca7bb466aa6dfcf
+inio:
+  url: https://example.invalid/v1
+  authUrl: https://example.invalid/token
+  clientId: ci
+ingress:
+  enabled: true
+  host: mcp.example.com
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+  hostnames: [mcp.example.com, mcp2.example.com]

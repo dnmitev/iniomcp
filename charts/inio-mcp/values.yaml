@@ -1,0 +1,81 @@
+# inio-mcp runs here as a shared Streamable HTTP server (MCP_TRANSPORT=http) on port 3000.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/dnmitev/inio-mcp
+  # Defaults to the chart's appVersion.
+  tag: ''
+  # sha256:... pins the image by digest and takes precedence over tag.
+  digest: ''
+  pullPolicy: IfNotPresent
+
+inio:
+  # Required: API base URL including /v1, token endpoint (or realm issuer URL), API client id.
+  url: ''
+  authUrl: ''
+  clientId: ''
+  # Optional; left out when empty, so the server defaults apply.
+  allowWrites: false
+  writeTools: [] # e.g. [create_customer_pause, cancel_customer_pause]
+  maxPaymentAmount: '' # e.g. "500"
+  revealPii: false
+  logLevel: '' # fatal … trace, or silent
+  requestTimeoutMs: '' # e.g. "30000"
+
+# Browser origins allowed besides localhost. Empty: https:// plus the ingress host and HTTPRoute hostnames.
+allowedOrigins: []
+
+# Secret with the keys INIO_CLIENT_SECRET and MCP_AUTH_TOKEN (created by hand or by External Secrets Operator).
+existingSecret: ''
+
+# For tests only: let the chart create the Secret from these values. Prefer existingSecret.
+secret:
+  create: false
+  clientSecret: ''
+  authToken: ''
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: false
+  className: nginx
+  host: ''
+  annotations: {}
+  # ingress-nginx defaults that suit MCP:
+  #   nginx.ingress.kubernetes.io/proxy-body-size: 256k
+  #   nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+  #   nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+  #   nginx.ingress.kubernetes.io/proxy-buffering: "off"
+  tls:
+    secretName: ''
+
+# Gateway API (gateway.networking.k8s.io/v1). Can run alongside the Ingress during a migration.
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs: []
+  #  - name: shared-gateway
+  #    namespace: gateway-system
+  #    sectionName: https
+  hostnames: []
+  timeouts: {}
+  #  request: 120s
+
+# Seconds to wait before SIGTERM so the proxy stops sending traffic first.
+preStopSleepSeconds: 5
+terminationGracePeriodSeconds: 30
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    memory: 256Mi
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

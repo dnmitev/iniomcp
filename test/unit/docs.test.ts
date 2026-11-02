@@ -17,10 +17,16 @@ function markdownFiles(dir: string): string[] {
   });
 }
 
-const docs = markdownFiles(join(root, 'docs'));
+const docs = [...markdownFiles(join(root, 'docs')), ...markdownFiles(join(root, 'charts'))];
 const readme = join(root, 'README.md');
 
 describe('docs', () => {
+  it('keeps the Helm chart version and appVersion equal to package.json', () => {
+    const chart = readFileSync(join(root, 'charts/inio-mcp/Chart.yaml'), 'utf8');
+    expect(/^version: (.+)$/m.exec(chart)?.[1]).toBe(version);
+    expect(/^appVersion: (.+)$/m.exec(chart)?.[1]).toBe(version);
+  });
+
   it('pins every package and image reference to the package.json version', () => {
     const pins = [readme, ...docs].flatMap((file) =>
       [

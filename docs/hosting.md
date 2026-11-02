@@ -47,6 +47,109 @@ INIO_WRITE_TOOLS=create_customer_pause,update_customer_pause,cancel_customer_pau
 INIO_MAX_PAYMENT_AMOUNT=500
 ```
 
+## Kubernetes (Helm)
+
+The chart in [`charts/inio-mcp`](../charts/inio-mcp/README.md) runs the server in HTTP mode with two replicas, a read-only root filesystem, no Linux capabilities and a numeric non-root user. It is published as an OCI chart from version 0.5.0 on:
+
+```bash
+helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.5.0 -f values.yaml
+```
+
+### Secret
+
+The chart reads `INIO_CLIENT_SECRET` and `MCP_AUTH_TOKEN` from an existing Secret. Create it by hand:
+
+```bash
+kubectl create secret generic inio-mcp \
+  --from-literal=INIO_CLIENT_SECRET='<client secret>' \
+  --from-literal=MCP_AUTH_TOKEN="$(openssl rand -hex 32)"
+```
+
+Or with External Secrets Operator, producing the same Secret name:
+
+```yaml
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: inio-mcp
+spec:
+  secretStoreRef: { name: aws-secrets-manager, kind: ClusterSecretStore }
+  target: { name: inio-mcp }
+  data:
+    - secretKey: INIO_CLIENT_SECRET
+      remoteRef: { key: inio-mcp, property: client_secret }
+    - secretKey: MCP_AUTH_TOKEN
+      remoteRef: { key: inio-mcp, property: mcp_auth_token }
+```
+
+The chart does not own the Secret, so changing it does not restart the pods. Restart them (`kubectl rollout restart deploy/inio-mcp`) or use a tool such as Reloader.
+
+### Values
+
+With ingress-nginx:
+
+```yaml
+existingSecret: inio-mcp
+inio:
+  url: https://<your-inio-api-gateway>/v1
+  authUrl: https://<your-keycloak>/realms/<realm>/protocol/openid-connect/token
+  clientId: your-client-id
+ingress:
+  enabled: true
+  className: nginx
+  host: mcp.example.com
+  tls:
+    secretName: mcp-example-com-tls
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 256k
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '120'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '120'
+    nginx.ingress.kubernetes.io/proxy-buffering: 'off'
+```
+
+With Gateway API instead (or as well, during a migration; both point at the same Service):
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-system
+      sectionName: https
+  hostnames: [mcp.example.com]
+  timeouts:
+    request: 120s
+```
+
+TLS ends at the Gateway listener. Route `timeouts` need Gateway API v1.1 or later CRDs; leave them out on older gateways. Gateway API has no standard field for body size or buffering; the server already caps bodies at 256 KiB and streams responses. `MCP_ALLOWED_ORIGINS` defaults to `https://` plus the configured hosts. Write tools, the allowlist and the payment limit are under `inio` (see the [chart README](../charts/inio-mcp/README.md)).
+
+### ArgoCD
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: inio-mcp
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/dnmitev/charts
+    chart: inio-mcp
+    targetRevision: 0.5.0
+    helm:
+      valuesObject:
+        existingSecret: inio-mcp
+        # … the values above
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inio-mcp
+  syncPolicy:
+    syncOptions: [CreateNamespace=true]
+```
+
+An OCI Helm source needs a repository entry in ArgoCD with `enableOCI: true` for `ghcr.io/dnmitev/charts` (the package is public, so no credentials). To upgrade, change `targetRevision`. On Argo CD 3.1 or later you can instead use native OCI: `repoURL: oci://ghcr.io/dnmitev/charts/inio-mcp` and no `chart` field.
+
 ## Security
 
 - Put the server behind a reverse proxy that terminates TLS, and do not expose port 3000 directly. The server has no TLS of its own.

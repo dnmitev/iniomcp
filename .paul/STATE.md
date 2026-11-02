@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Milestone: v0.3 Integration Layer
-Phase: 11 of 11 (Helm chart and EKS)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-11-02 — Phase 10 complete, transitioned to Phase 11
+Phase: 11 of 11 (Helm chart and EKS) — In progress
+Plan: 11-01 complete (1 of 2; 11-02 chart publish, release 0.5.0, EKS deploy next)
+Status: Ready to plan 11-02
+Last activity: 2026-11-02 — 11-01 unified (Helm chart)
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Phase 10 complete - ready to plan Phase 11]
+  ○        ○        ○     [11-01 complete - ready to plan 11-02]
 ```
 
 ## Accumulated Context
@@ -98,6 +98,7 @@ See PROJECT.md Key Decisions.
 | 2026-11-02: Write log lines carry write:true, target (id keys only) and client when known; client absent over stateless HTTP (SDK per-request server) — documented, no workaround; 401 warn throttled 60 s | Phase 10 | v0.4 OAuth gives per-person attribution |
 | 2026-11-02: actions/* SHA-pinned; release smoke-tests an amd64 load build before multi-arch push; rulesets main (no delete/force-push) and v* tags (no delete/move), no bypass | Phase 10 | First smoke run at 0.5.0; fixing a bad tag means disabling the rule briefly |
 | 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
+| 2026-11-02: Chart pod runs as uid/gid 1000 (image USER node is non-numeric); secrets only via existingSecret; CI chart job pins Helm 4.3.1, kind 0.33.0, kubeconform 0.8.0 | Phase 11 | kind smoke caught the runAsNonRoot failure |
 
 ### Deferred Issues
 
@@ -113,6 +114,7 @@ See PROJECT.md Key Decisions.
 | Central registerTool wrapper in createServerFactory instead of per-file withToolLogging + toolLog deps (smaller code) | 10-02 | S | Any tool-registration touch |
 | Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
 | Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
+| Optional PodDisruptionBudget and topology spread in the Helm chart | 11-01 | S | First node-drain incident or more replicas |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
@@ -133,9 +135,9 @@ Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-
 ## Session Continuity
 
 Last session: 2026-11-02
-Stopped at: Phase 10 complete, ready to plan Phase 11
-Next action: /paul:plan for Phase 11
-Resume file: .paul/phases/10-write-bounds-attribution-release-hygiene/10-03-SUMMARY.md
+Stopped at: Plan 11-01 complete
+Next action: /paul:plan for 11-02 (chart publish, release 0.5.0, EKS deploy)
+Resume file: .paul/phases/11-helm-chart-and-eks/11-01-SUMMARY.md
 Resume context:
 - v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
 - Phase 8 done (08-01): customer-type redaction; live suite first runs at the 0.5.0 gate (key-drift check may surface keys to review)
