@@ -17,8 +17,8 @@ See: .paul/PROJECT.md (updated 2026-11-02)
 
 Milestone: v0.3 Integration Layer
 Phase: 11 of 11 (Helm chart and EKS) — In progress
-Plan: 11-02 created, awaiting approval (chart publish, release 0.5.0, EKS deploy)
-Status: PLAN created, ready for APPLY
+Plan: 11-02 applying — waiting at checkpoint: owner merges PR #41, then tag v0.5.0 and approve release
+Status: APPLY in progress (tasks 1-2 done; PR #41 CI green; live suite 14/14 locally)
 Last activity: 2026-11-02 — Created .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
 
 Progress:
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan 11-02 created, awaiting approval]
+  ✓        ◐        ○     [11-02 at checkpoint: merge PR #41]
 ```
 
 ## Accumulated Context
