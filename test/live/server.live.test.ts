@@ -157,7 +157,10 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect(Object.keys(inv)).not.toContain('success');
     // Compare booleans, not values, so a mismatch never prints invoice data.
     expect(inv.invoiceNo === invoiceNo).toBe(true);
-    expect('IBAN' in inv ? inv.IBAN === '[redacted]' : true).toBe(true);
+    // IBAN is shown for business customers and redacted otherwise.
+    const customerId = typeof inv.customerId === 'string' ? inv.customerId : undefined;
+    const business = customerId !== undefined && (await customerTypeOf(customerId)) === 'B';
+    expect(business || !('IBAN' in inv) || inv.IBAN === '[redacted]').toBe(true);
   }, 120_000);
 
   it('returns NOT_FOUND for an unknown invoice number', async () => {
@@ -267,7 +270,6 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     expect({ isError, count }).toEqual({ isError: false, count: 1 });
     const inv = z.record(z.string(), z.unknown()).parse(JSON.parse(text ?? ''));
     expect(inv.invoiceNo === number).toBe(true);
-    expect('IBAN' in inv ? inv.IBAN === '[redacted]' : true).toBe(true);
     expect(
       Object.entries(inv)
         .filter(([k]) => /^(pdfurl|digitalinvoiceurl)$/i.test(k))
@@ -279,7 +281,10 @@ describe.skipIf(process.env.INIO_LIVE !== '1')('live Inio test environment', () 
     const addressRedacted = flatEntries(inv)
       .filter(([k]) => /^(city|addressline\d*)$/i.test(k))
       .every(([, v]) => v === '[redacted]');
-    expect(business || (addressRedacted && text?.includes('@') === false)).toBe(true);
+    const ibanRedacted = !('IBAN' in inv) || inv.IBAN === '[redacted]';
+    expect(business || (addressRedacted && ibanRedacted && text?.includes('@') === false)).toBe(
+      true,
+    );
   }, 120_000);
 
   it('gets retry attempts by invoice number', async () => {
