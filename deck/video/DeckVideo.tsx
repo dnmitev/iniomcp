@@ -3,70 +3,89 @@ import {
   Audio,
   Sequence,
   staticFile,
+  useCurrentFrame,
+  interpolate,
 } from 'remotion';
 import { slideRegistry } from '../src/slideRegistry';
 import { slides } from '../src/content';
 import { slideComponents } from './slideComponents';
+import { calculateOpacity } from './timing';
 
-export const DeckVideo: React.FC = () => {
-  const fps = 30;
-  const paddingSeconds = 0.5;
-  const crossfadeSeconds = 0.4;
-  const crossfadeDuration = Math.floor(crossfadeSeconds * fps);
-  const estimatedSlideDurationSeconds = 3.0;
-  
-  const slideTimings = [];
-  let currentFrame = 0;
-  
-  for (const registryEntry of slideRegistry) {
-    const content = slides.find((s) => s.id === registryEntry.id);
-    if (!content) {
-      throw new Error(`No content found for slide ${registryEntry.id}`);
-    }
-    const component = slideComponents[registryEntry.id as keyof typeof slideComponents];
-    if (!component) {
-      throw new Error(`No component found for slide ${registryEntry.id}`);
-    }
-    const audioFilename = `${registryEntry.id}-${registryEntry.slug}.wav`;
-    const audioPath = staticFile(audioFilename);
-    const durationFrames = Math.floor((estimatedSlideDurationSeconds + paddingSeconds) * fps);
-    
-    slideTimings.push({
-      component,
-      content,
-      audioPath,
-      startFrame: currentFrame,
-      durationFrames,
-    });
-    
-    const overlapFrames = slideTimings.length > 1 ? crossfadeDuration : 0;
-    currentFrame += durationFrames - overlapFrames;
+export interface SlideTimingProps {
+  startFrame: number;
+  durationFrames: number;
+}
+
+export interface DeckVideoProps {
+  slideTimings: SlideTimingProps[];
+  crossfadeFrames: number;
+}
+
+export const DeckVideo: React.FC<DeckVideoProps> = ({ slideTimings, crossfadeFrames }) => {
+  if (slideTimings.length !== slideRegistry.length) {
+    throw new Error(
+      `Mismatch: ${slideTimings.length} timings for ${slideRegistry.length} slides`
+    );
   }
 
   return (
     <AbsoluteFill style={{ backgroundColor: 'white' }}>
-      {slideTimings.map((slide, index) => {
-        const SlideComponent = slide.component;
-        const actualStart = index > 0 
-          ? slide.startFrame - crossfadeDuration 
-          : slide.startFrame;
-        const actualDuration = index > 0 
-          ? slide.durationFrames + crossfadeDuration 
-          : slide.durationFrames;
+      {slideRegistry.map((registryEntry, index) => {
+        const timing = slideTimings[index];
+        const content = slides.find((s) => s.id === registryEntry.id);
+        if (!content) {
+          throw new Error(`No content found for slide ${registryEntry.id}`);
+        }
+
+        const component = slideComponents[registryEntry.id as keyof typeof slideComponents];
+        if (!component) {
+          throw new Error(`No component found for slide ${registryEntry.id}`);
+        }
+
+        const SlideComponent = component;
+        const audioFilename = `${registryEntry.id}-${registryEntry.slug}.wav`;
+        const audioPath = staticFile(audioFilename);
 
         return (
           <Sequence
-            key={index}
-            from={actualStart}
-            durationInFrames={actualDuration}
+            key={registryEntry.id}
+            from={timing.startFrame}
+            durationInFrames={timing.durationFrames}
           >
-            <AbsoluteFill>
-              <SlideComponent content={slide.content} />
-            </AbsoluteFill>
-            <Audio src={slide.audioPath} />
+            <SlideWithFade
+              isFirstSlide={index === 0}
+              crossfadeFrames={crossfadeFrames}
+              durationFrames={timing.durationFrames}
+            >
+              <SlideComponent content={content} />
+            </SlideWithFade>
+            <Audio src={audioPath} />
           </Sequence>
         );
       })}
+    </AbsoluteFill>
+  );
+};
+
+interface SlideWithFadeProps {
+  isFirstSlide: boolean;
+  crossfadeFrames: number;
+  durationFrames: number;
+  children: React.ReactNode;
+}
+
+const SlideWithFade: React.FC<SlideWithFadeProps> = ({
+  isFirstSlide,
+  crossfadeFrames,
+  durationFrames,
+  children,
+}) => {
+  const frame = useCurrentFrame();
+  const opacity = calculateOpacity(frame, durationFrames, crossfadeFrames, isFirstSlide);
+
+  return (
+    <AbsoluteFill style={{ opacity }}>
+      {children}
     </AbsoluteFill>
   );
 };
