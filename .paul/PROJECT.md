@@ -63,6 +63,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 - ✓ Helm chart (ingress-nginx Ingress and Gateway API HTTPRoute, existingSecret, hardened pod) published as OCI; team runs it on EKS via ArgoCD — Phase 11 (0.5.0)
 
+- ✓ Unauthenticated `GET /healthz` (no Inio call) probed by the Helm chart; chart PodDisruptionBudget, topology spread, optional HPA — after v0.3 (0.5.1)
+
 ### Active (In Progress)
 - None (v0.3 complete; next milestone not started)
 
@@ -78,7 +80,6 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard (per-user roles come with the v0.4 MCP realm)
 - `reverse_payment` — the public API exposes no paymentAllocationId (payment id is not one; live probe 2026-10-29)
 - `create_invoice` in v0.1 — sends to the end customer at once and needs full calcInput (revisit after usage)
-- Health endpoint for HTTP mode — would be the only unauthenticated route; discovered during v0.1 (add if an orchestrator needs it)
 - `credit_loss`/`cancelled` payments and other non-curated transaction types — until asked for
 
 ## Target Users

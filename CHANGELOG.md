@@ -6,7 +6,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- HTTP mode answers `GET /healthz` with `ok` without a token and without calling the Inio API, so probes can tell a hung process from a running one.
 - Helm chart: a PodDisruptionBudget (`maxUnavailable: 1`, on by default), soft topology spread across nodes and zones (on by default) and an optional CPU HorizontalPodAutoscaler (`autoscaling.enabled`).
+
+### Changed
+
+- Helm chart probes call `GET /healthz` instead of checking the TCP port. The chart now needs an image with `/healthz` (this release or later): do not pin an older `image.tag` or `image.digest` with it.
 
 ## [0.5.0] - 2026-11-02
 

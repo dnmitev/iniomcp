@@ -30,4 +30,4 @@ helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.5.0 -f v
 | `topologySpread.enabled`                                                              | `true`                                  | Prefer spreading pods across nodes and zones (never blocks scheduling)                                   |
 | `podAnnotations`, `nodeSelector`, `tolerations`, `affinity`                           |                                         | Scheduling and annotations                                                                               |
 
-The pod runs as user 1000 with a read-only root filesystem, all capabilities dropped and `automountServiceAccountToken: false`. Probes check the TCP port (the server has no unauthenticated health endpoint).
+The pod runs as user 1000 with a read-only root filesystem, all capabilities dropped and `automountServiceAccountToken: false`. Liveness and readiness probes call `GET /healthz`, which needs no token, returns `ok` and never calls the Inio API. Use an image at least as new as the chart: images before 0.6.0 have no `/healthz`, so their pods never become Ready.

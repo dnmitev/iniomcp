@@ -90,12 +90,16 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
+          # /healthz is answered by the Node event loop without calling the Inio API, so a hung process fails
+          # both probes while an upstream outage does not take every pod out of the Service.
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             periodSeconds: 5
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             initialDelaySeconds: 10
             periodSeconds: 20

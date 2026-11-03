@@ -459,14 +459,14 @@ describe('http entry point (spawned process)', () => {
 const MIB = 1024 * 1024;
 
 /** Sends headers plus a first chunk of a declared 1 MiB upload and never finishes it. */
-function openUpload(port: number, path: string, headers: Record<string, string>) {
+function openUpload(port: number, path: string, headers: Record<string, string>, method = 'POST') {
   return new Promise<{ status: number; headers: http.IncomingHttpHeaders; closed: boolean }>(
     (resolve) => {
       const req = http.request({
         host: '127.0.0.1',
         port,
         path,
-        method: 'POST',
+        method,
         agent: false,
         headers: { 'content-type': 'application/json', 'content-length': String(MIB), ...headers },
       });
@@ -935,5 +935,177 @@ describe('401 and transport error logging', () => {
     expect(obj).toEqual({ err: expect.any(String) });
     expect(logger.warn.mock.calls[0]?.[1]).toBe('mcp handler error');
     expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('secret-body');
+  });
+});
+
+describe('/healthz', () => {
+  const AUTHS: Array<[string, Record<string, string>]> = [
+    ['no Authorization header', {}],
+    ['a wrong token', { authorization: `Bearer ${WRONG}` }],
+  ];
+  const req = (method: string, headers: Record<string, string> = {}, path = '/healthz') =>
+    new Request(`http://127.0.0.1:3000${path}`, { method, headers });
+
+  function fakeLogger() {
+    return {
+      debug: vi.fn<(obj: object, msg?: string) => void>(),
+      info: vi.fn<(obj: object, msg?: string) => void>(),
+      warn: vi.fn<(obj: object, msg?: string) => void>(),
+    };
+  }
+
+  describe('createHttpHandler', () => {
+    it.each(AUTHS)('answers GET 200 ok with %s', async (_n, h) => {
+      const { handler } = setup();
+      const res = await handler(req('GET', h));
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toBe('text/plain');
+      expect(res.headers.get('cache-control')).toBe('no-store');
+      expect(await res.text()).toBe('ok');
+    });
+
+    it.each(AUTHS)('answers HEAD 200 with an empty body with %s', async (_n, h) => {
+      const { handler } = setup();
+      const res = await handler(req('HEAD', h));
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toBe('text/plain');
+      expect(res.headers.get('cache-control')).toBe('no-store');
+      expect(await res.text()).toBe('');
+    });
+
+    it('never calls the Inio API', async () => {
+      const { handler, fetch } = setup();
+      await handler(req('GET'));
+      await handler(req('HEAD'));
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('ignores a foreign Origin', async () => {
+      const { handler } = setup();
+      const res = await handler(req('GET', { origin: 'https://evil.example' }));
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe('ok');
+    });
+
+    it('allows a query string', async () => {
+      const { handler } = setup();
+      const res = await handler(req('GET', {}, '/healthz?x=1'));
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe('ok');
+    });
+
+    it('answers 404 for a trailing slash', async () => {
+      const { handler } = setup();
+      const res = await handler(req('GET', {}, '/healthz/'));
+      expect(res.status).toBe(404);
+      expect(await res.text()).toBe('Not Found');
+    });
+
+    it.each(['POST', 'PUT', 'DELETE'])('answers 404 for %s', async (method) => {
+      const { handler } = setup();
+      const res = await handler(req(method));
+      expect(res.status).toBe(404);
+      expect(await res.text()).toBe('Not Found');
+    });
+
+    it('still answers 401 on /mcp without a token', async () => {
+      const { handler } = setup();
+      const res = await handler(post({}));
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('startHttpServer', () => {
+    async function start(now?: () => number) {
+      const logger = fakeLogger();
+      const fetch = fakeFetch();
+      const server = await startHttpServer(CONFIG, { fetch, logger, now });
+      servers.push(server);
+      return {
+        logger,
+        fetch,
+        server,
+        url: (p = '/healthz') => `http://127.0.0.1:${server.port}${p}`,
+      };
+    }
+
+    it.each(AUTHS)('answers GET 200 ok with %s', async (_n, h) => {
+      const { url } = await start();
+      const res = await fetch(url(), { headers: h });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toBe('text/plain');
+      expect(res.headers.get('cache-control')).toBe('no-store');
+      expect(await res.text()).toBe('ok');
+    });
+
+    it.each(AUTHS)('answers HEAD 200 with an empty body with %s', async (_n, h) => {
+      const { url } = await start();
+      const res = await fetch(url(), { method: 'HEAD', headers: h });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toBe('text/plain');
+      expect(res.headers.get('cache-control')).toBe('no-store');
+      expect(await res.text()).toBe('');
+    });
+
+    it('never calls the Inio API and ignores a foreign Origin', async () => {
+      const { url, fetch: upstream } = await start();
+      const res = await fetch(url(), { headers: { origin: 'https://evil.example' } });
+      expect(res.status).toBe(200);
+      expect(upstream).not.toHaveBeenCalled();
+    });
+
+    it('does not log a warning', async () => {
+      const { url, logger } = await start();
+      await (await fetch(url(), { headers: { authorization: `Bearer ${WRONG}` } })).text();
+      await (await fetch(url())).text();
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not consume the 401 throttle', async () => {
+      const { url, logger } = await start(() => 0);
+      await (await fetch(url())).text();
+      const res = await fetch(url('/mcp'), { headers: { authorization: `Bearer ${WRONG}` } });
+      expect(res.status).toBe(401);
+      expect(logger.warn.mock.calls).toEqual([
+        [{ remoteAddress: '127.0.0.1', path: '/mcp' }, 'unauthorized request'],
+      ]);
+    });
+
+    it('allows a query string', async () => {
+      const { url } = await start();
+      expect((await fetch(url('/healthz?x=1'))).status).toBe(200);
+    });
+
+    it('answers 404 for a trailing slash', async () => {
+      const { url } = await start();
+      expect((await fetch(url('/healthz/'))).status).toBe(404);
+    });
+
+    it.each(['POST', 'PUT', 'DELETE'])('answers 404 for %s', async (method) => {
+      const { url } = await start();
+      const res = await fetch(url(), { method });
+      expect(res.status).toBe(404);
+      expect(await res.text()).toBe('Not Found');
+    });
+
+    it('still answers 401 on /mcp without a token', async () => {
+      const { url } = await start();
+      expect((await fetch(url('/mcp'), { method: 'POST' })).status).toBe(401);
+    });
+
+    it('answers 404 to a POST with a large body before reading it', async () => {
+      const { server } = await start();
+      const out = await openUpload(server.port, '/healthz', {});
+      expect(out.status).toBe(404);
+      expect(out.closed).toBe(true);
+    });
+
+    it('answers 200 to a GET with a large body before reading it and closes', async () => {
+      const { server } = await start();
+      const out = await openUpload(server.port, '/healthz', {}, 'GET');
+      expect(out.status).toBe(200);
+      expect(out.headers.connection).toBe('close');
+      expect(out.closed).toBe(true);
+    });
   });
 });

@@ -96,8 +96,6 @@ jobs:
     env:
       KUBECONFORM_VERSION: v0.8.0
       KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
-      # The chart is installed with the last published image (0.4.0, by digest); a PR's own image is tested in the docker job.
-      SMOKE_IMAGE_DIGEST: sha256:c7c188c13fc23b2ddefc2fbc7dddf304468b0072f08994304ca7bb466aa6dfcf
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -127,27 +125,33 @@ jobs:
             echo "::error::Chart rendered without existingSecret or secret.create"; exit 1
           fi
           grep -q 'Set existingSecret' err.txt
+      # The chart is smoke-tested with this commit's image, so probes and chart changes are checked against the code they ship with.
+      - name: Build image
+        run: docker build -t inio-mcp:ci .
       - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         with:
           version: v0.33.0
           cluster_name: inio-smoke
+      - name: Load image into kind
+        run: kind load docker-image inio-mcp:ci --name inio-smoke
       - name: Install on kind and smoke-test over HTTP
         run: |
           token=$(openssl rand -hex 20)
           kubectl create secret generic inio-mcp-test \
             --from-literal=INIO_CLIENT_SECRET=ci --from-literal=MCP_AUTH_TOKEN="$token"
           helm install smoke charts/inio-mcp -f charts/inio-mcp/ci/ingress.yaml \
-            --set image.digest="$SMOKE_IMAGE_DIGEST" --wait --timeout 180s \
+            --set image.repository=inio-mcp,image.tag=ci,image.digest=,image.pullPolicy=Never --wait --timeout 180s \
             || { kubectl describe pods; kubectl logs deploy/smoke-inio-mcp --tail=50 || true; exit 1; }
           kubectl port-forward svc/smoke-inio-mcp 3000:3000 >port-forward.log 2>&1 &
-          for _ in $(seq 20); do curl -s -o /dev/null http://127.0.0.1:3000/ && break; sleep 1; done
-          unauth=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp)
-          init=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp \
+          for _ in $(seq 20); do curl -s -m 2 -o /dev/null http://127.0.0.1:3000/ && break; sleep 1; done
+          health=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/healthz)
+          unauth=$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp)
+          init=$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/mcp \
             -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
             -H 'Accept: application/json, text/event-stream' \
             -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}')
-          echo "unauthenticated: $unauth, initialize: $init"
-          [ "$unauth" = 401 ] && [ "$init" = 200 ]
+          echo "healthz: $health, unauthenticated: $unauth, initialize: $init"
+          [ "$health" = 200 ] && [ "$unauth" = 401 ] && [ "$init" = 200 ]
       - name: Show cluster state on failure
         if: failure()
         run: |
