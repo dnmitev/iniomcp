@@ -1,5 +1,5 @@
 name = "inio-mcp"
-version = "0.5.0"
+version = "0.6.0"
 status = "active"
 path = "."
 tags = []
@@ -9,21 +9,19 @@ version = "1.4"
 source = "https://chrisai.cv/skool"
 
 [milestone]
-name = "v0.3 Integration Layer"
-version = "0.3.0"
-status = "complete"
-phases = 4
+name = "v0.4 Hosted Sign-in"
+version = "0.4.0"
+status = "in_progress"
+phases = 2
 
 [phase]
-number = 11
-name = "Helm chart and EKS"
-status = "complete"
-plans_completed = 2
+number = 12
+name = "OAuth resource server"
+status = "not_started"
+plans_completed = 0
 
 [loop]
 position = "IDLE"
-plan = ""
-plan_path = ""
 
 [satellite]
 groom = true
@@ -31,4 +29,4 @@ groom = true
 [stats]
 total_plans = 26
 total_phases = 10
-last_activity = "2026-11-02T12:10:48Z"
+last_activity = "2026-11-03T12:00:00Z"
