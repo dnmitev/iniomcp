@@ -7,6 +7,8 @@ metadata:
     {{- include "inio-mcp.labels" . | nindent 4 }}
 spec:
   maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  # A pod that is not Ready can always be evicted, so a crash-looping pod cannot hold up a drain.
+  unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels:
       {{- include "inio-mcp.selectorLabels" . | nindent 6 }}

@@ -2,7 +2,8 @@
 
 replicaCount: 2
 
-# Evicts at most one pod at a time during node drains and upgrades. Never blocks a drain, even with one replica.
+# Evicts at most one pod at a time during node drains and upgrades, waiting for its replacement to be Ready before the
+# next. Pods that are not Ready can always be evicted (unhealthyPodEvictionPolicy: AlwaysAllow, Kubernetes 1.27+).
 podDisruptionBudget:
   enabled: true
   maxUnavailable: 1
