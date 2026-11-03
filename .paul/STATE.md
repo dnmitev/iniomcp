@@ -19,7 +19,7 @@ Milestone: none active (v0.3 Integration Layer ✓)
 Phase: -
 Plan: -
 Status: Milestone complete; ready for /paul:discuss-milestone
-Last activity: 2026-11-03 — v0.3 complete; 0.5.0 deployed on EKS via ArgoCD
+Last activity: 2026-11-03 — 0.6.0 prepared (/healthz, chart PDB, topology spread, HPA); after v0.3, outside a milestone
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
@@ -129,7 +129,7 @@ See PROJECT.md Key Decisions.
 ### Git State
 Branch: paul/milestone-v0.3-close (from main 2f5c3e2 = PR #41 squash)
 Milestone tags: milestone-v0.1, milestone-v0.2, milestone-v0.3 (local, not pushed)
-Releases: v0.5.0 (npm latest with provenance, GHCR 0.5.0/0.5/latest sha256:f64c180f…, chart oci://ghcr.io/dnmitev/charts/inio-mcp 0.5.0, 2026-11-02; v0.3 Integration Layer); v0.4.0 (v0.2); v0.3.1; v0.3.0; earlier
+Releases: v0.6.0 (pending tag: /healthz, chart PDB/topology spread/HPA); v0.5.0 (npm latest with provenance, GHCR 0.5.0/0.5/latest sha256:f64c180f…, chart oci://ghcr.io/dnmitev/charts/inio-mcp 0.5.0, 2026-11-02; v0.3 Integration Layer); v0.4.0 (v0.2); v0.3.1; v0.3.0; earlier
 Hosted: https://mcp.inio-shared.com/mcp (EKS, ArgoCD, static bearer token)
 
 ## Session Continuity

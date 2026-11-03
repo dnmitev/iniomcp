@@ -3,7 +3,7 @@
 Runs [inio-mcp](https://github.com/dnmitev/iniomcp) as a shared Streamable HTTP server. Setup, Secret, ingress-nginx, Gateway API and ArgoCD examples: [hosting guide](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md#kubernetes-helm).
 
 ```bash
-helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.5.0 -f values.yaml
+helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.6.0 -f values.yaml
 ```
 
 | Value                                                                                 | Default                                 | Purpose                                                                                                  |
