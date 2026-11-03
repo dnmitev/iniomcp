@@ -647,6 +647,35 @@ describe('startHttpServer (OAuth on)', () => {
     expect(res.status).toBe(200);
   });
 
+  describe('untyped tokens', () => {
+    const initWith = (url: string, token: string) =>
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+          authorization: `Bearer ${token}`,
+        },
+        body: INIT_BODY,
+      });
+
+    it('answers 200 for an untyped JWT when allowUntypedTokens is on', async () => {
+      const cfg = withOauth();
+      cfg.http = { ...cfg.http, oauth: { ...OAUTH, allowUntypedTokens: true } };
+      const { url, idp } = await start(() => 0, cfg);
+      const token = await idp.sign({ typ: 'JWT', claims: { sub: 'user-1' } });
+      expect((await initWith(url(), token)).status).toBe(200);
+    });
+
+    it('answers 401 invalid_token for the same token by default', async () => {
+      const { url, idp } = await start();
+      const token = await idp.sign({ typ: 'JWT', claims: { sub: 'user-1' } });
+      const res = await initWith(url(), token);
+      expect(res.status).toBe(401);
+      expect(res.headers.get('www-authenticate')).toBe(CHALLENGE_INVALID);
+    });
+  });
+
   it('never logs a presented token', async () => {
     const { url, logger, idp } = await start(() => 0);
     const token = await idp.sign({ typ: 'at+jwt', aud: null });

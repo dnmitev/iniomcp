@@ -44,18 +44,20 @@ The server is only the protected resource. It does not issue tokens; your provid
 
 ### Server settings
 
-| Variable             | Purpose                                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `MCP_OAUTH_ISSUER`   | Turns OAuth on. The provider's issuer URL, for example `https://idp.example.com/realms/mcp` (https; http only for localhost) |
-| `MCP_PUBLIC_URL`     | Required with the issuer. The URL users enter in Claude, ending in `/mcp`, for example `https://mcp.example.com/mcp`         |
-| `MCP_OAUTH_AUDIENCE` | Optional. The `aud` value your provider puts in access tokens. Default: `MCP_PUBLIC_URL`                                     |
-| `MCP_AUTH_TOKEN`     | Optional once OAuth is on; set it to keep the shared token for header-based clients                                          |
+| Variable                         | Purpose                                                                                                                                  |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `MCP_OAUTH_ISSUER`               | Turns OAuth on. The provider's issuer URL, for example `https://idp.example.com/realms/mcp` (https; http only for localhost)             |
+| `MCP_PUBLIC_URL`                 | Required with the issuer. The URL users enter in Claude, ending in `/mcp`, for example `https://mcp.example.com/mcp`                     |
+| `MCP_OAUTH_AUDIENCE`             | Optional. The `aud` value your provider puts in access tokens. Default: `MCP_PUBLIC_URL`                                                 |
+| `MCP_OAUTH_ALLOW_UNTYPED_TOKENS` | Optional, default `false`. Set `true` for providers whose access tokens carry no type marker (for example Microsoft Entra ID); see below |
+| `MCP_AUTH_TOKEN`                 | Optional once OAuth is on; set it to keep the shared token for header-based clients                                                      |
 
 With OAuth on, the server:
 
 - serves its sign-in metadata ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)) without a token at `/.well-known/oauth-protected-resource/mcp` (and `/.well-known/oauth-protected-resource`), naming your issuer;
 - answers requests without a valid token with `401` and `WWW-Authenticate: Bearer resource_metadata="…"`, which is how Claude finds where to send the user;
 - reads your provider's `/.well-known/openid-configuration` once and checks each access token's signature against its keys, plus issuer, audience and expiry. Only asymmetric algorithms such as RS256 and ES256 are accepted;
+- accepts only tokens marked as access tokens: header `typ` of `at+jwt` ([RFC 9068](https://www.rfc-editor.org/rfc/rfc9068)) or a `typ` claim of `Bearer` (Keycloak). This keeps ID tokens from the same provider out. Some providers, such as Microsoft Entra ID, put no marker on access tokens. For them, set `MCP_OAUTH_ALLOW_UNTYPED_TOKENS=true`, and use an audience that ID tokens never carry, such as an Application ID URI (`api://…`), never the client ID. Tokens explicitly marked as something else (ID, refresh) are still refused;
 - checks the shared token first, so header clients keep working even if the provider is down. If the provider is unreachable, sign-in users get `401` and the log shows one `token verification unavailable` line a minute.
 
 Every tool call from a signed-in user is logged with `user: { sub, name }`, the token's subject and username. The username is often an email address. Nothing else from the token is logged.

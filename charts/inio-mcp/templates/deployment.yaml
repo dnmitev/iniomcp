@@ -60,8 +60,8 @@ spec:
                   {{- if .Values.oauth.issuer }}
                   optional: true
                   {{- end }}
-            {{- if and (not .Values.oauth.issuer) (or .Values.oauth.publicUrl .Values.oauth.audience) }}
-            {{- fail "oauth.publicUrl and oauth.audience need oauth.issuer" }}
+            {{- if and (not .Values.oauth.issuer) (or .Values.oauth.publicUrl .Values.oauth.audience .Values.oauth.allowUntypedTokens) }}
+            {{- fail "oauth.publicUrl, oauth.audience and oauth.allowUntypedTokens need oauth.issuer" }}
             {{- end }}
             {{- with .Values.oauth.issuer }}
             - name: MCP_OAUTH_ISSUER
@@ -72,6 +72,10 @@ spec:
             {{- if and .Values.oauth.issuer .Values.oauth.audience }}
             - name: MCP_OAUTH_AUDIENCE
               value: {{ .Values.oauth.audience | quote }}
+            {{- end }}
+            {{- if and .Values.oauth.issuer .Values.oauth.allowUntypedTokens }}
+            - name: MCP_OAUTH_ALLOW_UNTYPED_TOKENS
+              value: "true"
             {{- end }}
             {{- with include "inio-mcp.allowedOrigins" . }}
             - name: MCP_ALLOWED_ORIGINS

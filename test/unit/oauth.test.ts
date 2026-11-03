@@ -631,3 +631,73 @@ describe('PR47-typ: ID token rejection (bug fix)', () => {
     await expect(verify(token)).rejects.toThrow(errors.JWTClaimValidationFailed);
   });
 });
+
+describe('createTokenVerifier with allowUntypedTokens', () => {
+  async function setupUntyped() {
+    const idp = await createFakeIdp();
+    const verifier = createTokenVerifier({
+      issuer: ISSUER,
+      audience: AUDIENCE,
+      resourceUrl: AUDIENCE,
+      allowUntypedTokens: true,
+      fetch: idp.fetch,
+    });
+    return { idp, verify: (t: string) => verifier.verifyAccessToken(t) };
+  }
+
+  it('accepts a token with header typ JWT and no payload typ', async () => {
+    const { idp, verify } = await setupUntyped();
+    const token = await idp.sign({ typ: 'JWT' });
+    await expect(verify(token)).resolves.toMatchObject({ token });
+  });
+
+  it('accepts a token with lowercase header typ jwt', async () => {
+    const { idp, verify } = await setupUntyped();
+    const token = await idp.sign({ typ: 'jwt' });
+    await expect(verify(token)).resolves.toMatchObject({ token });
+  });
+
+  it('accepts a token with no header typ and no payload typ', async () => {
+    const { idp, verify } = await setupUntyped();
+    const token = await idp.sign();
+    await expect(verify(token)).resolves.toMatchObject({ token });
+  });
+
+  it.each(['ID', 'Refresh'])('still rejects payload typ %s', async (typ) => {
+    const { idp, verify } = await setupUntyped();
+    await expect(verify(await idp.sign({ typ: 'JWT', claims: { typ } }))).rejects.toThrow(
+      errors.JWTClaimValidationFailed,
+    );
+  });
+
+  it.each(['id_token+jwt', 'logout+jwt'])('still rejects header typ %s', async (typ) => {
+    const { idp, verify } = await setupUntyped();
+    await expect(verify(await idp.sign({ typ }))).rejects.toThrow(errors.JOSEError);
+  });
+
+  it.each(['at+jwt', 'application/at+jwt'])('still accepts header typ %s', async (typ) => {
+    const { idp, verify } = await setupUntyped();
+    await expect(verify(await idp.sign({ typ }))).resolves.toMatchObject({ clientId: '' });
+  });
+
+  it('still accepts payload typ Bearer', async () => {
+    const { idp, verify } = await setupUntyped();
+    await expect(verify(await idp.sign({ claims: { typ: 'Bearer' } }))).resolves.toMatchObject({
+      clientId: '',
+    });
+  });
+
+  it('still rejects an untyped token when allowUntypedTokens is false', async () => {
+    const idp = await createFakeIdp();
+    const verifier = createTokenVerifier({
+      issuer: ISSUER,
+      audience: AUDIENCE,
+      resourceUrl: AUDIENCE,
+      allowUntypedTokens: false,
+      fetch: idp.fetch,
+    });
+    await expect(verifier.verifyAccessToken(await idp.sign({ typ: 'JWT' }))).rejects.toThrow(
+      errors.JWTClaimValidationFailed,
+    );
+  });
+});

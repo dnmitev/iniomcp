@@ -33,7 +33,20 @@ Both can be on at once. With a shared token, everyone who has it has the same ac
 With **Microsoft Entra ID**:
 
 - set `MCP_OAUTH_AUDIENCE` to your app registration's Application ID URI (for example `api://inio-mcp`), not to its client ID;
+- set `MCP_OAUTH_ALLOW_UNTYPED_TOKENS=true`: Entra access tokens carry no access-token type marker, so the server refuses them otherwise;
 - register the MCP server URL as an Application ID URI on that app, or Claude's token request fails with `AADSTS9010010`.
+
+## Agent platforms
+
+The server is a stateless Streamable HTTP server on `/mcp`, packaged as a multi-arch image (amd64 and arm64). That is what agent platforms expect. What follows is from the platforms' documentation and has not been tested with inio-mcp, so try it in a test environment first.
+
+| Platform                                          | How it connects                                                                                                                          | inio-mcp settings                                                                                                                                                                                                                             |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Azure AI Foundry** (Agent Service MCP tool)     | Remote MCP server by URL, with a key in a header from a project connection, or OAuth with your own Entra app registration                | Shared token (`MCP_AUTH_TOKEN`, sent as `Authorization: Bearer …`), or OAuth with Entra as above                                                                                                                                              |
+| **TrueFoundry** (AI Gateway, MCP servers)         | Registers a remote MCP server with an API key, OAuth2 (authorization code or client credentials), or token passthrough of the user's JWT | API key: shared token. OAuth2 authorization code or passthrough: OAuth with the same provider, issuer and audience as the gateway uses. Client credentials: works with OAuth if the token carries the audience, but the log shows no person   |
+| **AWS: Amazon Bedrock AgentCore** (not SageMaker) | Runs your container in AgentCore Runtime, or fronts it with AgentCore Gateway; inbound auth (JWT or IAM) is done by AgentCore            | Run the image with `MCP_TRANSPORT=http`, `HOST=0.0.0.0`, `PORT=8000` (AgentCore expects `0.0.0.0:8000/mcp`). Check whether AgentCore forwards the `Authorization` header to your container before choosing between the shared token and OAuth |
+
+Machine-to-machine `client_credentials` tokens carry no user. With OAuth on, they pass only if they are marked as access tokens and carry the audience, and the logs then show no person.
 
 ## Choose what the assistant may do
 

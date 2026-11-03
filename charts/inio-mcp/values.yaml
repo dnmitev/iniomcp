@@ -44,6 +44,9 @@ oauth:
   issuer: '' # e.g. https://idp.example/realms/mcp
   publicUrl: '' # public URL of /mcp; default https://<ingress.host>/mcp, else https://<first HTTPRoute hostname>/mcp
   audience: '' # aud the provider puts in access tokens; default publicUrl
+  # Accept access tokens without a type marker (header typ at+jwt or payload typ Bearer), e.g. Microsoft Entra ID.
+  # Only with an audience that ID tokens never carry, such as an Application ID URI (api://…).
+  allowUntypedTokens: false
 
 # Browser origins allowed besides localhost. Empty: https:// plus the ingress host and HTTPRoute hostnames.
 allowedOrigins: []

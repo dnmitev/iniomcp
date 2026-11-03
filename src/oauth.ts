@@ -4,7 +4,12 @@ import { createRemoteJWKSet, customFetch, errors, jwtVerify } from 'jose';
 import { z } from 'zod';
 import { isAllowedUrl } from './config.ts';
 
-export type OAuthConfig = { issuer: string; resourceUrl: string; audience: string };
+export type OAuthConfig = {
+  issuer: string;
+  resourceUrl: string;
+  audience: string;
+  allowUntypedTokens?: true;
+};
 
 // Asymmetric only: HS* would let anyone holding the public key forge tokens, "none" is never listed.
 const ALGORITHMS = [
@@ -36,16 +41,22 @@ export function resourceMetadataUrl(resourceUrl: string): string {
   return origin + PRM_PREFIX + pathname;
 }
 
-// An ID token from the same provider can carry our audience (aud == client id); reject non-access token types.
-// Accept only if header typ is at+jwt/application/at+jwt (RFC 9068) or payload typ is Bearer.
-function assertAccessToken(payload: JWTPayload, headerTyp: string | undefined): void {
+// Explicit typ markers decide first: a non-access typ rejects (ID tokens can carry our audience).
+// With no marker at all, accept only when allowUntypedTokens (providers that omit typ).
+function assertAccessToken(
+  payload: JWTPayload,
+  headerTyp: string | undefined,
+  allowUntyped: boolean,
+): void {
   const typ = payload['typ'];
-  const hasAccessTokenHeaderTyp =
-    headerTyp !== undefined && ['at+jwt', 'application/at+jwt'].includes(headerTyp.toLowerCase());
-  const hasAccessTokenPayloadTyp =
-    typ !== undefined && typeof typ === 'string' && typ.toLowerCase() === 'bearer';
-
-  if (!hasAccessTokenHeaderTyp && !hasAccessTokenPayloadTyp) {
+  const payloadTyp = typeof typ === 'string' ? typ.toLowerCase() : typ;
+  const header = headerTyp?.toLowerCase();
+  const headerIsAccess = header === 'at+jwt' || header === 'application/at+jwt';
+  const rejected =
+    (typ !== undefined && payloadTyp !== 'bearer') ||
+    (header !== undefined && !headerIsAccess && header !== 'jwt');
+  const ok = !rejected && (headerIsAccess || payloadTyp === 'bearer' || allowUntyped);
+  if (!ok) {
     throw new errors.JWTClaimValidationFailed(
       'token is not an access token',
       payload,
@@ -60,11 +71,13 @@ export function createTokenVerifier({
   issuer,
   audience,
   resourceUrl,
+  allowUntypedTokens = false,
   fetch = globalThis.fetch,
 }: {
   issuer: string;
   audience: string;
   resourceUrl: string;
+  allowUntypedTokens?: boolean;
   fetch?: typeof globalThis.fetch;
 }) {
   let jwks: Promise<ReturnType<typeof createRemoteJWKSet>> | undefined;
@@ -115,7 +128,7 @@ export function createTokenVerifier({
         clockTolerance: CLOCK_TOLERANCE_S,
         requiredClaims: ['exp'],
       });
-      assertAccessToken(payload, protectedHeader.typ);
+      assertAccessToken(payload, protectedHeader.typ, allowUntypedTokens);
       const { sub, preferred_username: name, azp, client_id: cid, scope, exp } = payload;
       const clientId = [azp, cid].find((v) => typeof v === 'string');
       return {

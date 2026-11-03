@@ -798,6 +798,41 @@ describe('loadConfig OAuth resource server', () => {
     );
   });
 
+  describe('MCP_OAUTH_ALLOW_UNTYPED_TOKENS', () => {
+    it('sets allowUntypedTokens when true', () => {
+      const oauth = loadConfig(oauthEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'true' })).http?.oauth;
+      expect(oauth?.allowUntypedTokens).toBe(true);
+    });
+
+    it.each([undefined, 'false'])('leaves allowUntypedTokens absent when %s', (v) => {
+      const oauth = loadConfig(oauthEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: v })).http?.oauth;
+      expect(oauth).not.toHaveProperty('allowUntypedTokens');
+    });
+
+    it('rejects an invalid value', () => {
+      expect(lines({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'yes' })).toEqual([
+        '- MCP_OAUTH_ALLOW_UNTYPED_TOKENS must be one of: false, true',
+      ]);
+    });
+
+    it('requires MCP_OAUTH_ISSUER', () => {
+      expect(errorOf(httpEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'true' })).message).toBe(
+        'Invalid Inio MCP configuration:\n- MCP_OAUTH_ALLOW_UNTYPED_TOKENS requires MCP_OAUTH_ISSUER',
+      );
+    });
+
+    it('reports allowUntypedTokens in startupFields when on', () => {
+      const fields = startupFields(
+        loadConfig(oauthEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'true' })),
+      );
+      expect(fields).toHaveProperty('oauth', { issuer: ISSUER, allowUntypedTokens: true });
+    });
+
+    it('omits allowUntypedTokens from startupFields by default', () => {
+      expect(startupFields(loadConfig(oauthEnv()))).toHaveProperty('oauth', { issuer: ISSUER });
+    });
+  });
+
   describe('startupFields', () => {
     it('reports oauth with the issuer only when OAuth is on', () => {
       const fields = startupFields(

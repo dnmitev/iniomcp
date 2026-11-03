@@ -60,7 +60,12 @@ export function startupFields({
     logLevel,
     writeTools: allowWrites ? WRITE_TOOL_NAMES.filter((n) => writeTools.has(n)) : [],
     ...(allowWrites && maxPaymentAmount !== undefined && { maxPaymentAmount }),
-    ...(http?.oauth && { oauth: { issuer: http.oauth.issuer } }),
+    ...(http?.oauth && {
+      oauth: {
+        issuer: http.oauth.issuer,
+        ...(http.oauth.allowUntypedTokens && { allowUntypedTokens: true }),
+      },
+    }),
   };
 }
 
@@ -113,13 +118,20 @@ export function loadConfig(env: Env): Config {
     return value;
   };
 
+  const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
+
   const oauthConfig = (): OAuthConfig | undefined => {
     const issuer = env.MCP_OAUTH_ISSUER;
     const resourceUrl = env.MCP_PUBLIC_URL;
     if (!issuer) {
-      for (const name of ['MCP_PUBLIC_URL', 'MCP_OAUTH_AUDIENCE']) {
+      for (const name of [
+        'MCP_PUBLIC_URL',
+        'MCP_OAUTH_AUDIENCE',
+        'MCP_OAUTH_ALLOW_UNTYPED_TOKENS',
+      ]) {
         if (env[name]) problems.push(`${name} requires MCP_OAUTH_ISSUER`);
       }
+      flag('MCP_OAUTH_ALLOW_UNTYPED_TOKENS');
       return undefined;
     }
     if (!isAllowedUrl(issuer)) {
@@ -135,7 +147,12 @@ export function loadConfig(env: Env): Config {
       }
     }
     const resource = resourceUrl ?? '';
-    return { issuer, resourceUrl: resource, audience: env.MCP_OAUTH_AUDIENCE || resource };
+    return {
+      issuer,
+      resourceUrl: resource,
+      audience: env.MCP_OAUTH_AUDIENCE || resource,
+      ...(flag('MCP_OAUTH_ALLOW_UNTYPED_TOKENS') && { allowUntypedTokens: true as const }),
+    };
   };
 
   const origins = (name: string): string[] => {
@@ -148,8 +165,6 @@ export function loadConfig(env: Env): Config {
     }
     return list;
   };
-
-  const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
 
   const writeTools = (): ReadonlySet<string> => {
     const names = (env.INIO_WRITE_TOOLS ?? '')
