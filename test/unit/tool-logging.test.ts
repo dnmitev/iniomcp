@@ -317,3 +317,80 @@ describe('withToolLogging attribution', () => {
     expect(lineOf(logger)).not.toHaveProperty('client');
   });
 });
+
+describe('withToolLogging signed-in user', () => {
+  const lineOf = (logger: ReturnType<typeof fakeLogger>) => logger.info.mock.calls[0]?.[0];
+  const ctx = (extra?: Record<string, unknown>, more: Record<string, unknown> = {}) => ({
+    http: { authInfo: { token: 'jwt-do-not-log', clientId: 'web', scopes: [], extra, ...more } },
+  });
+  const run = async (c: object | null, options = {}, args: object = {}) => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.resolve(text('x')), options);
+    await wrapped(args, c);
+    return logger;
+  };
+
+  it('logs user sub and name from preferred_username', async () => {
+    const logger = await run(ctx({ sub: 'u-1', preferred_username: 'alice' }));
+    expect(lineOf(logger)).toHaveProperty('user', { sub: 'u-1', name: 'alice' });
+  });
+
+  it('logs the user on write lines next to write and target', async () => {
+    const logger = await run(
+      ctx({ sub: 'u-1', preferred_username: 'alice' }),
+      { write: true },
+      { id: 'i-1' },
+    );
+    expect(lineOf(logger)).toMatchObject({
+      write: true,
+      target: { id: 'i-1' },
+      user: { sub: 'u-1', name: 'alice' },
+    });
+  });
+
+  it('logs sub alone when preferred_username is absent', async () => {
+    const logger = await run(ctx({ sub: 'u-1' }));
+    expect(lineOf(logger)).toHaveProperty('user', { sub: 'u-1' });
+    expect(lineOf(logger)).toHaveProperty('user.sub', 'u-1');
+    expect(lineOf(logger)).not.toHaveProperty('user.name');
+  });
+
+  it('logs sub alone when preferred_username is not a string', async () => {
+    const logger = await run(ctx({ sub: 'u-1', preferred_username: 5 }));
+    expect(lineOf(logger)).not.toHaveProperty('user.name');
+  });
+
+  it('logs the user on a failing call too', async () => {
+    const logger = fakeLogger();
+    const wrapped = withToolLogging(logger, 't', () => Promise.reject(new Error('boom')));
+    await expect(wrapped({}, ctx({ sub: 'u-1' }))).rejects.toThrow('boom');
+    expect(lineOf(logger)).toMatchObject({ outcome: 'error', user: { sub: 'u-1' } });
+  });
+
+  it.each([
+    ['no authInfo', {}],
+    ['no http context', { signal: 1 }],
+    ['authInfo without extra', ctx(undefined)],
+    ['extra without sub', ctx({ preferred_username: 'alice' })],
+    ['null extra', { http: { authInfo: { extra: null } } }],
+    ['string extra', { http: { authInfo: { extra: 'sub' } } }],
+    ['non-string sub', ctx({ sub: 5 })],
+    ['null authInfo', { http: { authInfo: null } }],
+    ['null http', { http: null }],
+    ['null extra context', null],
+  ])('logs no user with %s', async (_n, c) => {
+    const logger = await run(c);
+    expect(lineOf(logger)).not.toHaveProperty('user');
+  });
+
+  it('logs only sub and name, never the token or other claims', async () => {
+    const logger = await run(
+      ctx({ sub: 'u-1', preferred_username: 'alice', email: 'alice@corp.example', groups: ['g'] }),
+    );
+    expect(lineOf(logger)).toHaveProperty('user', { sub: 'u-1', name: 'alice' });
+    const dump = JSON.stringify(logger.info.mock.calls);
+    expect(dump).not.toContain('jwt-do-not-log');
+    expect(dump).not.toContain('alice@corp.example');
+    expect(dump).not.toContain('groups');
+  });
+});

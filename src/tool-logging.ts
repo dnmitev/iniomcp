@@ -27,6 +27,7 @@ export function withToolLogging<A extends object, E, R extends ToolResult>(
 ): (args: A, extra: E) => Promise<R> {
   return async (args, extra) => {
     const started = performance.now();
+    const user = userOf(extra);
     const log = (outcome: 'ok' | 'error', responseBytes: number) => {
       const durationMs = Math.round(performance.now() - started);
       const approxTokens = Math.ceil(responseBytes / 4);
@@ -39,6 +40,7 @@ export function withToolLogging<A extends object, E, R extends ToolResult>(
           responseBytes,
           approxTokens,
           ...(clientInfo && { client: { name: clientInfo.name, version: clientInfo.version } }),
+          ...(user && { user }),
           ...(write && { write, ...targetOf(args) }),
         },
         'tool call',
@@ -66,4 +68,16 @@ function targetOf(args: object): { target?: Record<string, unknown> } {
     TARGET_KEYS.filter((k) => record.has(k)).map((k) => [k, record.get(k)]),
   );
   return Object.keys(target).length > 0 ? { target } : {};
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+
+/** Signed-in user (sub and name only) from the verified access token, if the request had one. */
+function userOf(extra: unknown): { sub: string; name?: string } | undefined {
+  const http = isRecord(extra) ? extra.http : undefined;
+  const authInfo = isRecord(http) ? http.authInfo : undefined;
+  const claims = isRecord(authInfo) ? authInfo.extra : undefined;
+  if (!isRecord(claims) || typeof claims.sub !== 'string') return undefined;
+  const name = claims.preferred_username;
+  return { sub: claims.sub, ...(typeof name === 'string' && { name }) };
 }
