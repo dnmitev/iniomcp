@@ -560,3 +560,9 @@ at = "2026-11-02T12:10:48Z"
 action = "milestone_create"
 phase = 12
 at = "2026-11-03T12:00:00Z"
+
+[[entry]]
+action = "plan"
+phase = 12
+plan = "12-01"
+at = "2026-11-03T13:00:00Z"
