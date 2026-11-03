@@ -19,8 +19,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.6.0 |
-| Status | v0.4 Hosted Sign-in in progress (Phase 13) |
+| Version | 0.7.0 |
+| Status | v0.4 Hosted Sign-in complete (0.7.0); next milestone not started |
 | Last Updated | 2026-11-03 |
 
 ## Requirements
@@ -65,15 +65,18 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 - ✓ Unauthenticated `GET /healthz` (no Inio call) probed by the Helm chart; chart PodDisruptionBudget, topology spread, optional HPA — after v0.3 (0.6.0)
 
-### Active (In Progress) — v0.4 Hosted Sign-in
+### Active (In Progress)
+- None (v0.4 complete; next milestone not started)
+
+### Shipped in v0.4 Hosted Sign-in
 - ✓ OAuth resource server: Protected Resource Metadata, JWT validation via OIDC discovery, static token kept, user in logs — Phase 12
-- [ ] Chart values and routes, provider and Claude connector guides, sign-in verified from claude.ai, release — Phase 13
+- ✓ Chart OAuth values and routes, provider checklist, Claude connector guide, self-hosting guide, strict access-token type with opt-in; 0.7.0 released (owner sign-in at rollout) — Phase 13
 
 ### Planned (Next)
-- Per-user write roles, multi-tenant hosting (after v0.4 sign-in)
+- Tenant check before Inio hosts instances for external clients; multi-tenant hosting; per-user write roles
 - Request contract from the monorepo; hosted polish (cache TTL, get_invoice opt-in)
 - AEGIS R6 remainder: pack-once publish with `--ignore-scripts`, image build provenance, sandbox-tenant live gate
-- ChatGPT support: deferred until the hosted server has OAuth (v0.4 or later); ChatGPT connectors need a remote server with OAuth
+- ChatGPT support: possible now that the hosted server has OAuth (untested)
 - Move to the `@inio` npm scope and the company GitHub org when they exist
 
 ### Out of Scope
@@ -136,7 +139,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Safe defaults: no redistribution, no credit-note distribution, curated payment types, explicit full payment | Nothing reaches end customers or moves money unless asked | 2026-10-29 | Active |
 | Tenant clientId from the token's inio_client_id claim | No extra config | 2026-10-29 | Active |
 | senior-developer agent on Sonnet (medium effort) | Patterns settled; reviewer stays on Opus | 2026-10-29 | Active |
-| HTTP auth = one static bearer token (≥32 printable-ASCII chars), constant-time compare; one instance = one tenant; no OAuth in v0.1 | All common clients accept a fixed header; spec makes auth optional; no token passthrough | 2026-10-30 | Active |
+| HTTP auth = one static bearer token (≥32 printable-ASCII chars), constant-time compare; one instance = one tenant; no OAuth in v0.1 | All common clients accept a fixed header; spec makes auth optional; no token passthrough | 2026-10-30 | Extended (v0.4 OAuth) |
 | Origin allowlist by hostname (SDK helper); auth before Origin | Bearer is the barrier; Origin is the DNS-rebinding layer | 2026-10-30 | Active |
 | @modelcontextprotocol/node (toNodeHandler) for the Node bridge | Official adapter; streaming handled | 2026-10-30 | Active |
 | Docker image binds 0.0.0.0, stdio default; no health endpoint; SDK body limit 4 MB | Token still required; no unauthenticated route | 2026-10-30 | Superseded (body limit) |
@@ -144,16 +147,17 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Redaction by customer type: B open except invoice links and SSN; C/unknown strict (+ customerName, city, yourReference); `note` visible; errorText strict | Integration layer needs business data; consumer data stays protected (GDPR) | 2026-11-02 | Active |
 | Write bounds are opt-in (INIO_WRITE_TOOLS, INIO_MAX_PAYMENT_AMOUNT); writes logged with target ids and client app; rulesets protect main and v* tags | Ease of use by default, controls for team servers; single-maintainer release safety | 2026-11-02 | Active |
 | Helm chart: Ingress and Gateway API side by side, existingSecret only, uid/gid 1000, read-only root; published as OCI to GHCR by release.yml | Team deploys with ArgoCD on EKS; ingress-nginx today, Gateway API ready | 2026-11-02 | Active |
+| HTTP auth = static token first, then optional OAuth (OIDC provider, JWT via discovery/JWKS, access-token type required, untyped opt-in); PRM + resource_metadata challenge; user in logs | Claude's apps need OAuth on personal plans; header clients unchanged | 2026-11-03 | Active |
 | Client owns the check-before-retry sentence (status 0 or >= 500 on writes); tools add only a check pointer; accepted-unreadable = ok + note via writeFailure/acceptedUnreadable | AEGIS F-04-002: 8 of 11 write tools reported landed writes as failed | 2026-10-30 | Active |
 
 ## Success Metrics
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Mutation score | ≥ 80 break, 90 target | ≥ 94.9 on every changed file in v0.3 | Met |
-| Unit + integration tests | all green in CI | 2083 unit + integration + Docker + chart kind smoke green (0.5.0) | Met |
+| Mutation score | ≥ 80 break, 90 target | ≥ 92.6 on every changed file in v0.4 | Met |
+| Unit + integration tests | all green in CI | 2329 unit + 54 integration (real Keycloak OAuth) + Docker + chart kind smoke green (0.7.0) | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
-| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); `npx -y @dnmitev/inio-mcp@0.5.0` starts; 0.5.0 published with provenance | Met |
+| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); `npx -y @dnmitev/inio-mcp@0.7.0` starts; 0.7.0 published with provenance | Met |
 
 ## Tech Stack / Tools
 

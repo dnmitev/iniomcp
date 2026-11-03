@@ -7,6 +7,47 @@ Completed milestone log for this project.
 | v0.1 Initial Release | 2026-10-30 | 3 days | 5 phases, 16 plans |
 | v0.2 Audit Quick Wins | 2026-10-30 | 1 day | 2 phases, 4 plans |
 | v0.3 Integration Layer | 2026-11-03 | 2 days | 4 phases, 7 plans |
+| v0.4 Hosted Sign-in | 2026-11-03 | 1 day | 2 phases, 2 plans |
+
+---
+
+## ✅ v0.4 Hosted Sign-in
+
+**Completed:** 2026-11-03
+**Duration:** 1 day
+**Released as:** 0.7.0 (npm with provenance, `ghcr.io/dnmitev/inio-mcp` sha256:d8bb68b5…f783ab, chart `oci://ghcr.io/dnmitev/charts/inio-mcp` 0.7.0); 0.6.0 (`/healthz`, PDB, topology spread, HPA) shipped just before
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 2 |
+| Plans | 2 |
+| Files changed | 46 (+3,251 / −219, v0.6.0..v0.7.0) |
+| Tests | 2329 unit (was 2110), 54 integration (real Keycloak OAuth), 11 Docker |
+| Mutation | ≥ 92.6 per changed file (oauth.ts 95.2) |
+| Releases | 0.6.0, 0.7.0 |
+
+### Key Accomplishments
+
+- **OAuth protected resource:** the HTTP server publishes Protected Resource Metadata and answers with a `resource_metadata` challenge. It accepts access tokens from an OpenID Connect provider (issuer, audience, expiry, signature, access-token type), and the shared token keeps working next to it.
+- **New users:** Claude on the web, Desktop connectors and mobile can use the hosted server with each person's own sign-in, and logs name the user.
+- **Chart:** OAuth values and routes, an unchanged render when OAuth is off, and a kind smoke test of the metadata and challenge.
+- **Docs:** a generic provider checklist and troubleshooting, a connector guide, and a self-hosting guide for Inio clients that covers agent platforms.
+- **Before v0.4:** `/healthz` probes, PDB, topology spread and an optional HPA, shipped in 0.6.0.
+
+### Key Decisions
+
+- The static token is checked first; OAuth is opt-in. One instance = one tenant, and there is no token passthrough to the Inio API.
+- Tokens must be marked as access tokens. `MCP_OAUTH_ALLOW_UNTYPED_TOKENS` is the opt-in for Entra-style providers.
+- Provider configuration for the owner's environments stays outside this repo.
+- Inio clients can self-host with their own API-to-API credentials and identity provider.
+
+### Deferred to later
+
+- The owner's sign-in from claude.ai on the hosted instance, during rollout.
+- A tenant check before Inio hosts instances for external clients; multi-tenant hosting.
+- Agent platforms untested.
 
 ---
 
