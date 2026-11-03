@@ -72,6 +72,8 @@ Claude on the web, Desktop and mobile can use a hosted server as a connector, wi
 
 To run one server for your whole team, see [Hosting a shared server](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md).
 
+Inio clients who want to run it in their own cloud or agent platform, with their own Inio API credentials: [Self-hosting for Inio clients](https://github.com/dnmitev/iniomcp/blob/main/docs/self-hosting.md).
+
 ### Pinning and verification
 
 The examples pin version 0.7.0. Change the version on purpose when you upgrade; do not drop it. The pin covers the package itself: npx still resolves its dependencies within their declared ranges on each fresh install.

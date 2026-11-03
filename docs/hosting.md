@@ -1,6 +1,6 @@
 # Hosting a shared server
 
-One server can serve a whole team over Streamable HTTP. It holds the Inio client credentials; team members only get an MCP token and connect with the "Hosted" setup in their [client guide](https://github.com/dnmitev/iniomcp#set-up-your-client).
+One server can serve a whole team over Streamable HTTP. It holds the Inio client credentials; team members only get an MCP token and connect with the "Hosted" setup in their [client guide](https://github.com/dnmitev/iniomcp#set-up-your-client). Running it for your own company as an Inio client? Start with [Self-hosting for Inio clients](self-hosting.md).
 
 ## Local or hosted?
 
