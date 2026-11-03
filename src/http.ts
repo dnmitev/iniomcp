@@ -21,16 +21,19 @@ const MAX_REQUEST_BODY_BYTES = 256 * 1024;
 const DRAIN_GRACE_MS = 500;
 const UNAUTHORIZED_LOG_INTERVAL_MS = 60_000;
 
-type Rejection = { status: 404 | 401; body: string; headers?: Record<string, string> };
+type Reply = { status: 200 | 404 | 401; body: string; headers?: Record<string, string> };
 
-const rejectNotFound: Rejection = { status: 404, body: 'Not Found' };
-const rejectUnauthorized: Rejection = {
+const replyNotFound: Reply = { status: 404, body: 'Not Found' };
+const healthHeaders = { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' };
+const replyHealthy: Reply = { status: 200, body: 'ok', headers: healthHeaders };
+const replyHealthyHead: Reply = { status: 200, body: '', headers: healthHeaders };
+const replyUnauthorized: Reply = {
   status: 401,
   body: 'Unauthorized',
   headers: { 'WWW-Authenticate': 'Bearer' },
 };
 
-/** Web-standard handler for POST/GET/DELETE /mcp behind a static bearer token and Origin allowlist. */
+/** Web-standard handler for POST/GET/DELETE /mcp behind a static bearer token and Origin allowlist, plus open GET/HEAD /healthz. */
 export function createHttpHandler(
   config: HttpConfig,
   deps: Deps = {},
@@ -50,27 +53,34 @@ function buildHandler(config: HttpConfig, deps: Deps) {
     onerror: (e) => logger.warn({ err: e.message }, 'mcp handler error'),
   });
 
-  /** Path + bearer gate, usable before any body is read. */
-  const reject = (path: string, authorization: string | null | undefined): Rejection | null => {
-    if (path !== '/mcp') return rejectNotFound;
+  /** Method + path + bearer gate, usable before any body is read. Returns the reply to send (404, 401, or 200 for /healthz), or null to proceed to /mcp. */
+  const gate = (
+    method: string | undefined,
+    path: string,
+    authorization: string | null | undefined,
+  ): Reply | null => {
+    if (path === '/healthz' && (method === 'GET' || method === 'HEAD')) {
+      return method === 'GET' ? replyHealthy : replyHealthyHead;
+    }
+    if (path !== '/mcp') return replyNotFound;
     const match = /^Bearer +(\S+)$/i.exec(authorization ?? '');
-    if (!match?.[1] || !timingSafeEqual(digest(match[1]), expected)) return rejectUnauthorized;
+    if (!match?.[1] || !timingSafeEqual(digest(match[1]), expected)) return replyUnauthorized;
     return null;
   };
 
   const handle = async (req: Request): Promise<Response> => {
-    const rejection = reject(new URL(req.url).pathname, req.headers.get('authorization'));
-    if (rejection) return new Response(rejection.body, rejection);
+    const reply = gate(req.method, new URL(req.url).pathname, req.headers.get('authorization'));
+    if (reply) return new Response(reply.body, reply);
     return originValidationResponse(req, origins) ?? mcp.fetch(req);
   };
-  return { handle, reject, logger, close: () => mcp.close() };
+  return { handle, gate, logger, close: () => mcp.close() };
 }
 
 export async function startHttpServer(
   config: HttpConfig,
   deps: Deps = {},
 ): Promise<{ port: number; close(): Promise<void> }> {
-  const { handle, reject: gate, logger, close } = buildHandler(config, deps);
+  const { handle, gate, logger, close } = buildHandler(config, deps);
   const { now = Date.now } = deps;
   // Rate-limited so a scanner cannot flood the log; the skipped count rides on the next line.
   let lastUnauthorizedLog = -Infinity;
@@ -94,19 +104,19 @@ export async function startHttpServer(
   );
   const server: Server = createServer((req, res) => {
     const path = URL.parse(req.url ?? '/', 'http://localhost')?.pathname ?? '';
-    const rejection = gate(path, req.headers.authorization);
-    if (!rejection) {
+    const reply = gate(req.method, path, req.headers.authorization);
+    if (!reply) {
       void nodeHandler(req, res);
       return;
     }
-    if (rejection.status === 401) logUnauthorized(req.socket.remoteAddress, path);
-    // Reply before the body is read, then drop the connection so an open upload cannot pin it.
-    res.writeHead(rejection.status, {
+    if (reply.status === 401) logUnauthorized(req.socket.remoteAddress, path);
+    // Reply (404, 401, /healthz) before the body is read, then drop the connection so an open upload cannot pin it.
+    res.writeHead(reply.status, {
       'Content-Type': 'text/plain',
       Connection: 'close',
-      ...rejection.headers,
+      ...reply.headers,
     });
-    res.end(rejection.body);
+    res.end(reply.body);
   });
   let onError: (err: Error) => void = () => {};
   await new Promise<void>((resolve, reject) => {

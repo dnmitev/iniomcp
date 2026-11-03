@@ -14,7 +14,7 @@ One server can serve a whole team over Streamable HTTP. It holds the Inio client
 
 ## Run the server
 
-Every request to `/mcp` must send `Authorization: Bearer <MCP_AUTH_TOKEN>`, otherwise it gets 401. Browser requests from origins other than localhost (or `MCP_ALLOWED_ORIGINS`) get 403.
+Every request to `/mcp` must send `Authorization: Bearer <MCP_AUTH_TOKEN>`, otherwise it gets 401. Browser requests from origins other than localhost (or `MCP_ALLOWED_ORIGINS`) get 403. From 0.6.0, `GET /healthz` needs no token and returns `ok` for load balancer and Kubernetes probes; it never calls the Inio API. Every other path gets 404.
 
 Start it with npx:
 

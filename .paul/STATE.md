@@ -106,7 +106,6 @@ See PROJECT.md Key Decisions.
 |-------|--------|--------|---------|
 | Stryker TS checker / tsconfig handling disabled (no TS 7 JS API) | 01-01 | S | Stryker supports TS 7 |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
-| Health endpoint for HTTP mode (skipped: would be unauthenticated) | 05-02 | S | If an orchestrator needs it |
 | Per-user tokens or MCP OAuth for HTTP | 05-01 | M | If teams ask |
 | Double-signal shutdown tests are race-prone smoke tests; spawned SIGTERM test accepts finished-or-closed (drain proven via close()) | 05-02, 06-01 | S | If shutdown logic changes |
 | 5xx hint punctuation for API messages ending !/?/whitespace/empty | 06-02 | S | Cosmetic; any client touch |
