@@ -63,7 +63,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 - ✓ Helm chart (ingress-nginx Ingress and Gateway API HTTPRoute, existingSecret, hardened pod) published as OCI; team runs it on EKS via ArgoCD — Phase 11 (0.5.0)
 
-- ✓ Unauthenticated `GET /healthz` (no Inio call) probed by the Helm chart; chart PodDisruptionBudget, topology spread, optional HPA — after v0.3 (0.5.1)
+- ✓ Unauthenticated `GET /healthz` (no Inio call) probed by the Helm chart; chart PodDisruptionBudget, topology spread, optional HPA — after v0.3 (0.6.0)
 
 ### Active (In Progress)
 - None (v0.3 complete; next milestone not started)
