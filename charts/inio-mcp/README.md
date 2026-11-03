@@ -27,6 +27,7 @@ helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.5.0 -f v
 | `preStopSleepSeconds`                                                                 | `5`                                     | Delay before SIGTERM so the proxy drains first                                                           |
 | `terminationGracePeriodSeconds`                                                       | `30`                                    | Pod termination grace                                                                                    |
 | `resources`                                                                           | 50m / 96Mi request, 256Mi limit         | Container resources                                                                                      |
+| `topologySpread.enabled`                                                              | `true`                                  | Prefer spreading pods across nodes and zones (never blocks scheduling)                                   |
 | `podAnnotations`, `nodeSelector`, `tolerations`, `affinity`                           |                                         | Scheduling and annotations                                                                               |
 
 The pod runs as user 1000 with a read-only root filesystem, all capabilities dropped and `automountServiceAccountToken: false`. Probes check the TCP port (the server has no unauthenticated health endpoint).

@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- Helm chart: a PodDisruptionBudget (`maxUnavailable: 1`, on by default) and an optional CPU HorizontalPodAutoscaler (`autoscaling.enabled`).
+- Helm chart: a PodDisruptionBudget (`maxUnavailable: 1`, on by default), soft topology spread across nodes and zones (on by default) and an optional CPU HorizontalPodAutoscaler (`autoscaling.enabled`).
 
 ## [0.5.0] - 2026-11-02
 

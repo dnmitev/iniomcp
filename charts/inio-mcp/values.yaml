@@ -89,6 +89,10 @@ resources:
   limits:
     memory: 256Mi
 
+# Spread pods across nodes and zones when possible (ScheduleAnyway: never blocks scheduling).
+topologySpread:
+  enabled: true
+
 podAnnotations: {}
 nodeSelector: {}
 tolerations: []
