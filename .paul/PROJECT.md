@@ -19,9 +19,9 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.4.0 |
-| Status | v0.3 Integration Layer in progress (Phase 11) |
-| Last Updated | 2026-11-02 |
+| Version | 0.5.0 |
+| Status | v0.3 Integration Layer complete (0.5.0); next milestone not started |
+| Last Updated | 2026-11-03 |
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - Read tools: customers, customer pauses, invoices, invoice retry attempts (by id or number)
 - Opt-in write tools behind `INIO_ALLOW_WRITES` (customers, pauses, invoices, credit invoices, payments)
 - PII redaction by default (`INIO_REVEAL_PII` to disable)
-- Distributed as npm `@dnmitev/inio-mcp` (`@inio` later) and a GHCR Docker image, over stdio or Streamable HTTP
+- Distributed as npm `@dnmitev/inio-mcp` (`@inio` later), a GHCR Docker image and a Helm chart, over stdio or Streamable HTTP
 
 ### Validated (Shipped)
 - ✓ `client_credentials` auth with token cache and refresh (tested against real Keycloak) — Phase 1
@@ -61,8 +61,10 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor; local, Docker, hosted), hosting guide, usage examples, troubleshooting; drift fixed and guarded by a docs test (AEGIS R10) — Phase 9
 - ✓ Opt-in INIO_WRITE_TOOLS allowlist and INIO_MAX_PAYMENT_AMOUNT; later-effect sentences; write calls attributed in logs (target, outcome, client app when known); throttled 401 warnings; SHA-pinned actions, pre-push image smoke test, rulesets on main and v* tags (trimmed AEGIS R3, R8, R6) — Phase 10
 
-### Active (In Progress) — v0.3 Integration Layer
-- [ ] Helm chart (Ingress and Gateway API) published as OCI; team runs it on EKS via ArgoCD — Phase 11
+- ✓ Helm chart (ingress-nginx Ingress and Gateway API HTTPRoute, existingSecret, hardened pod) published as OCI; team runs it on EKS via ArgoCD — Phase 11 (0.5.0)
+
+### Active (In Progress)
+- None (v0.3 complete; next milestone not started)
 
 ### Planned (Next)
 - v0.4 Hosted: MCP Keycloak realm (BoP brokering), OAuth resource server, per-user write roles and audit, multi-tenant (`.paul/research/v0.4-hosted-auth.md`)
@@ -138,16 +140,17 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Auth and path checked before the body is read; 256 KiB body cap; 500 ms drain on shutdown | AEGIS F-04-007: pre-auth buffering let unauthenticated clients grow RSS by ~300 MB | 2026-10-30 | Active |
 | Redaction by customer type: B open except invoice links and SSN; C/unknown strict (+ customerName, city, yourReference); `note` visible; errorText strict | Integration layer needs business data; consumer data stays protected (GDPR) | 2026-11-02 | Active |
 | Write bounds are opt-in (INIO_WRITE_TOOLS, INIO_MAX_PAYMENT_AMOUNT); writes logged with target ids and client app; rulesets protect main and v* tags | Ease of use by default, controls for team servers; single-maintainer release safety | 2026-11-02 | Active |
+| Helm chart: Ingress and Gateway API side by side, existingSecret only, uid/gid 1000, read-only root; published as OCI to GHCR by release.yml | Team deploys with ArgoCD on EKS; ingress-nginx today, Gateway API ready | 2026-11-02 | Active |
 | Client owns the check-before-retry sentence (status 0 or >= 500 on writes); tools add only a check pointer; accepted-unreadable = ok + note via writeFailure/acceptedUnreadable | AEGIS F-04-002: 8 of 11 write tools reported landed writes as failed | 2026-10-30 | Active |
 
 ## Success Metrics
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Mutation score | ≥ 80 break, 90 target | ≥ 91.7 on every changed file in v0.2 | Met |
-| Unit + integration tests | all green in CI | 1895 unit + 47 integration + 27 Docker green (0.4.0) | Met |
+| Mutation score | ≥ 80 break, 90 target | ≥ 94.9 on every changed file in v0.3 | Met |
+| Unit + integration tests | all green in CI | 2083 unit + integration + Docker + chart kind smoke green (0.5.0) | Met |
 | First real answer | Claude Desktop fetches a real invoice | Verified 2026-10-28 | Met |
-| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); `npx -y @dnmitev/inio-mcp@0.4.0` starts; 0.4.0 published with provenance | Met |
+| Public install | `npx -y @dnmitev/inio-mcp` works on a clean machine | 0.3.0 verified 2026-10-30 (stdio and HTTP); `npx -y @dnmitev/inio-mcp@0.5.0` starts; 0.5.0 published with provenance | Met |
 
 ## Tech Stack / Tools
 

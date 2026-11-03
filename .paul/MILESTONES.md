@@ -6,6 +6,47 @@ Completed milestone log for this project.
 |-----------|-----------|----------|-------|
 | v0.1 Initial Release | 2026-10-30 | 3 days | 5 phases, 16 plans |
 | v0.2 Audit Quick Wins | 2026-10-30 | 1 day | 2 phases, 4 plans |
+| v0.3 Integration Layer | 2026-11-03 | 2 days | 4 phases, 7 plans |
+
+---
+
+## ✅ v0.3 Integration Layer
+
+**Completed:** 2026-11-03
+**Duration:** 2 days (2026-11-02 to 2026-11-03)
+**Released as:** 0.5.0 (npm `@dnmitev/inio-mcp` with provenance, `ghcr.io/dnmitev/inio-mcp` sha256:f64c180f…a8529d4, Helm chart `oci://ghcr.io/dnmitev/charts/inio-mcp`)
+**Source:** AEGIS findings reworked for ease of use (R2, R3, R6, R8, R10) plus the Helm chart
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 4 |
+| Plans | 7 |
+| Files changed | 99 (+6,515 / −696, v0.4.0..v0.5.0) |
+| Tests | 2083 unit (was 1895), integration, Docker, chart kind smoke |
+| Mutation | ≥ 94.9 on every changed file |
+| Releases | 0.5.0 |
+
+### Key Accomplishments
+
+- Redaction follows the customer type: business data is open except invoice links and SSN; consumer data also hides name, city and yourReference. Unreviewed response keys fail tests and the live release gate.
+- Setup guide per client (Claude Desktop, Claude Code, VS Code, Cursor; local, Docker, hosted), hosting guide, examples and troubleshooting, guarded by a docs test.
+- Opt-in write bounds (`INIO_WRITE_TOOLS`, `INIO_MAX_PAYMENT_AMOUNT`), write calls logged with target ids, throttled 401 warnings.
+- SHA-pinned actions, image smoke test before push, rulesets on `main` and `v*` tags.
+- Helm chart (ingress-nginx Ingress and Gateway API HTTPRoute, existingSecret, hardened pod), validated in CI and published as OCI; the team runs it on EKS through ArgoCD.
+
+### Key Decisions
+
+- Ease of use first: new safety settings are opt-in; one instance = one tenant with a static bearer token
+- Customer type read per object; unknown = consumer; get_invoice looks the customer up (cached)
+- Chart pod runs as uid/gid 1000; secrets only via existingSecret
+- ChatGPT deferred until the hosted server has OAuth (v0.4)
+
+### Deferred to later
+
+- v0.4 Hosted: MCP Keycloak realm, OAuth, per-user write roles and audit, multi-tenant
+- R6 remainder (pack-once publish, image provenance, sandbox live gate); PodDisruptionBudget; customer-type cache TTL; `userRealName` visibility
 
 ---
 

@@ -11,27 +11,27 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.3 Integration Layer — Phase 11 Helm chart and EKS
+**Current focus:** v0.3 Integration Layer complete (0.5.0, running on EKS); next milestone not started
 
 ## Current Position
 
-Milestone: v0.3 Integration Layer
-Phase: 11 of 11 (Helm chart and EKS) — In progress
-Plan: 11-02 applying — waiting at checkpoint: owner merges PR #41, then tag v0.5.0 and approve release
-Status: APPLY in progress (tasks 1-2 done; PR #41 CI green; live suite 14/14 locally)
-Last activity: 2026-11-02 — Created .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
+Milestone: none active (v0.3 Integration Layer ✓)
+Phase: -
+Plan: -
+Status: Milestone complete; ready for /paul:discuss-milestone
+Last activity: 2026-11-03 — v0.3 complete; 0.5.0 deployed on EKS via ArgoCD
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
-- v0.3 Integration Layer: [███████▌░░] 75% (Phases 8, 9, 10 ✓)
+- v0.3 Integration Layer: [██████████] 100% ✓ (0.5.0)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◐        ○     [11-02 at checkpoint: merge PR #41]
+  ○        ○        ○     [Milestone complete - ready for next]
 ```
 
 ## Accumulated Context
@@ -115,6 +115,7 @@ See PROJECT.md Key Decisions.
 | Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
 | Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
 | Optional PodDisruptionBudget and topology spread in the Helm chart | 11-01 | S | First node-drain incident or more replicas |
+| `userRealName` visible for all customer types (seen in live keys); consider consumer redaction | 11-02 | S | Owner decision |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
 ### Blockers/Concerns
@@ -128,21 +129,20 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/milestone-v0.3 (from main 3151511 = PR #39 squash; last commit Phase 10, not pushed); tag v0.4.0 on 1ddab79 (pushed)
-Previous: paul/milestone-v0.1; milestone tags milestone-v0.1, milestone-v0.2 (local, not pushed)
-Releases: v0.4.0 (npm latest, GHCR 0.4.0/0.4/latest sha256:c7c188c1…, 2026-10-30; v0.2 Audit Quick Wins); v0.3.1 (npm latest, GHCR 0.3.1/0.3/latest, 2026-10-30; cleanup); v0.3.0 (shared HTTP server); v0.2.0 before
+Branch: paul/milestone-v0.3-close (from main 2f5c3e2 = PR #41 squash)
+Milestone tags: milestone-v0.1, milestone-v0.2, milestone-v0.3 (local, not pushed)
+Releases: v0.5.0 (npm latest with provenance, GHCR 0.5.0/0.5/latest sha256:f64c180f…, chart oci://ghcr.io/dnmitev/charts/inio-mcp 0.5.0, 2026-11-02; v0.3 Integration Layer); v0.4.0 (v0.2); v0.3.1; v0.3.0; earlier
+Hosted: https://mcp.inio-shared.com/mcp (EKS, ArgoCD, static bearer token)
 
 ## Session Continuity
 
-Last session: 2026-11-02
-Stopped at: Plan 11-02 created
-Next action: Review and approve plan, then run /paul:apply .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
-Resume file: .paul/phases/11-helm-chart-and-eks/11-02-PLAN.md
+Last session: 2026-11-03
+Stopped at: Milestone v0.3 Integration Layer complete
+Next action: /paul:discuss-milestone (v0.4 Hosted candidate)
+Resume file: .paul/MILESTONES.md
 Resume context:
-- v0.3 phases 8-11: customer-type redaction, docs overhaul, write bounds/attribution/release hygiene, Helm chart + EKS; release 0.5.0
-- Phase 8 done (08-01): customer-type redaction; live suite first runs at the 0.5.0 gate (key-drift check may surface keys to review)
-- Research inputs: .paul/research/v0.3-helm-chart.md, .paul/research/v0.4-hosted-auth.md
-- Next release must bump the @0.4.0 pins in README and docs/ (test/unit/docs.test.ts enforces equality with package.json)
+- v0.4 design input: .paul/research/v0.4-hosted-auth.md (MCP Keycloak realm, BoP brokering, per-user write roles, multi-tenant)
+- Hosted instance on EKS is the base for v0.4
 
 ---
 *STATE.md — Updated after every significant action*
