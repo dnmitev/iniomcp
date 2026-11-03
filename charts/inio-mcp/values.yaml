@@ -2,6 +2,20 @@
 
 replicaCount: 2
 
+# Evicts at most one pod at a time during node drains and upgrades. Never blocks a drain, even with one replica.
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# CPU-based HorizontalPodAutoscaler (needs metrics-server and resources.requests.cpu). When enabled, the HPA owns the
+# replica count and replicaCount is ignored. Turning it on for a running release can drop to one pod for a few seconds
+# until the HPA scales back to minReplicas.
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
 image:
   repository: ghcr.io/dnmitev/inio-mcp
   # Defaults to the chart's appVersion.

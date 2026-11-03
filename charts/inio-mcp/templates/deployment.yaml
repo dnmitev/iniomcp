@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "inio-mcp.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "inio-mcp.selectorLabels" . | nindent 6 }}

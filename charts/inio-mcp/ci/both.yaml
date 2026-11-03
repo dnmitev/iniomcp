@@ -16,3 +16,5 @@ httpRoute:
   parentRefs:
     - name: shared-gateway
   hostnames: [mcp.example.com, mcp2.example.com]
+autoscaling:
+  enabled: true
