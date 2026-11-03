@@ -48,6 +48,9 @@ jobs:
             stryker-main-
       - if: matrix.node == 26
         run: npm run mutation
+      # Per-file mutation scores in the job summary, also when the break threshold failed the step above.
+      - if: (success() || failure()) && matrix.node == 26
+        run: node scripts/mutation-summary.mjs
       - if: matrix.node == 26
         run: npm run build
 
