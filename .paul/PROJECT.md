@@ -69,7 +69,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - None (v0.3 complete; next milestone not started)
 
 ### Planned (Next)
-- v0.4 Hosted: MCP Keycloak realm (BoP brokering), OAuth resource server, per-user write roles and audit, multi-tenant (`.paul/research/v0.4-hosted-auth.md`)
+- Hosted sign-in: OAuth resource server with an OIDC provider, per-user write roles and audit, multi-tenant (design notes kept outside the repo)
 - AEGIS R6 remainder: pack-once publish with `--ignore-scripts`, image build provenance, sandbox-tenant live gate
 - ChatGPT support: deferred until the hosted server has OAuth (v0.4 or later); ChatGPT connectors need a remote server with OAuth
 - Move to the `@inio` npm scope and the company GitHub org when they exist
@@ -77,7 +77,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 ### Out of Scope
 - Internal MCP for dev/QA/business (DB access, internal services) — separate future project
 - Bulk `PATCH /customers` and `PUT` variants — PATCH covers updates; bulk LLM updates too risky
-- Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard (per-user roles come with the v0.4 MCP realm)
+- Role/permission handling — the public API has none; `INIO_ALLOW_WRITES` is the write guard (per-user roles come with hosted OAuth sign-in)
 - `reverse_payment` — the public API exposes no paymentAllocationId (payment id is not one; live probe 2026-10-29)
 - `create_invoice` in v0.1 — sends to the end customer at once and needs full calcInput (revisit after usage)
 - `credit_loss`/`cancelled` payments and other non-curated transaction types — until asked for

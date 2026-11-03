@@ -16,7 +16,7 @@ None. Next: /paul:discuss-milestone (v0.4 Hosted candidate below).
 
 ## Next Milestone
 
-v0.4 Hosted (candidate): dedicated MCP Keycloak realm with BoP brokering, OAuth resource server, per-user write roles and audit, per-tenant credentials, multi-tenant hosting. Design input: `.paul/research/v0.4-hosted-auth.md`. Other candidates: INIO_REVEAL_LINKS, get_invoice opt-in, R6 pack-once publish and sandbox live gate. ChatGPT deferred until the hosted server has OAuth.
+v0.4 Hosted (candidate): OAuth sign-in through an OIDC provider, per-user write roles and audit, per-tenant credentials, multi-tenant hosting. Design notes are kept outside the repo. Other candidates: INIO_REVEAL_LINKS, get_invoice opt-in, R6 pack-once publish and sandbox live gate. ChatGPT deferred until the hosted server has OAuth.
 
 ## Completed Milestones
 

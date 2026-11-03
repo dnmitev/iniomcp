@@ -25,7 +25,7 @@ about: "inio-mcp"
 
 # Phase 11 Plan 02: Publish, release 0.5.0, deploy to EKS Summary
 
-**The release workflow now publishes the Helm chart to `oci://ghcr.io/dnmitev/charts/inio-mcp`; 0.5.0 shipped to npm, GHCR and GitHub; the team runs it on EKS through ArgoCD at `https://mcp.inio-shared.com/mcp`, and Claude Code connects and lists all 7 read tools.**
+**The release workflow now publishes the Helm chart to `oci://ghcr.io/dnmitev/charts/inio-mcp`; 0.5.0 shipped to npm, GHCR and GitHub; the team runs it on EKS through ArgoCD on the team's host, and Claude Code connects and lists all 7 read tools.**
 
 ## Acceptance Criteria Results
 
@@ -57,7 +57,7 @@ about: "inio-mcp"
 
 ## Next Phase Readiness
 
-**Ready:** v0.3 complete. v0.4 Hosted builds on the running EKS deployment (`.paul/research/v0.4-hosted-auth.md`).
+**Ready:** v0.3 complete. v0.4 Hosted builds on the running EKS deployment.
 
 **Concerns:** Hosted instance uses one static bearer token shared by the team; per-user identity comes with v0.4.
 
