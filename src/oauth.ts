@@ -1,5 +1,6 @@
 import type { AuthInfo } from '@modelcontextprotocol/server';
-import { createRemoteJWKSet, customFetch, jwtVerify } from 'jose';
+import type { JWTPayload } from 'jose';
+import { createRemoteJWKSet, customFetch, errors, jwtVerify } from 'jose';
 import { z } from 'zod';
 import { isAllowedUrl } from './config.ts';
 
@@ -33,6 +34,30 @@ export const protectedResourceMetadata = ({ issuer, resourceUrl }: OAuthConfig) 
 export function resourceMetadataUrl(resourceUrl: string): string {
   const { origin, pathname } = new URL(resourceUrl);
   return origin + PRM_PREFIX + pathname;
+}
+
+// An ID token from the same provider can carry our audience (aud == client id); reject non-access token types.
+function assertAccessToken(payload: JWTPayload, headerTyp: string | undefined): void {
+  const typ = payload['typ'];
+  if (typ !== undefined && (typeof typ !== 'string' || typ.toLowerCase() !== 'bearer')) {
+    throw new errors.JWTClaimValidationFailed(
+      'token is not an access token',
+      payload,
+      'typ',
+      'check_failed',
+    );
+  }
+  if (
+    headerTyp !== undefined &&
+    !['jwt', 'at+jwt', 'application/at+jwt'].includes(headerTyp.toLowerCase())
+  ) {
+    throw new errors.JWTClaimValidationFailed(
+      'token is not an access token',
+      payload,
+      'typ',
+      'check_failed',
+    );
+  }
 }
 
 /** Verifies JWT access tokens against the issuer's JWKS (found through OIDC discovery, fetched once). Throws on any failure. */
@@ -88,13 +113,14 @@ export function createTokenVerifier({
         jwks = undefined;
         throw err;
       });
-      const { payload } = await jwtVerify(token, await jwks, {
+      const { payload, protectedHeader } = await jwtVerify(token, await jwks, {
         issuer,
         audience,
         algorithms: ALGORITHMS,
         clockTolerance: CLOCK_TOLERANCE_S,
         requiredClaims: ['exp'],
       });
+      assertAccessToken(payload, protectedHeader.typ);
       const { sub, preferred_username: name, azp, client_id: cid, scope, exp } = payload;
       const clientId = [azp, cid].find((v) => typeof v === 'string');
       return {

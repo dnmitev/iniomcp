@@ -16,6 +16,8 @@ type SignOptions = {
   aud?: string | string[] | null;
   exp?: string | number;
   nbf?: string | number;
+  /** JOSE header typ. */
+  typ?: string;
 };
 
 export async function makeKey(kid: string, alg = 'RS256'): Promise<Key> {
@@ -82,7 +84,11 @@ export async function createFakeIdp(fallback?: typeof globalThis.fetch) {
     if (!key) throw new Error('no key');
     const alg = o.alg ?? 'RS256';
     const jwt = new SignJWT({ ...(o.claims ?? {}) })
-      .setProtectedHeader({ alg, kid: o.kid ?? key.kid })
+      .setProtectedHeader({
+        alg,
+        kid: o.kid ?? key.kid,
+        ...(o.typ === undefined ? {} : { typ: o.typ }),
+      })
       .setIssuedAt()
       .setExpirationTime(o.exp ?? '5m');
     if (o.iss !== null) jwt.setIssuer(o.iss ?? ISSUER);

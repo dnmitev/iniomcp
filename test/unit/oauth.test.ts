@@ -305,6 +305,42 @@ describe('createTokenVerifier discovery hardening', () => {
   );
 });
 
+describe('createTokenVerifier token type', () => {
+  it.each(['ID', 'Refresh', 'Offline', 'id'])(
+    'rejects a token whose typ claim is %s',
+    async (typ) => {
+      const { idp, verify } = await setup();
+      await expect(verify(await idp.sign({ claims: { typ } }))).rejects.toThrow(
+        errors.JWTClaimValidationFailed,
+      );
+    },
+  );
+
+  it.each(['Bearer', 'bearer', 'BEARER'])('accepts a typ claim of %s', async (typ) => {
+    const { idp, verify } = await setup();
+    const info = await verify(await idp.sign({ claims: { typ } }));
+    expect(info.resource).toEqual(new URL(AUDIENCE));
+  });
+
+  it('accepts a token without a typ claim', async () => {
+    const { idp, verify } = await setup();
+    await expect(verify(await idp.sign())).resolves.toMatchObject({ clientId: '' });
+  });
+
+  it.each(['at+jwt', 'AT+JWT', 'application/at+jwt', 'JWT', 'jwt'])(
+    'accepts header typ %s',
+    async (typ) => {
+      const { idp, verify } = await setup();
+      await expect(verify(await idp.sign({ typ }))).resolves.toMatchObject({ clientId: '' });
+    },
+  );
+
+  it.each(['id_token+jwt', 'JOSE', 'logout+jwt'])('rejects header typ %s', async (typ) => {
+    const { idp, verify } = await setup();
+    await expect(verify(await idp.sign({ typ }))).rejects.toThrow(errors.JOSEError);
+  });
+});
+
 describe('createTokenVerifier network use', () => {
   it('leaves no pending timer after a successful discovery', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });

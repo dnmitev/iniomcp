@@ -548,6 +548,15 @@ describe('startHttpServer (OAuth on)', () => {
     expect(providerWarns(logger)).toEqual([]);
   });
 
+  it('answers 401 invalid_token for an ID-token-shaped JWT without a provider warn', async () => {
+    const { url, logger, idp } = await start(() => 0);
+    const token = await idp.sign({ claims: { typ: 'ID' } });
+    const res = await fetch(url(), { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(401);
+    expect(res.headers.get('www-authenticate')).toBe(CHALLENGE_INVALID);
+    expect(providerWarns(logger)).toEqual([]);
+  });
+
   it('never logs a presented token', async () => {
     const { url, logger, idp } = await start(() => 0);
     const token = await idp.sign({ aud: null });
