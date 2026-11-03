@@ -14,18 +14,18 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 
 **v0.4 Hosted Sign-in** (0.4.0)
 Status: 🚧 In Progress
-Phases: 0 of 2 complete
+Phases: 1 of 2 complete
 Focus: Let users without a local setup (product owners, product managers; mostly internal) reach the hosted server from Claude on the web, Desktop connectors and mobile by signing in with OAuth, without breaking the static-token clients. One instance = one tenant; provider details for the owner's environments stay outside the repo.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 12 | OAuth resource server | 0/1 | Planning | - |
+| 12 | OAuth resource server | 1/1 | ✅ Complete | 2026-11-03 |
 | 13 | Deploy, connect, release | TBD | Not started | - |
 
-### Phase 12: OAuth resource server
+### Phase 12: OAuth resource server ✅
 
 Focus: TDD loop. Protected Resource Metadata (RFC 9728) at `/.well-known/oauth-protected-resource` (and the `/mcp` path-suffixed variant); 401 with `WWW-Authenticate: Bearer resource_metadata=…`; JWT access tokens validated against the provider's JWKS (issuer, audience = resource URL, expiry, signature); static `MCP_AUTH_TOKEN` kept for header clients; signed-in user in tool-call and write logs; all opt-in. Research first: Claude OAuth client option (pre-registered, Client ID Metadata Document, DCR) and redirect URI, audience vs RFC 8707 `resource`, authorization server metadata discovery, refresh tokens.
-Plans: TBD (defined during /paul:plan)
+Plans: 12-01 (done; reviewer 2 rounds, mutation ≥ 92.6 per file, Keycloak integration test)
 
 ### Phase 13: Deploy, connect, release
 

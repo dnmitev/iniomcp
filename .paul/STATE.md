@@ -16,23 +16,23 @@ See: .paul/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Milestone: v0.4 Hosted Sign-in
-Phase: 12 of 13 (OAuth resource server) — Planning
-Plan: 12-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-11-03 — Created .paul/phases/12-oauth-resource-server/12-01-PLAN.md
+Phase: 13 of 13 (Deploy, connect, release) — Not started
+Plan: -
+Status: Phase 12 complete; ready to plan Phase 13
+Last activity: 2026-11-03 — 12-01 unified (OAuth resource server)
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
 - v0.3 Integration Layer: [██████████] 100% ✓ (0.5.0)
-- v0.4 Hosted Sign-in: [░░░░░░░░░░] 0%
+- v0.4 Hosted Sign-in: [█████░░░░░] 50% (Phase 12 ✓)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ✓        ✓        ✓     [12-01 closed; next: /paul:plan Phase 13]
 ```
 
 ## Accumulated Context
@@ -100,6 +100,7 @@ See PROJECT.md Key Decisions.
 | 2026-11-02: actions/* SHA-pinned; release smoke-tests an amd64 load build before multi-arch push; rulesets main (no delete/force-push) and v* tags (no delete/move), no bypass | Phase 10 | First smoke run at 0.5.0; fixing a bad tag means disabling the rule briefly |
 | 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
 | 2026-11-03: v0.4 = OAuth sign-in only (Phase 12 resource server, Phase 13 deploy/connect/release); Claude web/Desktop connectors/mobile need OAuth (no request headers on personal plans); provider details private; contract, polish, release trust moved to next milestone | v0.4 | Business users without local setup |
+| 2026-11-03: 12-01: static token first, then JWT (jose, OIDC discovery, asymmetric only); resource = MCP_PUBLIC_URL, audience may be a client id; provider outage = 401 + throttled warn; user { sub, name } in logs | Phase 12 | Phase 13 routes /.well-known/oauth-protected-resource |
 | 2026-11-02: Chart pod runs as uid/gid 1000 (image USER node is non-numeric); secrets only via existingSecret; CI chart job pins Helm 4.3.1, kind 0.33.0, kubeconform 0.8.0 | Phase 11 | kind smoke caught the runAsNonRoot failure |
 
 ### Deferred Issues
@@ -114,6 +115,7 @@ See PROJECT.md Key Decisions.
 | Central registerTool wrapper in createServerFactory instead of per-file withToolLogging + toolLog deps (smaller code) | 10-02 | S | Any tool-registration touch |
 | Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
 | Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
+| `preferred_username` logged as user.name (often an email) | 12-01 | S | Document in Phase 13; sub only if owner prefers |
 | `userRealName` visible for all customer types (seen in live keys); consider consumer redaction | 11-02 | S | Owner decision |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
@@ -136,9 +138,9 @@ Hosted: team instance on EKS via ArgoCD (static bearer token)
 ## Session Continuity
 
 Last session: 2026-11-03
-Stopped at: Plan 12-01 created
-Next action: Review and approve plan, then run /paul:apply .paul/phases/12-oauth-resource-server/12-01-PLAN.md
-Resume file: .paul/phases/12-oauth-resource-server/12-01-PLAN.md
+Stopped at: Phase 12 complete (12-01 unified)
+Next action: /paul:plan for Phase 13 (deploy, connect, release)
+Resume file: .paul/phases/12-oauth-resource-server/12-01-SUMMARY.md
 Resume context:
 - Provider details for the owner's environments stay outside the repo (private notes)
 - Owner deploys provider config as a realm import, then updates via Admin API jobs

@@ -15,15 +15,13 @@ status = "in_progress"
 phases = 2
 
 [phase]
-number = 12
-name = "OAuth resource server"
+number = 13
+name = "Deploy, connect, release"
 status = "not_started"
 plans_completed = 0
 
 [loop]
-position = "PLAN"
-plan = "12-01"
-plan_path = "phases/12-oauth-resource-server/12-01-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true

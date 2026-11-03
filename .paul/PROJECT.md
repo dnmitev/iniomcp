@@ -20,7 +20,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 |-----------|-------|
 | Type | Application |
 | Version | 0.6.0 |
-| Status | v0.4 Hosted Sign-in in progress (Phase 12) |
+| Status | v0.4 Hosted Sign-in in progress (Phase 13) |
 | Last Updated | 2026-11-03 |
 
 ## Requirements
@@ -66,7 +66,7 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 - ✓ Unauthenticated `GET /healthz` (no Inio call) probed by the Helm chart; chart PodDisruptionBudget, topology spread, optional HPA — after v0.3 (0.6.0)
 
 ### Active (In Progress) — v0.4 Hosted Sign-in
-- [ ] OAuth resource server: Protected Resource Metadata, JWT validation, static token kept, user in logs — Phase 12
+- ✓ OAuth resource server: Protected Resource Metadata, JWT validation via OIDC discovery, static token kept, user in logs — Phase 12
 - [ ] Chart values and routes, provider and Claude connector guides, sign-in verified from claude.ai, release — Phase 13
 
 ### Planned (Next)
