@@ -557,6 +557,80 @@ describe('startHttpServer (OAuth on)', () => {
     expect(providerWarns(logger)).toEqual([]);
   });
 
+  it('PR47-typ:http-reject-id-token-no-typ: answers 401 for an ID token with no typ claim', async () => {
+    const { url, logger, idp } = await start(() => 0);
+    const token = await idp.sign({
+      claims: { sub: 'user-1', email: 'user@example.com' },
+    });
+    const res = await fetch(url(), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${token}`,
+      },
+      body: INIT_BODY,
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get('www-authenticate')).toBe(CHALLENGE_INVALID);
+    expect(providerWarns(logger)).toEqual([]);
+  });
+
+  it('PR47-typ:http-reject-id-token-jwt-header: answers 401 for an ID token with header typ JWT', async () => {
+    const { url, logger, idp } = await start(() => 0);
+    const token = await idp.sign({
+      typ: 'JWT',
+      claims: { sub: 'user-1', email: 'user@example.com' },
+    });
+    const res = await fetch(url(), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${token}`,
+      },
+      body: INIT_BODY,
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get('www-authenticate')).toBe(CHALLENGE_INVALID);
+    expect(providerWarns(logger)).toEqual([]);
+  });
+
+  it('PR47-typ:http-accept-at-jwt: accepts an access token with header typ at+jwt', async () => {
+    const { url, idp } = await start();
+    const token = await idp.sign({
+      typ: 'at+jwt',
+      claims: { sub: 'user-1', scope: 'openid profile' },
+    });
+    const res = await fetch(url(), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${token}`,
+      },
+      body: INIT_BODY,
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('PR47-typ:http-accept-bearer-payload: accepts an access token with payload typ Bearer', async () => {
+    const { url, idp } = await start();
+    const token = await idp.sign({
+      claims: { sub: 'user-1', typ: 'Bearer', scope: 'openid profile' },
+    });
+    const res = await fetch(url(), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${token}`,
+      },
+      body: INIT_BODY,
+    });
+    expect(res.status).toBe(200);
+  });
+
   it('never logs a presented token', async () => {
     const { url, logger, idp } = await start(() => 0);
     const token = await idp.sign({ aud: null });

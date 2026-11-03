@@ -549,3 +549,47 @@ describe('createTokenVerifier algorithms', () => {
     await expect(verify(unsignedToken())).rejects.toThrow(errors.JOSEError);
   });
 });
+
+describe('PR47-typ: ID token rejection (bug fix)', () => {
+  it('PR47-typ:reject-id-token-no-typ: rejects an ID token with no typ claim (valid sig/iss/aud/exp)', async () => {
+    const { idp, verify } = await setup();
+    const token = await idp.sign({
+      claims: { sub: 'user-1', email: 'user@example.com' },
+    });
+    await expect(verify(token)).rejects.toThrow(errors.JWTClaimValidationFailed);
+  });
+
+  it('PR47-typ:reject-id-token-jwt-header: rejects an ID token with header typ JWT (valid sig/iss/aud/exp)', async () => {
+    const { idp, verify } = await setup();
+    const token = await idp.sign({
+      typ: 'JWT',
+      claims: { sub: 'user-1', email: 'user@example.com' },
+    });
+    await expect(verify(token)).rejects.toThrow(errors.JWTClaimValidationFailed);
+  });
+
+  it('PR47-typ:accept-at-jwt-header: accepts an access token with header typ at+jwt', async () => {
+    const { idp, verify } = await setup();
+    const token = await idp.sign({
+      typ: 'at+jwt',
+      claims: { sub: 'user-1', scope: 'openid profile' },
+    });
+    await expect(verify(token)).resolves.toMatchObject({ token });
+  });
+
+  it('PR47-typ:accept-bearer-payload: accepts an access token with payload typ Bearer', async () => {
+    const { idp, verify } = await setup();
+    const token = await idp.sign({
+      claims: { sub: 'user-1', typ: 'Bearer', scope: 'openid profile' },
+    });
+    await expect(verify(token)).resolves.toMatchObject({ token });
+  });
+
+  it('PR47-typ:reject-id-payload: rejects a token with payload typ ID', async () => {
+    const { idp, verify } = await setup();
+    const token = await idp.sign({
+      claims: { sub: 'user-1', typ: 'ID' },
+    });
+    await expect(verify(token)).rejects.toThrow(errors.JWTClaimValidationFailed);
+  });
+});
