@@ -37,20 +37,15 @@ export function resourceMetadataUrl(resourceUrl: string): string {
 }
 
 // An ID token from the same provider can carry our audience (aud == client id); reject non-access token types.
+// Accept only if header typ is at+jwt/application/at+jwt (RFC 9068) or payload typ is Bearer.
 function assertAccessToken(payload: JWTPayload, headerTyp: string | undefined): void {
   const typ = payload['typ'];
-  if (typ !== undefined && (typeof typ !== 'string' || typ.toLowerCase() !== 'bearer')) {
-    throw new errors.JWTClaimValidationFailed(
-      'token is not an access token',
-      payload,
-      'typ',
-      'check_failed',
-    );
-  }
-  if (
-    headerTyp !== undefined &&
-    !['jwt', 'at+jwt', 'application/at+jwt'].includes(headerTyp.toLowerCase())
-  ) {
+  const hasAccessTokenHeaderTyp =
+    headerTyp !== undefined && ['at+jwt', 'application/at+jwt'].includes(headerTyp.toLowerCase());
+  const hasAccessTokenPayloadTyp =
+    typ !== undefined && typeof typ === 'string' && typ.toLowerCase() === 'bearer';
+
+  if (!hasAccessTokenHeaderTyp && !hasAccessTokenPayloadTyp) {
     throw new errors.JWTClaimValidationFailed(
       'token is not an access token',
       payload,
