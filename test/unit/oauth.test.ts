@@ -84,6 +84,7 @@ describe('createTokenVerifier accepts', () => {
     const ec = await makeKey('ec1', 'ES256');
     idp.keys.push(ec);
     const token = await idp.sign({
+      typ: 'at+jwt',
       alg: 'ES256',
       kid: 'ec1',
       key: ec.privateKey,
