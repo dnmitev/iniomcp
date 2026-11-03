@@ -20,7 +20,7 @@ Focus: Let users without a local setup (product owners, product managers; mostly
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 12 | OAuth resource server | 1/1 | ✅ Complete | 2026-11-03 |
-| 13 | Deploy, connect, release | TBD | Not started | - |
+| 13 | Deploy, connect, release | 0/1 | Planning | - |
 
 ### Phase 12: OAuth resource server ✅
 

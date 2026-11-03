@@ -16,10 +16,10 @@ See: .paul/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Milestone: v0.4 Hosted Sign-in
-Phase: 13 of 13 (Deploy, connect, release) — Not started
-Plan: -
-Status: Phase 12 complete; ready to plan Phase 13
-Last activity: 2026-11-03 — 12-01 unified (OAuth resource server)
+Phase: 13 of 13 (Deploy, connect, release) — Planning
+Plan: 13-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-11-03 — Created .paul/phases/13-deploy-connect-release/13-01-PLAN.md
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
@@ -32,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [12-01 closed; next: /paul:plan Phase 13]
+  ✓        ○        ○     [Plan 13-01 created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -138,9 +138,9 @@ Hosted: team instance on EKS via ArgoCD (static bearer token)
 ## Session Continuity
 
 Last session: 2026-11-03
-Stopped at: Phase 12 complete (12-01 unified)
-Next action: /paul:plan for Phase 13 (deploy, connect, release)
-Resume file: .paul/phases/12-oauth-resource-server/12-01-SUMMARY.md
+Stopped at: Plan 13-01 created
+Next action: Review and approve plan, then run /paul:apply .paul/phases/13-deploy-connect-release/13-01-PLAN.md
+Resume file: .paul/phases/13-deploy-connect-release/13-01-PLAN.md
 Resume context:
 - Provider details for the owner's environments stay outside the repo (private notes)
 - Owner deploys provider config as a realm import, then updates via Admin API jobs

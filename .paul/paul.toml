@@ -21,7 +21,9 @@ status = "not_started"
 plans_completed = 0
 
 [loop]
-position = "IDLE"
+position = "PLAN"
+plan = "13-01"
+plan_path = "phases/13-deploy-connect-release/13-01-PLAN.md"
 
 [satellite]
 groom = true
