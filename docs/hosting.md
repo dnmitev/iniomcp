@@ -20,7 +20,7 @@ Start it with npx:
 
 ```bash
 export MCP_AUTH_TOKEN=$(openssl rand -hex 32)   # share this with your team
-MCP_TRANSPORT=http npx -y @dnmitev/inio-mcp@0.5.0   # plus the four INIO_* variables
+MCP_TRANSPORT=http npx -y @dnmitev/inio-mcp@0.6.0   # plus the four INIO_* variables
 ```
 
 Or with Docker (the image listens on `0.0.0.0:3000` in HTTP mode and stops cleanly on `docker stop`):
@@ -29,7 +29,7 @@ Or with Docker (the image listens on `0.0.0.0:3000` in HTTP mode and stops clean
 docker run -d --name inio-mcp -p 127.0.0.1:3000:3000 \
   -e MCP_TRANSPORT=http -e MCP_AUTH_TOKEN \
   -e INIO_CLIENT_ID -e INIO_CLIENT_SECRET -e INIO_AUTH_URL -e INIO_URL \
-  ghcr.io/dnmitev/inio-mcp:0.5.0
+  ghcr.io/dnmitev/inio-mcp:0.6.0
 ```
 
 ## Connect users
@@ -52,7 +52,7 @@ INIO_MAX_PAYMENT_AMOUNT=500
 The chart in [`charts/inio-mcp`](../charts/inio-mcp/README.md) runs the server in HTTP mode with two replicas and a PodDisruptionBudget (optional CPU autoscaling), a read-only root filesystem, no Linux capabilities and a numeric non-root user. It is published as an OCI chart:
 
 ```bash
-helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.5.0 -f values.yaml
+helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.6.0 -f values.yaml
 ```
 
 ### Secret
@@ -136,7 +136,7 @@ spec:
   source:
     repoURL: ghcr.io/dnmitev/charts
     chart: inio-mcp
-    targetRevision: 0.5.0
+    targetRevision: 0.6.0
     helm:
       valuesObject:
         existingSecret: inio-mcp

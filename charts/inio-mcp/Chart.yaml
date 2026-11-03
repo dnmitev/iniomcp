@@ -2,8 +2,8 @@ apiVersion: v2
 name: inio-mcp
 description: MCP server for the Inio REST API, run as a shared HTTP server
 type: application
-version: 0.5.0
-appVersion: 0.5.0
+version: 0.6.0
+appVersion: 0.6.0
 home: https://github.com/dnmitev/iniomcp
 sources:
   - https://github.com/dnmitev/iniomcp

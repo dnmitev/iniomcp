@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-03
+
 ### Added
 
 - HTTP mode answers `GET /healthz` with `ok` without a token and without calling the Inio API, so probes can tell a hung process from a running one.

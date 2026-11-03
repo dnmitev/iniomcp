@@ -19,7 +19,7 @@ claude mcp add inio \
   -e INIO_CLIENT_SECRET="$INIO_CLIENT_SECRET" \
   -e INIO_AUTH_URL=https://<your-keycloak>/realms/<realm>/protocol/openid-connect/token \
   -e INIO_URL=https://<your-inio-api-gateway>/v1 \
-  -- npx -y @dnmitev/inio-mcp@0.5.0
+  -- npx -y @dnmitev/inio-mcp@0.6.0
 ```
 
 Claude Code saves the values in its settings file (`~/.claude.json`), in plaintext. Optional variables (write tools, PII, log level, timeout) are listed in the [README](../../README.md#install); add them with more `-e` flags.
@@ -36,7 +36,7 @@ claude mcp add inio \
   -e INIO_AUTH_URL=https://<your-keycloak>/realms/<realm>/protocol/openid-connect/token \
   -e INIO_URL=https://<your-inio-api-gateway>/v1 \
   -- docker run -i --rm -e INIO_CLIENT_ID -e INIO_CLIENT_SECRET -e INIO_AUTH_URL -e INIO_URL \
-  ghcr.io/dnmitev/inio-mcp:0.5.0
+  ghcr.io/dnmitev/inio-mcp:0.6.0
 ```
 
 ## Hosted
