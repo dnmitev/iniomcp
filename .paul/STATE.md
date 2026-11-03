@@ -11,28 +11,28 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.4 Hosted Sign-in — Phase 12 OAuth resource server
+**Current focus:** v0.4 Hosted Sign-in complete (0.7.0); next milestone not started
 
 ## Current Position
 
-Milestone: v0.4 Hosted Sign-in
-Phase: 13 of 13 (Deploy, connect, release) — Planning
-Plan: 13-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-11-03 — Created .paul/phases/13-deploy-connect-release/13-01-PLAN.md
+Milestone: none active (v0.4 Hosted Sign-in ✓)
+Phase: -
+Plan: -
+Status: Milestone complete; ready for /paul:discuss-milestone
+Last activity: 2026-11-03 — v0.4 complete; 0.7.0 released
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
 - v0.3 Integration Layer: [██████████] 100% ✓ (0.5.0)
-- v0.4 Hosted Sign-in: [█████░░░░░] 50% (Phase 12 ✓)
+- v0.4 Hosted Sign-in: [██████████] 100% ✓ (0.7.0)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan 13-01 created, awaiting approval]
+  ○        ○        ○     [Milestone complete - ready for next]
 ```
 
 ## Accumulated Context
@@ -101,6 +101,7 @@ See PROJECT.md Key Decisions.
 | 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
 | 2026-11-03: v0.4 = OAuth sign-in only (Phase 12 resource server, Phase 13 deploy/connect/release); Claude web/Desktop connectors/mobile need OAuth (no request headers on personal plans); provider details private; contract, polish, release trust moved to next milestone | v0.4 | Business users without local setup |
 | 2026-11-03: 12-01: static token first, then JWT (jose, OIDC discovery, asymmetric only); resource = MCP_PUBLIC_URL, audience may be a client id; provider outage = 401 + throttled warn; user { sub, name } in logs | Phase 12 | Phase 13 routes /.well-known/oauth-protected-resource |
+| 2026-11-03: Access tokens must carry a type marker (header at+jwt or payload Bearer); MCP_OAUTH_ALLOW_UNTYPED_TOKENS opt-in for Entra-style providers (owner chose option 2); bots on the repo disabled | Phase 13 | Self-hosting guide documents Entra |
 | 2026-11-02: Chart pod runs as uid/gid 1000 (image USER node is non-numeric); secrets only via existingSecret; CI chart job pins Helm 4.3.1, kind 0.33.0, kubeconform 0.8.0 | Phase 11 | kind smoke caught the runAsNonRoot failure |
 
 ### Deferred Issues
@@ -115,6 +116,10 @@ See PROJECT.md Key Decisions.
 | Central registerTool wrapper in createServerFactory instead of per-file withToolLogging + toolLog deps (smaller code) | 10-02 | S | Any tool-registration touch |
 | Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
 | Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
+| Owner sign-in from claude.ai on the hosted instance (AC-4 of 13-01): rollout = release provider config, create user, chart 0.7.0 with oauth.issuer, connect | 13-01 | S | Owner rollout |
+| Tenant check (MCP_OAUTH_REQUIRED_CLAIM) before Inio hosts instances for external clients | 13-01 | S | Before external hosted clients |
+| Agent platforms (Azure AI Foundry, TrueFoundry, Bedrock AgentCore) untested; AgentCore Authorization pass-through | 13-01 | S | First client on a platform |
+| Malformed token triggers a cached, throttled discovery fetch before rejection | 13-01 | S | Any oauth.ts touch |
 | `preferred_username` logged as user.name (often an email) | 12-01 | S | Document in Phase 13; sub only if owner prefers |
 | `userRealName` visible for all customer types (seen in live keys); consider consumer redaction | 11-02 | S | Owner decision |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
@@ -130,20 +135,20 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/milestone-v0.4 (from main 383b6c4 = PR #46 squash)
-Milestone tags: milestone-v0.1, milestone-v0.2, milestone-v0.3 (local, not pushed)
-Releases: v0.6.0 (npm latest with provenance, GHCR 0.6.0/0.6/latest sha256:551f5654…, chart 0.6.0, 2026-11-03; /healthz, PDB, topology spread, HPA); v0.5.0 (v0.3); v0.4.0 (v0.2); v0.3.1; v0.3.0; earlier
-Hosted: team instance on EKS via ArgoCD (static bearer token)
+Branch: paul/milestone-v0.4-close (from main a69b537 = PR #47 squash)
+Milestone tags: milestone-v0.1 … milestone-v0.4 (local, not pushed)
+Releases: v0.7.0 (npm latest with provenance, GHCR 0.7.0/0.7/latest sha256:d8bb68b5…, chart 0.7.0, 2026-11-03; v0.4 Hosted Sign-in); v0.6.0; v0.5.0 (v0.3); v0.4.0 (v0.2); earlier
+Hosted: team instance on EKS via ArgoCD (static bearer token; OAuth not yet enabled)
 
 ## Session Continuity
 
 Last session: 2026-11-03
-Stopped at: Plan 13-01 created
-Next action: Review and approve plan, then run /paul:apply .paul/phases/13-deploy-connect-release/13-01-PLAN.md
-Resume file: .paul/phases/13-deploy-connect-release/13-01-PLAN.md
+Stopped at: Milestone v0.4 Hosted Sign-in complete
+Next action: /paul:discuss-milestone
+Resume file: .paul/MILESTONES.md
 Resume context:
-- Provider details for the owner's environments stay outside the repo (private notes)
-- Owner deploys provider config as a realm import, then updates via Admin API jobs
+- Owner rollout of OAuth on the hosted instance is pending (provider config prepared privately)
+- Candidates: tenant check, multi-tenant hosting, request contract, hosted polish, release trust
 
 ---
 *STATE.md — Updated after every significant action*

@@ -8,35 +8,35 @@ about: "inio-mcp"
 
 ## Overview
 
-From an empty repo to a publicly installable MCP server: foundation and one working tool, then all read tools, then packaging and release to npm/GHCR, then opt-in write tools, then hardening of the shared HTTP mode, then an easy integration layer deployable on Kubernetes.
+From an empty repo to a publicly installable MCP server: foundation and one working tool, then all read tools, then packaging and release to npm/GHCR, then opt-in write tools, then hardening of the shared HTTP mode, then an easy integration layer deployable on Kubernetes, then OAuth sign-in for Claude's apps.
 
 ## Current Milestone
 
-**v0.4 Hosted Sign-in** (0.4.0)
-Status: 🚧 In Progress
-Phases: 1 of 2 complete
-Focus: Let users without a local setup (product owners, product managers; mostly internal) reach the hosted server from Claude on the web, Desktop connectors and mobile by signing in with OAuth, without breaking the static-token clients. One instance = one tenant; provider details for the owner's environments stay outside the repo.
-
-| Phase | Name | Plans | Status | Completed |
-|-------|------|-------|--------|-----------|
-| 12 | OAuth resource server | 1/1 | ✅ Complete | 2026-11-03 |
-| 13 | Deploy, connect, release | 0/1 | Planning | - |
-
-### Phase 12: OAuth resource server ✅
-
-Focus: TDD loop. Protected Resource Metadata (RFC 9728) at `/.well-known/oauth-protected-resource` (and the `/mcp` path-suffixed variant); 401 with `WWW-Authenticate: Bearer resource_metadata=…`; JWT access tokens validated against the provider's JWKS (issuer, audience = resource URL, expiry, signature); static `MCP_AUTH_TOKEN` kept for header clients; signed-in user in tool-call and write logs; all opt-in. Research first: Claude OAuth client option (pre-registered, Client ID Metadata Document, DCR) and redirect URI, audience vs RFC 8707 `resource`, authorization server metadata discovery, refresh tokens.
-Plans: 12-01 (done; reviewer 2 rounds, mutation ≥ 92.6 per file, Keycloak integration test)
-
-### Phase 13: Deploy, connect, release
-
-Focus: Helm values for OAuth; Ingress and HTTPRoute also route the well-known path; generic OIDC provider guide (Keycloak example, placeholders only); Claude web/Desktop/mobile connector guide; private hand-over of the provider config (realm import plus Admin API job) for the owner's environments; owner signs in from claude.ai on the team instance; release.
-Plans: TBD (defined during /paul:plan)
+None. Next: /paul:discuss-milestone (candidates below).
 
 ## Next Milestone
 
-Candidates: request contract from the monorepo (export script, contract and coverage tests, Redocly change alarm, `registerTool` wrapper); hosted polish (customer-type cache TTL, `get_invoice` size opt-in); release trust (image provenance, npm publish from one build); later per-user write roles, multi-tenant hosting, ChatGPT.
+Candidates:
+- Tenant check (`MCP_OAUTH_REQUIRED_CLAIM`) before Inio hosts instances for external clients.
+- Multi-tenant hosting: one instance per environment, with the tenant claim selecting the credentials.
+- Request contract from the monorepo (export script, contract and coverage tests, Redocly change alarm, `registerTool` wrapper).
+- Hosted polish (customer-type cache TTL, `get_invoice` size opt-in).
+- Release trust (image provenance, npm publish from one build).
+- Later: per-user write roles, ChatGPT.
 
 ## Completed Milestones
+
+<details>
+<summary>v0.4 Hosted Sign-in - 2026-11-03 (2 phases, 2 plans)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 12 | OAuth resource server | 1/1 | 2026-11-03 |
+| 13 | Deploy, connect, release | 1/1 | 2026-11-03 |
+
+Full detail: `.paul/milestones/v0.4-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>v0.3 Integration Layer - 2026-11-03 (4 phases, 7 plans)</summary>
@@ -81,4 +81,4 @@ Full detail: `.paul/milestones/v0.1-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-11-03 — v0.4 Hosted Sign-in created*
+*Last updated: 2026-11-03 — v0.4 Hosted Sign-in complete*

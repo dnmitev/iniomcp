@@ -1,5 +1,5 @@
 name = "inio-mcp"
-version = "0.6.0"
+version = "0.7.0"
 status = "active"
 path = "."
 tags = []
@@ -11,19 +11,17 @@ source = "https://chrisai.cv/skool"
 [milestone]
 name = "v0.4 Hosted Sign-in"
 version = "0.4.0"
-status = "in_progress"
+status = "complete"
 phases = 2
 
 [phase]
 number = 13
 name = "Deploy, connect, release"
-status = "not_started"
-plans_completed = 0
+status = "complete"
+plans_completed = 1
 
 [loop]
-position = "PLAN"
-plan = "13-01"
-plan_path = "phases/13-deploy-connect-release/13-01-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
