@@ -64,6 +64,7 @@ describe('createTokenVerifier accepts', () => {
   it('a valid RS256 token and returns AuthInfo built from its claims', async () => {
     const { idp, verify } = await setup();
     const token = await idp.sign({
+      typ: 'at+jwt',
       claims: { sub: 'user-1', preferred_username: 'alice', azp: 'web', scope: 'a b' },
       exp: 4_000_000_000,
     });
@@ -93,24 +94,28 @@ describe('createTokenVerifier accepts', () => {
 
   it('a token whose aud array contains the audience', async () => {
     const { idp, verify } = await setup();
-    const token = await idp.sign({ aud: ['account', AUDIENCE] });
+    const token = await idp.sign({ typ: 'at+jwt', aud: ['account', AUDIENCE] });
     expect((await verify(token)).token).toBe(token);
   });
 
   it('client_id when azp is absent', async () => {
     const { idp, verify } = await setup();
-    expect((await verify(await idp.sign({ claims: { client_id: 'cid' } }))).clientId).toBe('cid');
+    expect(
+      (await verify(await idp.sign({ typ: 'at+jwt', claims: { client_id: 'cid' } }))).clientId,
+    ).toBe('cid');
   });
 
   it('azp over client_id', async () => {
     const { idp, verify } = await setup();
-    const info = await verify(await idp.sign({ claims: { client_id: 'cid', azp: 'az' } }));
+    const info = await verify(
+      await idp.sign({ typ: 'at+jwt', claims: { client_id: 'cid', azp: 'az' } }),
+    );
     expect(info.clientId).toBe('az');
   });
 
   it('an empty clientId, no scopes and only present claims in extra', async () => {
     const { idp, verify } = await setup();
-    const info = await verify(await idp.sign());
+    const info = await verify(await idp.sign({ typ: 'at+jwt' }));
     expect(info.clientId).toBe('');
     expect(info.scopes).toEqual([]);
     expect(info.extra).toEqual({});
@@ -118,7 +123,9 @@ describe('createTokenVerifier accepts', () => {
 
   it('a token without preferred_username: extra carries sub only', async () => {
     const { idp, verify } = await setup();
-    expect((await verify(await idp.sign({ claims: { sub: 'u' } }))).extra).toEqual({ sub: 'u' });
+    expect((await verify(await idp.sign({ typ: 'at+jwt', claims: { sub: 'u' } }))).extra).toEqual({
+      sub: 'u',
+    });
   });
 });
 
@@ -129,31 +136,37 @@ describe('createTokenVerifier rejects', () => {
   it('a token from another issuer', async () => {
     const { idp, verify } = await setup();
     await expect(
-      verify(await idp.sign({ iss: 'https://evil.example/realms/mcp' })),
+      verify(await idp.sign({ typ: 'at+jwt', iss: 'https://evil.example/realms/mcp' })),
     ).rejects.toThrow(errors.JOSEError);
   });
 
   it('a token without iss', async () => {
     const { idp, verify } = await setup();
-    await expect(verify(await idp.sign({ iss: null }))).rejects.toThrow(errors.JOSEError);
-  });
-
-  it('a token for another audience', async () => {
-    const { idp, verify } = await setup();
-    await expect(verify(await idp.sign({ aud: 'https://other.example/mcp' }))).rejects.toThrow(
+    await expect(verify(await idp.sign({ typ: 'at+jwt', iss: null }))).rejects.toThrow(
       errors.JOSEError,
     );
   });
 
+  it('a token for another audience', async () => {
+    const { idp, verify } = await setup();
+    await expect(
+      verify(await idp.sign({ typ: 'at+jwt', aud: 'https://other.example/mcp' })),
+    ).rejects.toThrow(errors.JOSEError);
+  });
+
   it('a token without aud', async () => {
     const { idp, verify } = await setup();
-    await expect(verify(await idp.sign({ aud: null }))).rejects.toThrow(errors.JOSEError);
+    await expect(verify(await idp.sign({ typ: 'at+jwt', aud: null }))).rejects.toThrow(
+      errors.JOSEError,
+    );
   });
 
   it('an expired token', async () => {
     const { idp, verify } = await setup();
     const past = Math.floor(Date.now() / 1000) - 120;
-    await expect(verify(await idp.sign({ exp: past }))).rejects.toThrow(errors.JOSEError);
+    await expect(verify(await idp.sign({ typ: 'at+jwt', exp: past }))).rejects.toThrow(
+      errors.JOSEError,
+    );
   });
 
   it('a token without exp', async () => {
@@ -172,13 +185,15 @@ describe('createTokenVerifier rejects', () => {
   it('a token that is not valid yet (nbf)', async () => {
     const { idp, verify } = await setup();
     const future = Math.floor(Date.now() / 1000) + 120;
-    await expect(verify(await idp.sign({ nbf: future }))).rejects.toThrow(errors.JOSEError);
+    await expect(verify(await idp.sign({ typ: 'at+jwt', nbf: future }))).rejects.toThrow(
+      errors.JOSEError,
+    );
   });
 
   it('a token signed with another key under a known kid', async () => {
     const { idp, verify } = await setup();
     const other = await makeKey('k1');
-    await expect(verify(await idp.sign({ key: other.privateKey }))).rejects.toThrow(
+    await expect(verify(await idp.sign({ typ: 'at+jwt', key: other.privateKey }))).rejects.toThrow(
       errors.JOSEError,
     );
   });
@@ -191,9 +206,9 @@ describe('createTokenVerifier rejects', () => {
   it('an HS256 token signed with a shared secret', async () => {
     const { idp, verify } = await setup();
     const secret = new TextEncoder().encode('0123456789abcdef0123456789abcdef');
-    await expect(verify(await idp.sign({ alg: 'HS256', key: secret }))).rejects.toThrow(
-      errors.JOSEError,
-    );
+    await expect(
+      verify(await idp.sign({ typ: 'at+jwt', alg: 'HS256', key: secret })),
+    ).rejects.toThrow(errors.JOSEError);
   });
 
   it.each(['', 'garbage', 'a.b.c', 'a.b'])('unparseable token %j', async (t) => {
@@ -204,15 +219,15 @@ describe('createTokenVerifier rejects', () => {
   it('a token for an unknown kid that the provider does not publish', async () => {
     const { idp, verify } = await setup();
     const other = await makeKey('nope');
-    await expect(verify(await idp.sign({ kid: 'nope', key: other.privateKey }))).rejects.toThrow(
-      errors.JOSEError,
-    );
+    await expect(
+      verify(await idp.sign({ typ: 'at+jwt', kid: 'nope', key: other.privateKey })),
+    ).rejects.toThrow(errors.JOSEError);
   });
 
   it('every token while the provider is unreachable', async () => {
     const { idp, verify } = await setup();
     idp.state.down = true;
-    await expect(verify(await idp.sign())).rejects.toThrow('connect ECONNREFUSED');
+    await expect(verify(await idp.sign({ typ: 'at+jwt' }))).rejects.toThrow('connect ECONNREFUSED');
   });
 
   it('every token when the discovery document names a different issuer', async () => {
@@ -230,7 +245,7 @@ describe('createTokenVerifier rejects', () => {
       resourceUrl: AUDIENCE,
       fetch,
     });
-    await expect(verifier.verifyAccessToken(await idp.sign())).rejects.toThrow(
+    await expect(verifier.verifyAccessToken(await idp.sign({ typ: 'at+jwt' }))).rejects.toThrow(
       'OIDC discovery document does not match the configured issuer',
     );
   });
@@ -245,7 +260,9 @@ describe('createTokenVerifier with a non-URL audience', () => {
       resourceUrl: AUDIENCE,
       fetch: idp.fetch,
     });
-    const info = await verifier.verifyAccessToken(await idp.sign({ aud: 'inio-mcp' }));
+    const info = await verifier.verifyAccessToken(
+      await idp.sign({ typ: 'at+jwt', aud: 'inio-mcp' }),
+    );
     expect(info.resource).toEqual(new URL(AUDIENCE));
   });
 });
@@ -256,7 +273,7 @@ describe('createTokenVerifier discovery hardening', () => {
 
   it('fetches discovery with redirect manual and an abort signal', async () => {
     const { idp, verify } = await setup();
-    await verify(await idp.sign());
+    await verify(await idp.sign({ typ: 'at+jwt' }));
     const init = idp.idpCalls(DISCOVERY_URL)[0]?.[1];
     expect(init?.redirect).toBe('manual');
     expect(init?.signal).toBeInstanceOf(AbortSignal);
@@ -265,7 +282,7 @@ describe('createTokenVerifier discovery hardening', () => {
   it('gives up on a provider that never answers within 5 s, then retries discovery', async () => {
     vi.useFakeTimers();
     const idp = await createFakeIdp();
-    const token = await idp.sign();
+    const token = await idp.sign({ typ: 'at+jwt' });
     const verifier = make(idp.fetch);
     idp.state.hangDiscovery = true;
     const first = verifier.verifyAccessToken(token);
@@ -281,7 +298,9 @@ describe('createTokenVerifier discovery hardening', () => {
   it('rejects an http jwks_uri for an https issuer', async () => {
     const idp = await createFakeIdp();
     idp.state.jwksUri = 'http://idp.example/realms/mcp/certs';
-    await expect(make(idp.fetch).verifyAccessToken(await idp.sign())).rejects.toThrow(/jwks_uri/);
+    await expect(
+      make(idp.fetch).verifyAccessToken(await idp.sign({ typ: 'at+jwt' })),
+    ).rejects.toThrow(/jwks_uri/);
     expect(idp.idpCalls(idp.state.jwksUri)).toHaveLength(0);
   });
 
@@ -299,7 +318,7 @@ describe('createTokenVerifier discovery hardening', () => {
         if (url === jwksUri) return Promise.resolve(Response.json({ keys: [jwk] }));
         return Promise.reject(new Error(`unexpected fetch ${url}`));
       });
-      const token = await idp.sign({ iss: issuer });
+      const token = await idp.sign({ typ: 'at+jwt', iss: issuer });
       await expect(make(fetch, issuer).verifyAccessToken(token)).resolves.toMatchObject({ token });
     },
   );
@@ -322,18 +341,20 @@ describe('createTokenVerifier token type', () => {
     expect(info.resource).toEqual(new URL(AUDIENCE));
   });
 
-  it('accepts a token without a typ claim', async () => {
+  it('PR47-typ:reject-no-typ-claim: rejects a token without a typ claim', async () => {
     const { idp, verify } = await setup();
-    await expect(verify(await idp.sign())).resolves.toMatchObject({ clientId: '' });
+    await expect(verify(await idp.sign())).rejects.toThrow(errors.JWTClaimValidationFailed);
   });
 
-  it.each(['at+jwt', 'AT+JWT', 'application/at+jwt', 'JWT', 'jwt'])(
-    'accepts header typ %s',
-    async (typ) => {
-      const { idp, verify } = await setup();
-      await expect(verify(await idp.sign({ typ }))).resolves.toMatchObject({ clientId: '' });
-    },
-  );
+  it.each(['at+jwt', 'AT+JWT', 'application/at+jwt'])('accepts header typ %s', async (typ) => {
+    const { idp, verify } = await setup();
+    await expect(verify(await idp.sign({ typ }))).resolves.toMatchObject({ clientId: '' });
+  });
+
+  it.each(['JWT', 'jwt'])('PR47-typ:reject-header-typ-%s: rejects header typ %s', async (typ) => {
+    const { idp, verify } = await setup();
+    await expect(verify(await idp.sign({ typ }))).rejects.toThrow(errors.JWTClaimValidationFailed);
+  });
 
   it.each(['id_token+jwt', 'JOSE', 'logout+jwt'])('rejects header typ %s', async (typ) => {
     const { idp, verify } = await setup();
@@ -351,47 +372,51 @@ describe('createTokenVerifier network use', () => {
       resourceUrl: AUDIENCE,
       fetch: idp.fetch,
     });
-    await verifier.verifyAccessToken(await idp.sign());
+    await verifier.verifyAccessToken(await idp.sign({ typ: 'at+jwt' }));
     expect(vi.getTimerCount()).toBe(0);
   });
 
   it('fetches the discovery document once across many verifications', async () => {
     const { idp, verify } = await setup();
-    await verify(await idp.sign());
-    await verify(await idp.sign());
-    await verify(await idp.sign());
+    await verify(await idp.sign({ typ: 'at+jwt' }));
+    await verify(await idp.sign({ typ: 'at+jwt' }));
+    await verify(await idp.sign({ typ: 'at+jwt' }));
     expect(idp.idpCalls(DISCOVERY_URL)).toHaveLength(1);
   });
 
   it('fetches the discovery document once for concurrent verifications', async () => {
     const { idp, verify } = await setup();
-    const tokens = await Promise.all([idp.sign(), idp.sign(), idp.sign()]);
+    const tokens = await Promise.all([
+      idp.sign({ typ: 'at+jwt' }),
+      idp.sign({ typ: 'at+jwt' }),
+      idp.sign({ typ: 'at+jwt' }),
+    ]);
     await Promise.all(tokens.map(verify));
     expect(idp.idpCalls(DISCOVERY_URL)).toHaveLength(1);
   });
 
   it('caches the JWKS across verifications', async () => {
     const { idp, verify } = await setup();
-    await verify(await idp.sign());
-    await verify(await idp.sign());
+    await verify(await idp.sign({ typ: 'at+jwt' }));
+    await verify(await idp.sign({ typ: 'at+jwt' }));
     expect(idp.idpCalls(JWKS_URL)).toHaveLength(1);
   });
 
   it('requests discovery and JWKS from the issuer with GET', async () => {
     const { idp, verify } = await setup();
-    await verify(await idp.sign());
+    await verify(await idp.sign({ typ: 'at+jwt' }));
     expect(idp.idpCalls().map(([i]) => requestUrl(i))).toEqual([DISCOVERY_URL, JWKS_URL]);
   });
 
   it('refetches the JWKS on an unknown kid after key rotation', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const { idp, verify } = await setup();
-    await verify(await idp.sign());
+    await verify(await idp.sign({ typ: 'at+jwt' }));
     const rotated = await makeKey('k2');
     idp.keys.unshift(rotated);
     // jose waits out its cooldown before reloading on a miss
     vi.setSystemTime(Date.now() + 60_000);
-    const token = await idp.sign({ kid: 'k2' });
+    const token = await idp.sign({ typ: 'at+jwt', kid: 'k2' });
     await expect(verify(token)).resolves.toMatchObject({ token });
     expect(idp.idpCalls(JWKS_URL)).toHaveLength(2);
     expect(idp.idpCalls(DISCOVERY_URL)).toHaveLength(1);
@@ -410,7 +435,7 @@ describe('createTokenVerifier discovery URL and failures', () => {
         ? Promise.resolve(Response.json({ issuer, jwks_uri: JWKS_URL }))
         : idp.fetch(input, init),
     );
-    const token = await idp.sign({ iss: issuer });
+    const token = await idp.sign({ typ: 'at+jwt', iss: issuer });
     await expect(make(fetch, issuer).verifyAccessToken(token)).resolves.toMatchObject({ token });
     expect(requestUrl(fetch.mock.calls[0]?.[0] ?? '')).toBe(DISCOVERY_URL);
   });
@@ -420,7 +445,7 @@ describe('createTokenVerifier discovery URL and failures', () => {
       Promise.resolve(new Response('x', { status })),
     );
     const idp = await createFakeIdp();
-    await expect(make(fetch).verifyAccessToken(await idp.sign())).rejects.toThrow(
+    await expect(make(fetch).verifyAccessToken(await idp.sign({ typ: 'at+jwt' }))).rejects.toThrow(
       `OIDC discovery failed with status ${status}`,
     );
   });
@@ -430,7 +455,7 @@ describe('createTokenVerifier discovery URL and failures', () => {
       Promise.resolve(Response.json({ issuer: 'https://evil.example', jwks_uri: JWKS_URL })),
     );
     const idp = await createFakeIdp();
-    await expect(make(fetch).verifyAccessToken(await idp.sign())).rejects.toThrow(
+    await expect(make(fetch).verifyAccessToken(await idp.sign({ typ: 'at+jwt' }))).rejects.toThrow(
       /does not match the configured issuer/,
     );
   });
@@ -440,7 +465,7 @@ describe('createTokenVerifier discovery URL and failures', () => {
       Promise.resolve(Response.json({ issuer: ISSUER })),
     );
     const idp = await createFakeIdp();
-    await expect(make(fetch).verifyAccessToken(await idp.sign())).rejects.toThrow(
+    await expect(make(fetch).verifyAccessToken(await idp.sign({ typ: 'at+jwt' }))).rejects.toThrow(
       /does not match the configured issuer/,
     );
   });
@@ -454,7 +479,7 @@ describe('createTokenVerifier discovery URL and failures', () => {
         : idp.fetch(input, init),
     );
     const verifier = make(fetch);
-    const token = await idp.sign();
+    const token = await idp.sign({ typ: 'at+jwt' });
     await expect(verifier.verifyAccessToken(token)).rejects.toThrow('status 500');
     fail = false;
     await expect(verifier.verifyAccessToken(token)).resolves.toMatchObject({ token });
@@ -464,7 +489,7 @@ describe('createTokenVerifier discovery URL and failures', () => {
   it('fails with a plain Error naming the status when the JWKS endpoint answers non-2xx', async () => {
     const { idp, verify } = await setup();
     idp.state.jwksStatus = 503;
-    const err = await verify(await idp.sign()).catch((e: unknown) => e);
+    const err = await verify(await idp.sign({ typ: 'at+jwt' })).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(Error);
     expect(err).not.toBeInstanceOf(errors.JOSEError);
     expect(err).toHaveProperty('message', 'JWKS fetch failed with status 503');
@@ -478,42 +503,52 @@ describe('createTokenVerifier claims mapping', () => {
     ['single', ['single']],
   ])('splits scope %j into %j', async (scope, expected) => {
     const { idp, verify } = await setup();
-    expect((await verify(await idp.sign({ claims: { scope } }))).scopes).toEqual(expected);
+    expect((await verify(await idp.sign({ typ: 'at+jwt', claims: { scope } }))).scopes).toEqual(
+      expected,
+    );
   });
 
   it('yields no scopes when scope is missing or not a string', async () => {
     const { idp, verify } = await setup();
-    expect((await verify(await idp.sign())).scopes).toEqual([]);
-    expect((await verify(await idp.sign({ claims: { scope: ['a'] } }))).scopes).toEqual([]);
+    expect((await verify(await idp.sign({ typ: 'at+jwt' }))).scopes).toEqual([]);
+    expect(
+      (await verify(await idp.sign({ typ: 'at+jwt', claims: { scope: ['a'] } }))).scopes,
+    ).toEqual([]);
   });
 
   it('omits sub from extra when the token has none', async () => {
     const { idp, verify } = await setup();
-    const info = await verify(await idp.sign({ claims: { preferred_username: 'alice' } }));
+    const info = await verify(
+      await idp.sign({ typ: 'at+jwt', claims: { preferred_username: 'alice' } }),
+    );
     expect(info.extra).toStrictEqual({ preferred_username: 'alice' });
   });
 
   it('omits preferred_username from extra when absent', async () => {
     const { idp, verify } = await setup();
-    const info = await verify(await idp.sign({ claims: { sub: 'u' } }));
+    const info = await verify(await idp.sign({ typ: 'at+jwt', claims: { sub: 'u' } }));
     expect(info.extra).toStrictEqual({ sub: 'u' });
   });
 
   it('omits a non-string preferred_username and a non-string sub', async () => {
     const { idp, verify } = await setup();
-    const info = await verify(await idp.sign({ claims: { sub: 5, preferred_username: 7 } }));
+    const info = await verify(
+      await idp.sign({ typ: 'at+jwt', claims: { sub: 5, preferred_username: 7 } }),
+    );
     expect(info.extra).toStrictEqual({});
   });
 
   it('reports expiresAt equal to the exp claim', async () => {
     const { idp, verify } = await setup();
     const exp = Math.floor(Date.now() / 1000) + 777;
-    expect((await verify(await idp.sign({ exp }))).expiresAt).toBe(exp);
+    expect((await verify(await idp.sign({ typ: 'at+jwt', exp }))).expiresAt).toBe(exp);
   });
 
   it('ignores a non-string azp and falls back to client_id', async () => {
     const { idp, verify } = await setup();
-    const info = await verify(await idp.sign({ claims: { azp: 1, client_id: 'cid' } }));
+    const info = await verify(
+      await idp.sign({ typ: 'at+jwt', claims: { azp: 1, client_id: 'cid' } }),
+    );
     expect(info.clientId).toBe('cid');
   });
 });
@@ -534,14 +569,16 @@ describe('createTokenVerifier algorithms', () => {
     const { idp, verify } = await setup();
     const key = await makeKey(`k-${alg}`, alg);
     idp.keys.push(key);
-    const token = await idp.sign({ alg, kid: key.kid, key: key.privateKey });
+    const token = await idp.sign({ typ: 'at+jwt', alg, kid: key.kid, key: key.privateKey });
     await expect(verify(token)).resolves.toMatchObject({ token });
   });
 
   it.each(['HS256', 'HS384', 'HS512'])('rejects %s', async (alg) => {
     const { idp, verify } = await setup();
     const secret = new TextEncoder().encode('0123456789abcdef0123456789abcdef0123456789abcdef');
-    await expect(verify(await idp.sign({ alg, key: secret }))).rejects.toThrow(errors.JOSEError);
+    await expect(verify(await idp.sign({ typ: 'at+jwt', alg, key: secret }))).rejects.toThrow(
+      errors.JOSEError,
+    );
   });
 
   it('rejects alg none', async () => {

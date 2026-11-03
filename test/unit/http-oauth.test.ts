@@ -182,10 +182,10 @@ describe('without OAuth', () => {
     expect(res.headers.get('www-authenticate')).toBe('Bearer');
   });
 
-  it('does not treat a JWT as valid', async () => {
+  it('does not treat a JWT without OAuth on as valid', async () => {
     const idp = await createFakeIdp(inioFetch());
     const handler = createHttpHandler(BASE, { fetch: idp.fetch });
-    const res = await handler(post(`Bearer ${await idp.sign()}`));
+    const res = await handler(post(`Bearer ${await idp.sign({ typ: 'at+jwt' })}`));
     expect(res.status).toBe(401);
     expect(res.headers.get('www-authenticate')).toBe('Bearer');
     expect(idp.fetch).not.toHaveBeenCalled();
@@ -238,14 +238,16 @@ describe('challenge (OAuth on)', () => {
     const { idp } = await setup();
     const handler = createHttpHandler({ ...config, http: rest }, { fetch: idp.fetch });
     expect((await handler(post(`Bearer ${WRONG}`))).status).toBe(401);
-    expect((await handler(post(`Bearer ${await idp.sign()}`))).status).toBe(200);
+    expect((await handler(post(`Bearer ${await idp.sign({ typ: 'at+jwt' })}`))).status).toBe(200);
   });
 });
 
 describe('access tokens (OAuth on)', () => {
   it('serves a valid JWT like the static token', async () => {
     const { handler, idp } = await setup();
-    const res = await handler(post(`Bearer ${await idp.sign({ claims: { sub: 'u-1' } })}`));
+    const res = await handler(
+      post(`Bearer ${await idp.sign({ typ: 'at+jwt', claims: { sub: 'u-1' } })}`),
+    );
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('"protocolVersion"');
   });
@@ -267,34 +269,41 @@ describe('access tokens (OAuth on)', () => {
     [
       'another issuer',
       (i: Awaited<ReturnType<typeof createFakeIdp>>) =>
-        i.sign({ iss: 'https://evil.example/realms/mcp' }),
+        i.sign({ typ: 'at+jwt', iss: 'https://evil.example/realms/mcp' }),
     ],
-    ['no audience', (i: Awaited<ReturnType<typeof createFakeIdp>>) => i.sign({ aud: null })],
+    [
+      'no audience',
+      (i: Awaited<ReturnType<typeof createFakeIdp>>) => i.sign({ typ: 'at+jwt', aud: null }),
+    ],
     [
       'another audience',
       (i: Awaited<ReturnType<typeof createFakeIdp>>) =>
-        i.sign({ aud: 'https://other.example/mcp' }),
+        i.sign({ typ: 'at+jwt', aud: 'https://other.example/mcp' }),
     ],
     [
       'expired',
       (i: Awaited<ReturnType<typeof createFakeIdp>>) =>
-        i.sign({ exp: Math.floor(Date.now() / 1000) - 300 }),
+        i.sign({ typ: 'at+jwt', exp: Math.floor(Date.now() / 1000) - 300 }),
     ],
     [
       'not yet valid',
       (i: Awaited<ReturnType<typeof createFakeIdp>>) =>
-        i.sign({ nbf: Math.floor(Date.now() / 1000) + 300 }),
+        i.sign({ typ: 'at+jwt', nbf: Math.floor(Date.now() / 1000) + 300 }),
     ],
     [
       'bad signature',
       async (i: Awaited<ReturnType<typeof createFakeIdp>>) =>
-        i.sign({ key: (await makeKey('k1')).privateKey }),
+        i.sign({ typ: 'at+jwt', key: (await makeKey('k1')).privateKey }),
     ],
     ['alg none', () => Promise.resolve(unsignedToken())],
     [
       'HS256',
       (i: Awaited<ReturnType<typeof createFakeIdp>>) =>
-        i.sign({ alg: 'HS256', key: new TextEncoder().encode('0123456789abcdef0123456789abcdef') }),
+        i.sign({
+          typ: 'at+jwt',
+          alg: 'HS256',
+          key: new TextEncoder().encode('0123456789abcdef0123456789abcdef'),
+        }),
     ],
     ['garbage', () => Promise.resolve('not.a.jwt')],
   ])('rejects a token with %s', (_name, make) => {
@@ -308,7 +317,7 @@ describe('access tokens (OAuth on)', () => {
 
   it('answers 401 for a valid JWT while the provider is down', async () => {
     const { handler, idp } = await setup();
-    const token = await idp.sign();
+    const token = await idp.sign({ typ: 'at+jwt' });
     idp.state.down = true;
     const res = await handler(post(`Bearer ${token}`));
     expect(res.status).toBe(401);
@@ -317,8 +326,8 @@ describe('access tokens (OAuth on)', () => {
 
   it('fetches discovery once across requests', async () => {
     const { handler, idp } = await setup();
-    await handler(post(`Bearer ${await idp.sign()}`));
-    await handler(post(`Bearer ${await idp.sign()}`));
+    await handler(post(`Bearer ${await idp.sign({ typ: 'at+jwt' })}`));
+    await handler(post(`Bearer ${await idp.sign({ typ: 'at+jwt' })}`));
     expect(
       idp.idpCalls('https://idp.example/realms/mcp/.well-known/openid-configuration'),
     ).toHaveLength(1);
@@ -331,7 +340,7 @@ describe('non-URL audience (OAuth on)', () => {
       ...BASE,
       http: { ...BASE.http, oauth: { ...OAUTH, audience: 'inio-mcp' } },
     });
-    const res = await handler(post(`Bearer ${await idp.sign({ aud: 'inio-mcp' })}`));
+    const res = await handler(post(`Bearer ${await idp.sign({ typ: 'at+jwt', aud: 'inio-mcp' })}`));
     expect(res.status).toBe(200);
   });
 });
@@ -420,7 +429,7 @@ describe('startHttpServer (OAuth on)', () => {
 
   it('counts a rejected access token in the existing 401 throttle', async () => {
     const { url, logger, idp } = await start(() => 0);
-    const bad = await idp.sign({ aud: null });
+    const bad = await idp.sign({ typ: 'at+jwt', aud: null });
     await fetch(url(), { headers: { authorization: `Bearer ${bad}` } });
     await fetch(url(), { headers: { authorization: `Bearer ${bad}` } });
     expect(unauthorized(logger)).toEqual([
@@ -430,7 +439,10 @@ describe('startHttpServer (OAuth on)', () => {
 
   it('logs the signed-in user for a tool call made over the socket', async () => {
     const { url, idp, logger } = await start();
-    const token = await idp.sign({ claims: { sub: 'user-1', preferred_username: 'alice' } });
+    const token = await idp.sign({
+      typ: 'at+jwt',
+      claims: { sub: 'user-1', preferred_username: 'alice' },
+    });
     const transport = new StreamableHTTPClientTransport(new URL(url()), {
       requestInit: { headers: { authorization: `Bearer ${token}` } },
     });
@@ -460,7 +472,7 @@ describe('startHttpServer (OAuth on)', () => {
       headers: {
         'content-type': 'application/json',
         accept: 'application/json, text/event-stream',
-        authorization: `Bearer ${await idp.sign()}`,
+        authorization: `Bearer ${await idp.sign({ typ: 'at+jwt' })}`,
       },
       body: INIT_BODY,
     });
@@ -470,7 +482,7 @@ describe('startHttpServer (OAuth on)', () => {
   it('logs one throttled warn when the provider is unreachable, and keeps serving the static token', async () => {
     let clock = 0;
     const { url, logger, idp } = await start(() => clock);
-    const token = await idp.sign();
+    const token = await idp.sign({ typ: 'at+jwt' });
     idp.state.down = true;
     for (let i = 0; i < 3; i++) {
       const res = await fetch(url(), { headers: { authorization: `Bearer ${token}` } });
@@ -496,7 +508,7 @@ describe('startHttpServer (OAuth on)', () => {
     let clock = 0;
     const { url, logger, idp } = await start(() => clock);
     idp.state.jwksStatus = 503;
-    const token = await idp.sign();
+    const token = await idp.sign({ typ: 'at+jwt' });
     for (let i = 0; i < 3; i++) {
       const res = await fetch(url(), { headers: { authorization: `Bearer ${token}` } });
       expect(res.status).toBe(401);
@@ -510,7 +522,9 @@ describe('startHttpServer (OAuth on)', () => {
   it('warns about provider misconfiguration when jwks_uri is plain http on an https issuer', async () => {
     const { url, logger, idp } = await start(() => 0);
     idp.state.jwksUri = 'http://idp.example/realms/mcp/certs';
-    const res = await fetch(url(), { headers: { authorization: `Bearer ${await idp.sign()}` } });
+    const res = await fetch(url(), {
+      headers: { authorization: `Bearer ${await idp.sign({ typ: 'at+jwt' })}` },
+    });
     expect(res.status).toBe(401);
     expect(idp.idpCalls(idp.state.jwksUri)).toHaveLength(0);
     expect(providerWarns(logger).map(([, m]) => m)).toEqual(['token verification unavailable']);
@@ -518,7 +532,7 @@ describe('startHttpServer (OAuth on)', () => {
 
   it('logs the provider failure as exactly the error message, never the token', async () => {
     const { url, logger, idp } = await start(() => 0);
-    const token = await idp.sign();
+    const token = await idp.sign({ typ: 'at+jwt' });
     idp.state.down = true;
     await fetch(url(), { headers: { authorization: `Bearer ${token}` } });
     expect(providerWarns(logger)).toEqual([
@@ -528,7 +542,7 @@ describe('startHttpServer (OAuth on)', () => {
 
   it('counts a JWKS timeout as a provider outage', async () => {
     const { url, logger, idp } = await start(() => 0);
-    const token = await idp.sign();
+    const token = await idp.sign({ typ: 'at+jwt' });
     const inner = idp.fetch.getMockImplementation();
     idp.fetch.mockImplementation((input, init) =>
       urlOf(input) === JWKS_URL || !inner
@@ -543,7 +557,9 @@ describe('startHttpServer (OAuth on)', () => {
 
   it('does not log a provider warn for a merely invalid token', async () => {
     const { url, logger, idp } = await start(() => 0);
-    await fetch(url(), { headers: { authorization: `Bearer ${await idp.sign({ aud: null })}` } });
+    await fetch(url(), {
+      headers: { authorization: `Bearer ${await idp.sign({ typ: 'at+jwt', aud: null })}` },
+    });
     await fetch(url(), { headers: { authorization: 'Bearer garbage' } });
     expect(providerWarns(logger)).toEqual([]);
   });
@@ -633,7 +649,7 @@ describe('startHttpServer (OAuth on)', () => {
 
   it('never logs a presented token', async () => {
     const { url, logger, idp } = await start(() => 0);
-    const token = await idp.sign({ aud: null });
+    const token = await idp.sign({ typ: 'at+jwt', aud: null });
     idp.state.down = true;
     await fetch(url(), { headers: { authorization: `Bearer ${token}` } });
     const all = JSON.stringify([
@@ -655,7 +671,7 @@ describe('signed-in user in tool-call logs over HTTP', () => {
     const transport = new StreamableHTTPClientTransport(new URL('http://127.0.0.1:3000/mcp'), {
       requestInit: {
         headers: {
-          authorization: `Bearer ${claims ? await idp.sign({ claims: { sub: 'user-1', preferred_username: 'alice', email: 'alice@corp.example' } }) : token}`,
+          authorization: `Bearer ${claims ? await idp.sign({ typ: 'at+jwt', claims: { sub: 'user-1', preferred_username: 'alice', email: 'alice@corp.example' } }) : token}`,
         },
       },
       fetch: (input, init) => handler(new Request(input, init)),
