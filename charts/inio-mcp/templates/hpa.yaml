@@ -1,0 +1,28 @@
+{{- if .Values.autoscaling.enabled }}
+{{- if lt (int .Values.autoscaling.maxReplicas) (int .Values.autoscaling.minReplicas) }}
+{{- fail "autoscaling.maxReplicas must be at least autoscaling.minReplicas" }}
+{{- end }}
+{{- if not (dig "requests" "cpu" "" .Values.resources) }}
+{{- fail "autoscaling needs resources.requests.cpu (utilization is measured against it)" }}
+{{- end }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "inio-mcp.fullname" . }}
+  labels:
+    {{- include "inio-mcp.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "inio-mcp.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

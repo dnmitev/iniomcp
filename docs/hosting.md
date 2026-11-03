@@ -49,7 +49,7 @@ INIO_MAX_PAYMENT_AMOUNT=500
 
 ## Kubernetes (Helm)
 
-The chart in [`charts/inio-mcp`](../charts/inio-mcp/README.md) runs the server in HTTP mode with two replicas, a read-only root filesystem, no Linux capabilities and a numeric non-root user. It is published as an OCI chart:
+The chart in [`charts/inio-mcp`](../charts/inio-mcp/README.md) runs the server in HTTP mode with two replicas and a PodDisruptionBudget (optional CPU autoscaling), a read-only root filesystem, no Linux capabilities and a numeric non-root user. It is published as an OCI chart:
 
 ```bash
 helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.5.0 -f values.yaml

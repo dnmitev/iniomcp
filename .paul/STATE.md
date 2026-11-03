@@ -114,7 +114,6 @@ See PROJECT.md Key Decisions.
 | Central registerTool wrapper in createServerFactory instead of per-file withToolLogging + toolLog deps (smaller code) | 10-02 | S | Any tool-registration touch |
 | Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
 | Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
-| Optional PodDisruptionBudget and topology spread in the Helm chart | 11-01 | S | First node-drain incident or more replicas |
 | `userRealName` visible for all customer types (seen in live keys); consider consumer redaction | 11-02 | S | Owner decision |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
