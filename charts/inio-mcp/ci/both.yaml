@@ -16,3 +16,5 @@ httpRoute:
   hostnames: [mcp.example.com, mcp2.example.com]
 autoscaling:
   enabled: true
+oauth:
+  issuer: https://idp.example/realms/mcp

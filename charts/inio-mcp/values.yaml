@@ -38,6 +38,13 @@ inio:
   logLevel: '' # fatal … trace, or silent
   requestTimeoutMs: '' # e.g. "30000"
 
+# OAuth sign-in for Claude on the web, Desktop and mobile (see docs/hosting.md "Sign-in with OAuth").
+# Off while issuer is empty. The static MCP_AUTH_TOKEN keeps working next to it.
+oauth:
+  issuer: '' # e.g. https://idp.example/realms/mcp
+  publicUrl: '' # public URL of /mcp; default https://<ingress.host>/mcp, else https://<first HTTPRoute hostname>/mcp
+  audience: '' # aud the provider puts in access tokens; default publicUrl
+
 # Browser origins allowed besides localhost. Empty: https:// plus the ingress host and HTTPRoute hostnames.
 allowedOrigins: []
 

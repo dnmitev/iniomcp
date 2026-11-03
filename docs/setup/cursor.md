@@ -15,7 +15,7 @@ Add the configuration to `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.jso
   "mcpServers": {
     "inio": {
       "command": "npx",
-      "args": ["-y", "@dnmitev/inio-mcp@0.6.0"],
+      "args": ["-y", "@dnmitev/inio-mcp@0.7.0"],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
         "INIO_CLIENT_SECRET": "your-client-secret",
@@ -50,7 +50,7 @@ The image runs the same server as a non-root user, over stdio by default. `-i` k
         "INIO_AUTH_URL",
         "-e",
         "INIO_URL",
-        "ghcr.io/dnmitev/inio-mcp:0.6.0"
+        "ghcr.io/dnmitev/inio-mcp:0.7.0"
       ],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",

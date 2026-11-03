@@ -20,7 +20,7 @@ Start it with npx:
 
 ```bash
 export MCP_AUTH_TOKEN=$(openssl rand -hex 32)   # share this with your team
-MCP_TRANSPORT=http npx -y @dnmitev/inio-mcp@0.6.0   # plus the four INIO_* variables
+MCP_TRANSPORT=http npx -y @dnmitev/inio-mcp@0.7.0   # plus the four INIO_* variables
 ```
 
 Or with Docker (the image listens on `0.0.0.0:3000` in HTTP mode and stops cleanly on `docker stop`):
@@ -29,12 +29,82 @@ Or with Docker (the image listens on `0.0.0.0:3000` in HTTP mode and stops clean
 docker run -d --name inio-mcp -p 127.0.0.1:3000:3000 \
   -e MCP_TRANSPORT=http -e MCP_AUTH_TOKEN \
   -e INIO_CLIENT_ID -e INIO_CLIENT_SECRET -e INIO_AUTH_URL -e INIO_URL \
-  ghcr.io/dnmitev/inio-mcp:0.6.0
+  ghcr.io/dnmitev/inio-mcp:0.7.0
 ```
 
 ## Connect users
 
 Give each user the URL (for example `https://mcp.example.com/mcp`) and the token over a secure channel. The "Hosted" section of each client guide shows the setup: [Claude Desktop](setup/claude-desktop.md#hosted), [Claude Code](setup/claude-code.md#hosted), [VS Code](setup/vscode.md#hosted), [Cursor](setup/cursor.md#hosted).
+
+## Sign-in with OAuth
+
+Claude on the web, the Claude Desktop connectors and the Claude mobile apps can only reach a server through OAuth sign-in: personal plans have no field for a fixed token. With OAuth turned on, each person signs in with their own account at your OpenID Connect provider (for example Keycloak), and the server checks the access token Claude sends. The shared token keeps working next to it for Claude Code, VS Code, Cursor and Claude Desktop with mcp-remote.
+
+The server is only the protected resource. It does not issue tokens; your provider does.
+
+### Server settings
+
+| Variable             | Purpose                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `MCP_OAUTH_ISSUER`   | Turns OAuth on. The provider's issuer URL, for example `https://idp.example.com/realms/mcp` (https; http only for localhost) |
+| `MCP_PUBLIC_URL`     | Required with the issuer. The URL users enter in Claude, ending in `/mcp`, for example `https://mcp.example.com/mcp`         |
+| `MCP_OAUTH_AUDIENCE` | Optional. The `aud` value your provider puts in access tokens. Default: `MCP_PUBLIC_URL`                                     |
+| `MCP_AUTH_TOKEN`     | Optional once OAuth is on; set it to keep the shared token for header-based clients                                          |
+
+With OAuth on, the server:
+
+- serves its sign-in metadata ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)) without a token at `/.well-known/oauth-protected-resource/mcp` (and `/.well-known/oauth-protected-resource`), naming your issuer;
+- answers requests without a valid token with `401` and `WWW-Authenticate: Bearer resource_metadata="…"`, which is how Claude finds where to send the user;
+- reads your provider's `/.well-known/openid-configuration` once and checks each access token's signature against its keys, plus issuer, audience and expiry. Only asymmetric algorithms such as RS256 and ES256 are accepted;
+- checks the shared token first, so header clients keep working even if the provider is down. If the provider is unreachable, sign-in users get `401` and the log shows one `token verification unavailable` line a minute.
+
+Every tool call from a signed-in user is logged with `user: { sub, name }`, the token's subject and username. The username is often an email address. Nothing else from the token is logged.
+
+### Provider checklist
+
+Set up a client for Claude in your provider. Using Keycloak as the example (other providers have the same settings under other names):
+
+1. **Realm:** use a realm for the people who should use the server, for example a dedicated `mcp` realm. Create their users there.
+2. **Client:**
+   - make it public (no client secret);
+   - turn on **Standard flow** (authorization code) and nothing else;
+   - set **PKCE** to `S256`;
+   - add exactly this redirect URI: `https://claude.ai/api/mcp/auth_callback`.
+
+   Claude on the web, Desktop and mobile all use that redirect.
+
+3. **Audience:**
+   - add an audience mapper to the client that puts your `MCP_OAUTH_AUDIENCE` (by default your `MCP_PUBLIC_URL`) into the access token's `aud`, for example an "Audience" mapper with **Included Custom Audience**;
+   - tokens without it get `401`.
+4. **Scopes:**
+   - Claude always asks for `offline_access`, because it is listed in the provider's discovery document. Make sure the client may use that scope, or sign-in fails with `invalid_scope`.
+   - In Keycloak, users also need the `offline_access` role, and the client must allow it: either **Full scope allowed**, or a scope mapping for the role. Otherwise the code exchange fails with "Offline tokens not allowed".
+5. **Refresh tokens:** turn on refresh-token rotation, Keycloak's **Revoke Refresh Token** with reuse `0`. Claude refreshes before the access token expires.
+6. **Network:** Claude's servers call your provider (discovery, token) and this server from `160.79.104.0/21`. Do not block that range, and use a publicly trusted TLS certificate on both.
+
+Then give users the server URL and the client ID, and point them to [the connector guide](setup/claude-web.md).
+
+### Helm
+
+```yaml
+oauth:
+  issuer: https://idp.example.com/realms/mcp
+  # publicUrl defaults to https://<ingress.host>/mcp
+  # audience defaults to publicUrl
+```
+
+With `oauth.issuer` set, the chart passes the variables above and also routes `/.well-known/oauth-protected-resource` through the Ingress and the HTTPRoute. The Secret's `MCP_AUTH_TOKEN` key becomes optional.
+
+### Troubleshooting
+
+| Symptom                                                         | Cause                                                                                                                              |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Claude says it cannot reach the server; no sign-in page appears | `/.well-known/oauth-protected-resource/mcp` is not routed to the server, or `MCP_PUBLIC_URL` differs from the URL the user entered |
+| Sign-in returns `invalid_scope`                                 | The client cannot use the `offline_access` scope                                                                                   |
+| "Offline tokens not allowed for the user or client"             | The user lacks the `offline_access` role, or the client does not allow it (full scope or a scope mapping)                          |
+| Signed in, then `401` with `error="invalid_token"`              | The token's `aud` does not contain `MCP_OAUTH_AUDIENCE`, or the issuer differs from `MCP_OAUTH_ISSUER` (check the exact URL)       |
+| `token verification unavailable` in the log                     | The server cannot fetch the provider's discovery or keys (DNS, TLS, firewall), or the provider answers with an error               |
+| `403` for every request from Claude                             | The request carried an `Origin` that is not allowed; add it to `MCP_ALLOWED_ORIGINS` (`allowedOrigins` in the chart)               |
 
 ## Limit what the team can change
 
@@ -52,7 +122,7 @@ INIO_MAX_PAYMENT_AMOUNT=500
 The chart in [`charts/inio-mcp`](../charts/inio-mcp/README.md) runs the server in HTTP mode with two replicas and a PodDisruptionBudget (optional CPU autoscaling), a read-only root filesystem, no Linux capabilities and a numeric non-root user. It is published as an OCI chart:
 
 ```bash
-helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.6.0 -f values.yaml
+helm install inio-mcp oci://ghcr.io/dnmitev/charts/inio-mcp --version 0.7.0 -f values.yaml
 ```
 
 ### Secret
@@ -136,7 +206,7 @@ spec:
   source:
     repoURL: ghcr.io/dnmitev/charts
     chart: inio-mcp
-    targetRevision: 0.6.0
+    targetRevision: 0.7.0
     helm:
       valuesObject:
         existingSecret: inio-mcp

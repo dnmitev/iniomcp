@@ -29,4 +29,14 @@ spec:
                 name: {{ include "inio-mcp.fullname" . }}
                 port:
                   name: http
+          {{- if .Values.oauth.issuer }}
+          # OAuth Protected Resource Metadata: Claude reads it after the 401 to find the sign-in provider.
+          - path: /.well-known/oauth-protected-resource
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "inio-mcp.fullname" . }}
+                port:
+                  name: http
+          {{- end }}
 {{- end }}

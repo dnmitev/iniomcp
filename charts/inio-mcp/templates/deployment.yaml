@@ -57,6 +57,22 @@ spec:
                 secretKeyRef:
                   name: {{ include "inio-mcp.secretName" . }}
                   key: MCP_AUTH_TOKEN
+                  {{- if .Values.oauth.issuer }}
+                  optional: true
+                  {{- end }}
+            {{- if and (not .Values.oauth.issuer) (or .Values.oauth.publicUrl .Values.oauth.audience) }}
+            {{- fail "oauth.publicUrl and oauth.audience need oauth.issuer" }}
+            {{- end }}
+            {{- with .Values.oauth.issuer }}
+            - name: MCP_OAUTH_ISSUER
+              value: {{ . | quote }}
+            - name: MCP_PUBLIC_URL
+              value: {{ include "inio-mcp.publicUrl" $ | quote }}
+            {{- end }}
+            {{- if and .Values.oauth.issuer .Values.oauth.audience }}
+            - name: MCP_OAUTH_AUDIENCE
+              value: {{ .Values.oauth.audience | quote }}
+            {{- end }}
             {{- with include "inio-mcp.allowedOrigins" . }}
             - name: MCP_ALLOWED_ORIGINS
               value: {{ . | quote }}

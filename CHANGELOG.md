@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-03
+
+### Added
+
+- OAuth sign-in for the hosted server, so Claude on the web, the Claude Desktop connectors and the Claude mobile apps can use it with each person's own account. Set `MCP_OAUTH_ISSUER` and `MCP_PUBLIC_URL` (and optionally `MCP_OAUTH_AUDIENCE`): the server publishes Protected Resource Metadata (RFC 9728), answers `401` with a `resource_metadata` pointer, and accepts access tokens from that OpenID Connect provider (signature, issuer, audience and expiry checked). The shared `MCP_AUTH_TOKEN` keeps working next to it and becomes optional.
+- Tool-call and write log lines name the signed-in user (`user: { sub, name }`).
+- Helm chart values `oauth.issuer`, `oauth.publicUrl` and `oauth.audience`; the Ingress and HTTPRoute also route the sign-in metadata path.
+- Guides: [Sign-in with OAuth](docs/hosting.md#sign-in-with-oauth) (provider checklist, troubleshooting) and [Claude on the web, Desktop and mobile](docs/setup/claude-web.md).
+
 ## [0.6.0] - 2026-11-03
 
 ### Added
