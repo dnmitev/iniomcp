@@ -90,7 +90,7 @@ See PROJECT.md Key Decisions.
 | 2026-10-30: v0.2 releases as 0.4.0; README pins 0.4.0 before the tag; merge → tag → publish back to back (release.yml requires the tag on main) | Phase 7 | Brief window where main's README pins an unpublished version |
 | 2026-10-30: Client appends check-before-retry to write 5xx; write tools catch via writeFailure, shape failures → acceptedUnreadable (ok + note) | Phase 6 | New write tools inherit it; tools add only a check pointer |
 | 2026-11-02: v0.3 = customer-type redaction (B open except bearer links; C strict + names/address/city), docs per client, trimmed opt-in R3, R8, small R6, Helm chart; ChatGPT deferred to the hosted server (OAuth) | v0.3 | Ease of use first; AEGIS R2/R3 reworked |
-| 2026-11-02: Hosted auth direction = dedicated MCP Keycloak realm with BoP brokering; per-tenant MCP api2api clients first, APISIX trusting the realm later | v0.4 | `.paul/research/v0.4-hosted-auth.md` |
+| 2026-11-02: Hosted auth direction = OAuth sign-in through a dedicated OIDC realm for the MCP server; Inio credentials stay per instance | v0.4 | Design notes kept outside the repo |
 | 2026-11-02: Phase 8 = one TDD plan (08-01); customerType B/C per object in redact(); unknown = consumer; get_invoice looks up by customerId with a shared clear-at-1000 cache; write tools keep consumer rules | Phase 8 | Fixture customerType "Company" corrected to "B" |
 | 2026-11-02: 08-01 deviations: SSN redacted for B too; `note` stays visible (tool status field); errorText strict incl. new keys; customer type read from externalCustomer via zod | Phase 8 | README Data protection has business and consumer blocks |
 | 2026-11-02: Docs = README overview + docs/setup per client + hosting + examples; README links absolute (npm ships README only); Claude Desktop hosted via mcp-remote@0.15.1; docs test guards pins and links | Phase 9 | Release must bump pins in README and docs/ (test enforces) |
@@ -130,7 +130,7 @@ See PROJECT.md Key Decisions.
 Branch: paul/milestone-v0.3-close (from main 2f5c3e2 = PR #41 squash)
 Milestone tags: milestone-v0.1, milestone-v0.2, milestone-v0.3 (local, not pushed)
 Releases: v0.6.0 (pending tag: /healthz, chart PDB/topology spread/HPA); v0.5.0 (npm latest with provenance, GHCR 0.5.0/0.5/latest sha256:f64c180f…, chart oci://ghcr.io/dnmitev/charts/inio-mcp 0.5.0, 2026-11-02; v0.3 Integration Layer); v0.4.0 (v0.2); v0.3.1; v0.3.0; earlier
-Hosted: https://mcp.inio-shared.com/mcp (EKS, ArgoCD, static bearer token)
+Hosted: team instance on EKS via ArgoCD (static bearer token)
 
 ## Session Continuity
 
@@ -139,7 +139,7 @@ Stopped at: Milestone v0.3 Integration Layer complete
 Next action: /paul:discuss-milestone (v0.4 Hosted candidate)
 Resume file: .paul/MILESTONES.md
 Resume context:
-- v0.4 design input: .paul/research/v0.4-hosted-auth.md (MCP Keycloak realm, BoP brokering, per-user write roles, multi-tenant)
+- v0.4 design input: private design notes (not in the repo)
 - Hosted instance on EKS is the base for v0.4
 
 ---

@@ -45,7 +45,7 @@ Completed milestone log for this project.
 
 ### Deferred to later
 
-- v0.4 Hosted: MCP Keycloak realm, OAuth, per-user write roles and audit, multi-tenant
+- Hosted sign-in: OAuth through an OIDC provider, per-user write roles and audit, multi-tenant
 - R6 remainder (pack-once publish, image provenance, sandbox live gate); PodDisruptionBudget; customer-type cache TTL; `userRealName` visibility
 
 ---
