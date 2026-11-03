@@ -2,7 +2,7 @@
 
 Model Context Protocol (MCP) server for the [Inio](https://inio.com) REST API. Connect AI assistants such as Claude, Cursor or VS Code to your own Inio data: customers, invoices, pauses, retry attempts and payments.
 
-> **Status:** 0.6.0. Read-only by default, with opt-in write tools; stdio or a [shared HTTP server](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md). Published as `@dnmitev/inio-mcp` until it moves to the `@inio` scope.
+> **Status:** 0.7.0. Read-only by default, with opt-in write tools; stdio or a [shared HTTP server](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md). Published as `@dnmitev/inio-mcp` until it moves to the `@inio` scope.
 
 ## Install
 
@@ -13,7 +13,7 @@ export INIO_CLIENT_ID=...       # your Inio API client id
 export INIO_CLIENT_SECRET=...   # your Inio API client secret
 export INIO_AUTH_URL=...        # token endpoint (or realm issuer URL) of your Inio API realm
 export INIO_URL=...             # Inio API gateway base URL, including /v1
-npx -y @dnmitev/inio-mcp@0.6.0
+npx -y @dnmitev/inio-mcp@0.7.0
 ```
 
 | Variable                  | Required  | Default     | Purpose                                                                                                                                                                                                                                   |
@@ -43,7 +43,7 @@ Add this to `~/Library/Application Support/Claude/claude_desktop_config.json` (W
   "mcpServers": {
     "inio": {
       "command": "npx",
-      "args": ["-y", "@dnmitev/inio-mcp@0.6.0"],
+      "args": ["-y", "@dnmitev/inio-mcp@0.7.0"],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
         "INIO_CLIENT_SECRET": "your-client-secret",
@@ -68,14 +68,18 @@ Each guide covers running the server locally (npx), in Docker, and connecting to
 | VS Code        | [docs/setup/vscode.md](https://github.com/dnmitev/iniomcp/blob/main/docs/setup/vscode.md)                 |
 | Cursor         | [docs/setup/cursor.md](https://github.com/dnmitev/iniomcp/blob/main/docs/setup/cursor.md)                 |
 
+Claude on the web, Desktop and mobile can use a hosted server as a connector, with your own sign-in and nothing installed: [docs/setup/claude-web.md](https://github.com/dnmitev/iniomcp/blob/main/docs/setup/claude-web.md).
+
 To run one server for your whole team, see [Hosting a shared server](https://github.com/dnmitev/iniomcp/blob/main/docs/hosting.md).
+
+Inio clients who want to run it in their own cloud or agent platform, with their own Inio API credentials: [Self-hosting for Inio clients](https://github.com/dnmitev/iniomcp/blob/main/docs/self-hosting.md).
 
 ### Pinning and verification
 
-The examples pin version 0.6.0. Change the version on purpose when you upgrade; do not drop it. The pin covers the package itself: npx still resolves its dependencies within their declared ranges on each fresh install.
+The examples pin version 0.7.0. Change the version on purpose when you upgrade; do not drop it. The pin covers the package itself: npx still resolves its dependencies within their declared ranges on each fresh install.
 
-- **npm:** the package is published with npm provenance. The Provenance section on the package's npmjs.com page shows the source repository and workflow that built it; `npm view @dnmitev/inio-mcp@0.6.0 dist.attestations` gives the URL of the attestation bundle that records them. `npm audit signatures`, run in a project that installed the package (for example `npm init -y && npm i --ignore-scripts @dnmitev/inio-mcp@0.6.0 && npm audit signatures`), checks the registry signatures and provenance attestations of everything installed.
-- **Docker:** look up the digest with `docker buildx imagetools inspect ghcr.io/dnmitev/inio-mcp:0.6.0` and use `ghcr.io/dnmitev/inio-mcp@sha256:<digest>`. Pinning the digest stops the tag from changing under you; it does not by itself prove who built the image.
+- **npm:** the package is published with npm provenance. The Provenance section on the package's npmjs.com page shows the source repository and workflow that built it; `npm view @dnmitev/inio-mcp@0.7.0 dist.attestations` gives the URL of the attestation bundle that records them. `npm audit signatures`, run in a project that installed the package (for example `npm init -y && npm i --ignore-scripts @dnmitev/inio-mcp@0.7.0 && npm audit signatures`), checks the registry signatures and provenance attestations of everything installed.
+- **Docker:** look up the digest with `docker buildx imagetools inspect ghcr.io/dnmitev/inio-mcp:0.7.0` and use `ghcr.io/dnmitev/inio-mcp@sha256:<digest>`. Pinning the digest stops the tag from changing under you; it does not by itself prove who built the image.
 
 ## Tools
 

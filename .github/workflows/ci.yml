@@ -150,8 +150,15 @@ jobs:
             -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
             -H 'Accept: application/json, text/event-stream' \
             -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}')
+          # ci/ingress.yaml turns OAuth on: metadata is served without a token and the 401 points at it.
+          prm=$(curl -s -m 5 http://127.0.0.1:3000/.well-known/oauth-protected-resource/mcp)
+          challenge=$(curl -s -m 5 -o /dev/null -D - -X POST http://127.0.0.1:3000/mcp | grep -i '^www-authenticate:' || true)
           echo "healthz: $health, unauthenticated: $unauth, initialize: $init"
+          echo "metadata: $prm"
+          echo "challenge: $challenge"
           [ "$health" = 200 ] && [ "$unauth" = 401 ] && [ "$init" = 200 ]
+          echo "$prm" | jq -e '.resource == "https://mcp.example.com/mcp"' >/dev/null
+          echo "$challenge" | grep -q 'resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"'
       - name: Show cluster state on failure
         if: failure()
         run: |

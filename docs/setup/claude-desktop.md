@@ -17,7 +17,7 @@ The file holds secrets in plaintext. Keep it readable only by you (`chmod 600` o
   "mcpServers": {
     "inio": {
       "command": "npx",
-      "args": ["-y", "@dnmitev/inio-mcp@0.6.0"],
+      "args": ["-y", "@dnmitev/inio-mcp@0.7.0"],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
         "INIO_CLIENT_SECRET": "your-client-secret",
@@ -52,7 +52,7 @@ The image runs the same server as a non-root user, over stdio by default. `-i` k
         "INIO_AUTH_URL",
         "-e",
         "INIO_URL",
-        "ghcr.io/dnmitev/inio-mcp:0.6.0"
+        "ghcr.io/dnmitev/inio-mcp:0.7.0"
       ],
       "env": {
         "INIO_CLIENT_ID": "your-client-id",
@@ -67,7 +67,9 @@ The image runs the same server as a non-root user, over stdio by default. `-i` k
 
 ## Hosted
 
-Claude Desktop's config file only starts local programs, so it reaches a hosted server through [mcp-remote](https://www.npmjs.com/package/mcp-remote), a small bridge that sends your token with every request. It needs Node.js.
+If your team's server has OAuth sign-in, add it as a connector instead: no config file and no Node.js. See [Claude on the web, Desktop and mobile](claude-web.md).
+
+With a shared token: Claude Desktop's config file only starts local programs, so it reaches a hosted server through [mcp-remote](https://www.npmjs.com/package/mcp-remote), a small bridge that sends your token with every request. It needs Node.js.
 
 ```json
 {

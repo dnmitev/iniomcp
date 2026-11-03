@@ -11,27 +11,28 @@ about: "inio-mcp"
 See: .paul/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Inio clients can query (and optionally act on) their own Inio data from any AI assistant with four env vars and `npx`.
-**Current focus:** v0.3 Integration Layer complete (0.5.0, running on EKS); next milestone not started
+**Current focus:** v0.4 Hosted Sign-in — Phase 12 OAuth resource server
 
 ## Current Position
 
-Milestone: none active (v0.3 Integration Layer ✓)
-Phase: -
-Plan: -
-Status: Milestone complete; ready for /paul:discuss-milestone
-Last activity: 2026-11-03 — 0.6.0 prepared (/healthz, chart PDB, topology spread, HPA); after v0.3, outside a milestone
+Milestone: v0.4 Hosted Sign-in
+Phase: 13 of 13 (Deploy, connect, release) — Planning
+Plan: 13-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-11-03 — Created .paul/phases/13-deploy-connect-release/13-01-PLAN.md
 
 Progress:
 - v0.1 Initial Release: [██████████] 100% ✓
 - v0.2 Audit Quick Wins: [██████████] 100% ✓ (0.4.0)
 - v0.3 Integration Layer: [██████████] 100% ✓ (0.5.0)
+- v0.4 Hosted Sign-in: [█████░░░░░] 50% (Phase 12 ✓)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone complete - ready for next]
+  ✓        ○        ○     [Plan 13-01 created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -98,6 +99,8 @@ See PROJECT.md Key Decisions.
 | 2026-11-02: Write log lines carry write:true, target (id keys only) and client when known; client absent over stateless HTTP (SDK per-request server) — documented, no workaround; 401 warn throttled 60 s | Phase 10 | v0.4 OAuth gives per-person attribution |
 | 2026-11-02: actions/* SHA-pinned; release smoke-tests an amd64 load build before multi-arch push; rulesets main (no delete/force-push) and v* tags (no delete/move), no bypass | Phase 10 | First smoke run at 0.5.0; fixing a bad tag means disabling the rule briefly |
 | 2026-11-02: Helm chart supports Ingress (ingress-nginx) and Gateway API HTTPRoute side by side; readOnlyRootFilesystem verified with 0.4.0 | Phase 11 | `.paul/research/v0.3-helm-chart.md` |
+| 2026-11-03: v0.4 = OAuth sign-in only (Phase 12 resource server, Phase 13 deploy/connect/release); Claude web/Desktop connectors/mobile need OAuth (no request headers on personal plans); provider details private; contract, polish, release trust moved to next milestone | v0.4 | Business users without local setup |
+| 2026-11-03: 12-01: static token first, then JWT (jose, OIDC discovery, asymmetric only); resource = MCP_PUBLIC_URL, audience may be a client id; provider outage = 401 + throttled warn; user { sub, name } in logs | Phase 12 | Phase 13 routes /.well-known/oauth-protected-resource |
 | 2026-11-02: Chart pod runs as uid/gid 1000 (image USER node is non-numeric); secrets only via existingSecret; CI chart job pins Helm 4.3.1, kind 0.33.0, kubeconform 0.8.0 | Phase 11 | kind smoke caught the runAsNonRoot failure |
 
 ### Deferred Issues
@@ -106,13 +109,13 @@ See PROJECT.md Key Decisions.
 |-------|--------|--------|---------|
 | Stryker TS checker / tsconfig handling disabled (no TS 7 JS API) | 01-01 | S | Stryker supports TS 7 |
 | INIO_REVEAL_LINKS: show invoice links without revealing other PII | 03-01 | S | When users ask for links |
-| Per-user tokens or MCP OAuth for HTTP | 05-01 | M | If teams ask |
 | Double-signal shutdown tests are race-prone smoke tests; spawned SIGTERM test accepts finished-or-closed (drain proven via close()) | 05-02, 06-01 | S | If shutdown logic changes |
 | 5xx hint punctuation for API messages ending !/?/whitespace/empty | 06-02 | S | Cosmetic; any client touch |
 | Image build provenance (attest-build-provenance) and npm-shrinkwrap for transitive pins | 07-01 | M | R6 |
 | Central registerTool wrapper in createServerFactory instead of per-file withToolLogging + toolLog deps (smaller code) | 10-02 | S | Any tool-registration touch |
 | Test closeIdleConnections() for connections that go idle during the drain (http.ts mutation survivor) | 10-02 | S | If shutdown logic changes |
 | Customer-type cache in get_invoice never expires (B→C applies after restart; documented) | 08-01 | S | Hosted use or user report |
+| `preferred_username` logged as user.name (often an email) | 12-01 | S | Document in Phase 13; sub only if owner prefers |
 | `userRealName` visible for all customer types (seen in live keys); consider consumer redaction | 11-02 | S | Owner decision |
 | Upstream: allocation lookup for reverse_payment; JSON error envelope on reverse-payment (Jira AS-7101) | 04-04 | - | When AS-7101 is fixed |
 
@@ -127,20 +130,20 @@ See PROJECT.md Key Decisions.
 - get_invoice ~1,700 tokens by default (histories, invoiceItems); consider opt-in like workflowsSettings after real usage.
 
 ### Git State
-Branch: paul/milestone-v0.3-close (from main 2f5c3e2 = PR #41 squash)
+Branch: paul/milestone-v0.4 (from main 383b6c4 = PR #46 squash)
 Milestone tags: milestone-v0.1, milestone-v0.2, milestone-v0.3 (local, not pushed)
-Releases: v0.6.0 (pending tag: /healthz, chart PDB/topology spread/HPA); v0.5.0 (npm latest with provenance, GHCR 0.5.0/0.5/latest sha256:f64c180f…, chart oci://ghcr.io/dnmitev/charts/inio-mcp 0.5.0, 2026-11-02; v0.3 Integration Layer); v0.4.0 (v0.2); v0.3.1; v0.3.0; earlier
+Releases: v0.6.0 (npm latest with provenance, GHCR 0.6.0/0.6/latest sha256:551f5654…, chart 0.6.0, 2026-11-03; /healthz, PDB, topology spread, HPA); v0.5.0 (v0.3); v0.4.0 (v0.2); v0.3.1; v0.3.0; earlier
 Hosted: team instance on EKS via ArgoCD (static bearer token)
 
 ## Session Continuity
 
 Last session: 2026-11-03
-Stopped at: Milestone v0.3 Integration Layer complete
-Next action: /paul:discuss-milestone (v0.4 Hosted candidate)
-Resume file: .paul/MILESTONES.md
+Stopped at: Plan 13-01 created
+Next action: Review and approve plan, then run /paul:apply .paul/phases/13-deploy-connect-release/13-01-PLAN.md
+Resume file: .paul/phases/13-deploy-connect-release/13-01-PLAN.md
 Resume context:
-- v0.4 design input: private design notes (not in the repo)
-- Hosted instance on EKS is the base for v0.4
+- Provider details for the owner's environments stay outside the repo (private notes)
+- Owner deploys provider config as a realm import, then updates via Admin API jobs
 
 ---
 *STATE.md — Updated after every significant action*

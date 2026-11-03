@@ -51,3 +51,16 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 {{- end -}}
 {{- $origins | uniq | join "," -}}
 {{- end -}}
+
+{{/* Public URL of /mcp for OAuth: explicit, else from the ingress host or the first HTTPRoute hostname. */}}
+{{- define "inio-mcp.publicUrl" -}}
+{{- if .Values.oauth.publicUrl -}}
+{{- .Values.oauth.publicUrl -}}
+{{- else if and .Values.ingress.enabled .Values.ingress.host -}}
+{{- printf "https://%s/mcp" .Values.ingress.host -}}
+{{- else if and .Values.httpRoute.enabled .Values.httpRoute.hostnames -}}
+{{- printf "https://%s/mcp" (first .Values.httpRoute.hostnames) -}}
+{{- else -}}
+{{- fail "oauth.issuer needs oauth.publicUrl, ingress.host or an HTTPRoute hostname" -}}
+{{- end -}}
+{{- end -}}

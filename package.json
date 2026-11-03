@@ -1,6 +1,6 @@
 {
   "name": "@dnmitev/inio-mcp",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Model Context Protocol (MCP) server for the Inio REST API: read customers, invoices, pauses and retry attempts from any AI assistant",
   "keywords": [
     "mcp",
@@ -64,6 +64,7 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.1.2",
     "@modelcontextprotocol/server": "^2.4.0",
+    "jose": "^6.2.15",
     "pino": "^10.4.0",
     "zod": "^4.6.7"
   },

@@ -678,3 +678,172 @@ describe('startupFields', () => {
     expect(startupFields({ ...base, writeTools }).writeTools).toEqual([]);
   });
 });
+
+describe('loadConfig OAuth resource server', () => {
+  const ISSUER = 'https://idp.example/realms/mcp';
+  const PUBLIC = 'https://mcp.example/mcp';
+  const oauthEnv = (o: Record<string, string | undefined> = {}) =>
+    httpEnv({ MCP_OAUTH_ISSUER: ISSUER, MCP_PUBLIC_URL: PUBLIC, ...o });
+  const lines = (o: Record<string, string | undefined>) =>
+    errorOf(oauthEnv(o)).message.split('\n').slice(1);
+
+  it('leaves http.oauth absent when MCP_OAUTH_ISSUER is unset', () => {
+    expect(loadConfig(httpEnv()).http).not.toHaveProperty('oauth');
+  });
+
+  it('treats an empty MCP_OAUTH_ISSUER as unset', () => {
+    const config = loadConfig(httpEnv({ MCP_OAUTH_ISSUER: '' }));
+    expect(config.http).not.toHaveProperty('oauth');
+  });
+
+  it('still requires MCP_AUTH_TOKEN when OAuth is off', () => {
+    expect(errorOf(httpEnv({ MCP_AUTH_TOKEN: undefined })).message).toContain(
+      '- MCP_AUTH_TOKEN is required when MCP_TRANSPORT=http',
+    );
+  });
+
+  it('parses issuer and public URL, audience defaulting to the public URL', () => {
+    expect(loadConfig(oauthEnv()).http?.oauth).toEqual({
+      issuer: ISSUER,
+      resourceUrl: PUBLIC,
+      audience: PUBLIC,
+    });
+  });
+
+  it('uses an explicit MCP_OAUTH_AUDIENCE', () => {
+    const aud = 'https://api.example/inio';
+    expect(loadConfig(oauthEnv({ MCP_OAUTH_AUDIENCE: aud })).http?.oauth?.audience).toBe(aud);
+  });
+
+  it('makes MCP_AUTH_TOKEN optional when OAuth is on', () => {
+    const http = loadConfig(oauthEnv({ MCP_AUTH_TOKEN: undefined })).http;
+    expect(http?.authToken).toBeUndefined();
+  });
+
+  it('keeps a valid MCP_AUTH_TOKEN next to OAuth', () => {
+    expect(loadConfig(oauthEnv()).http?.authToken).toBe(TOKEN);
+  });
+
+  it('still validates MCP_AUTH_TOKEN when set next to OAuth', () => {
+    expect(lines({ MCP_AUTH_TOKEN: 'short' })).toEqual([
+      '- MCP_AUTH_TOKEN must be at least 32 characters',
+    ]);
+  });
+
+  it.each(['http://idp.example/realms/mcp', 'not a url', 'ftp://idp.example/x'])(
+    'rejects issuer %j',
+    (issuer) => {
+      expect(lines({ MCP_OAUTH_ISSUER: issuer })).toEqual([
+        '- MCP_OAUTH_ISSUER must be an https URL (http allowed only for localhost)',
+      ]);
+    },
+  );
+
+  it.each(['http://localhost:8080/realms/mcp', 'http://127.0.0.1:8080/realms/mcp'])(
+    'allows http issuer %s on loopback',
+    (issuer) => {
+      expect(loadConfig(oauthEnv({ MCP_OAUTH_ISSUER: issuer })).http?.oauth?.issuer).toBe(issuer);
+    },
+  );
+
+  it('requires MCP_PUBLIC_URL when the issuer is set', () => {
+    expect(lines({ MCP_PUBLIC_URL: undefined })).toEqual([
+      '- MCP_PUBLIC_URL is required when MCP_OAUTH_ISSUER is set',
+    ]);
+  });
+
+  it.each(['http://mcp.example/mcp', 'not a url', '/mcp'])('rejects public URL %j', (u) => {
+    expect(lines({ MCP_PUBLIC_URL: u })).toEqual([
+      '- MCP_PUBLIC_URL must be an https URL (http allowed only for localhost)',
+    ]);
+  });
+
+  it('allows an http public URL on localhost', () => {
+    const u = 'http://localhost:3000/mcp';
+    expect(loadConfig(oauthEnv({ MCP_PUBLIC_URL: u })).http?.oauth?.resourceUrl).toBe(u);
+  });
+
+  it.each([
+    'https://mcp.example',
+    'https://mcp.example/',
+    'https://mcp.example/mcp/x',
+    'https://mcp.example/xmcp',
+  ])('rejects public URL %s whose path does not end in /mcp', (u) => {
+    expect(lines({ MCP_PUBLIC_URL: u })).toEqual(['- MCP_PUBLIC_URL must end with /mcp']);
+  });
+
+  it('accepts a public URL with a longer path ending in /mcp', () => {
+    const u = 'https://mcp.example/v1/mcp';
+    expect(loadConfig(oauthEnv({ MCP_PUBLIC_URL: u })).http?.oauth?.resourceUrl).toBe(u);
+  });
+
+  it('reports every OAuth problem on its own line', () => {
+    expect(
+      lines({ MCP_OAUTH_ISSUER: 'http://idp.example/r', MCP_PUBLIC_URL: 'https://m.example/' }),
+    ).toEqual([
+      '- MCP_OAUTH_ISSUER must be an https URL (http allowed only for localhost)',
+      '- MCP_PUBLIC_URL must end with /mcp',
+    ]);
+  });
+
+  it('rejects MCP_PUBLIC_URL without MCP_OAUTH_ISSUER', () => {
+    expect(errorOf(httpEnv({ MCP_PUBLIC_URL: PUBLIC })).message).toBe(
+      'Invalid Inio MCP configuration:\n- MCP_PUBLIC_URL requires MCP_OAUTH_ISSUER',
+    );
+  });
+
+  it('rejects MCP_OAUTH_AUDIENCE without MCP_OAUTH_ISSUER', () => {
+    expect(errorOf(httpEnv({ MCP_OAUTH_AUDIENCE: PUBLIC })).message).toBe(
+      'Invalid Inio MCP configuration:\n- MCP_OAUTH_AUDIENCE requires MCP_OAUTH_ISSUER',
+    );
+  });
+
+  describe('MCP_OAUTH_ALLOW_UNTYPED_TOKENS', () => {
+    it('sets allowUntypedTokens when true', () => {
+      const oauth = loadConfig(oauthEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'true' })).http?.oauth;
+      expect(oauth?.allowUntypedTokens).toBe(true);
+    });
+
+    it.each([undefined, 'false'])('leaves allowUntypedTokens absent when %s', (v) => {
+      const oauth = loadConfig(oauthEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: v })).http?.oauth;
+      expect(oauth).not.toHaveProperty('allowUntypedTokens');
+    });
+
+    it('rejects an invalid value', () => {
+      expect(lines({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'yes' })).toEqual([
+        '- MCP_OAUTH_ALLOW_UNTYPED_TOKENS must be one of: false, true',
+      ]);
+    });
+
+    it('requires MCP_OAUTH_ISSUER', () => {
+      expect(errorOf(httpEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'true' })).message).toBe(
+        'Invalid Inio MCP configuration:\n- MCP_OAUTH_ALLOW_UNTYPED_TOKENS requires MCP_OAUTH_ISSUER',
+      );
+    });
+
+    it('reports allowUntypedTokens in startupFields when on', () => {
+      const fields = startupFields(
+        loadConfig(oauthEnv({ MCP_OAUTH_ALLOW_UNTYPED_TOKENS: 'true' })),
+      );
+      expect(fields).toHaveProperty('oauth', { issuer: ISSUER, allowUntypedTokens: true });
+    });
+
+    it('omits allowUntypedTokens from startupFields by default', () => {
+      expect(startupFields(loadConfig(oauthEnv()))).toHaveProperty('oauth', { issuer: ISSUER });
+    });
+  });
+
+  describe('startupFields', () => {
+    it('reports oauth with the issuer only when OAuth is on', () => {
+      const fields = startupFields(
+        loadConfig(oauthEnv({ MCP_OAUTH_AUDIENCE: 'https://a.example/x' })),
+      );
+      expect(fields).toHaveProperty('oauth', { issuer: ISSUER });
+      expect(JSON.stringify(fields)).not.toContain(TOKEN);
+    });
+
+    it('omits oauth when OAuth is off', () => {
+      expect(startupFields(loadConfig(httpEnv()))).not.toHaveProperty('oauth');
+    });
+  });
+});

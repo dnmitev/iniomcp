@@ -13,3 +13,5 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-read-timeout: '120'
     nginx.ingress.kubernetes.io/proxy-send-timeout: '120'
     nginx.ingress.kubernetes.io/proxy-buffering: 'off'
+oauth:
+  issuer: https://idp.example/realms/mcp

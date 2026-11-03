@@ -19,8 +19,8 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.5.0 |
-| Status | v0.3 Integration Layer complete (0.5.0); next milestone not started |
+| Version | 0.6.0 |
+| Status | v0.4 Hosted Sign-in in progress (Phase 13) |
 | Last Updated | 2026-11-03 |
 
 ## Requirements
@@ -65,11 +65,13 @@ Inio clients can query (and optionally act on) their own Inio data from any AI a
 
 - ✓ Unauthenticated `GET /healthz` (no Inio call) probed by the Helm chart; chart PodDisruptionBudget, topology spread, optional HPA — after v0.3 (0.6.0)
 
-### Active (In Progress)
-- None (v0.3 complete; next milestone not started)
+### Active (In Progress) — v0.4 Hosted Sign-in
+- ✓ OAuth resource server: Protected Resource Metadata, JWT validation via OIDC discovery, static token kept, user in logs — Phase 12
+- [ ] Chart values and routes, provider and Claude connector guides, sign-in verified from claude.ai, release — Phase 13
 
 ### Planned (Next)
-- Hosted sign-in: OAuth resource server with an OIDC provider, per-user write roles and audit, multi-tenant (design notes kept outside the repo)
+- Per-user write roles, multi-tenant hosting (after v0.4 sign-in)
+- Request contract from the monorepo; hosted polish (cache TTL, get_invoice opt-in)
 - AEGIS R6 remainder: pack-once publish with `--ignore-scripts`, image build provenance, sandbox-tenant live gate
 - ChatGPT support: deferred until the hosted server has OAuth (v0.4 or later); ChatGPT connectors need a remote server with OAuth
 - Move to the `@inio` npm scope and the company GitHub org when they exist

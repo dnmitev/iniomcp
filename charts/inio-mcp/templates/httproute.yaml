@@ -21,6 +21,11 @@ spec:
         - path:
             type: PathPrefix
             value: /mcp
+        {{- if .Values.oauth.issuer }}
+        - path:
+            type: PathPrefix
+            value: /.well-known/oauth-protected-resource
+        {{- end }}
       backendRefs:
         - name: {{ include "inio-mcp.fullname" . }}
           port: {{ .Values.service.port }}

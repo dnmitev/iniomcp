@@ -1,3 +1,5 @@
+import type { OAuthConfig } from './oauth.ts';
+
 export type Config = {
   clientId: string;
   clientSecret: string;
@@ -6,7 +8,13 @@ export type Config = {
   allowWrites: boolean;
   revealPii: boolean;
   transport: 'stdio' | 'http';
-  http?: { port: number; host: string; authToken: string; allowedOrigins: string[] };
+  http?: {
+    port: number;
+    host: string;
+    authToken?: string;
+    allowedOrigins: string[];
+    oauth?: OAuthConfig;
+  };
   logLevel: LogLevel;
   requestTimeoutMs: number;
   writeTools: ReadonlySet<string>;
@@ -44,6 +52,7 @@ export function startupFields({
   logLevel,
   writeTools,
   maxPaymentAmount,
+  http,
 }: Config) {
   return {
     allowWrites,
@@ -51,6 +60,12 @@ export function startupFields({
     logLevel,
     writeTools: allowWrites ? WRITE_TOOL_NAMES.filter((n) => writeTools.has(n)) : [],
     ...(allowWrites && maxPaymentAmount !== undefined && { maxPaymentAmount }),
+    ...(http?.oauth && {
+      oauth: {
+        issuer: http.oauth.issuer,
+        ...(http.oauth.allowUntypedTokens && { allowUntypedTokens: true }),
+      },
+    }),
   };
 }
 
@@ -92,14 +107,52 @@ export function loadConfig(env: Env): Config {
     return fallback;
   };
 
-  const authToken = (): string => {
+  const authToken = (optional: boolean): string => {
     const value = env.MCP_AUTH_TOKEN ?? '';
+    if (!value && optional) return '';
     if (!value) problems.push('MCP_AUTH_TOKEN is required when MCP_TRANSPORT=http');
     else if (/\s/.test(value)) problems.push('MCP_AUTH_TOKEN must not contain whitespace');
     else if (!/^[\x21-\x7e]+$/.test(value)) {
       problems.push('MCP_AUTH_TOKEN must contain only printable ASCII characters');
     } else if (value.length < 32) problems.push('MCP_AUTH_TOKEN must be at least 32 characters');
     return value;
+  };
+
+  const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
+
+  const oauthConfig = (): OAuthConfig | undefined => {
+    const issuer = env.MCP_OAUTH_ISSUER;
+    const resourceUrl = env.MCP_PUBLIC_URL;
+    if (!issuer) {
+      for (const name of [
+        'MCP_PUBLIC_URL',
+        'MCP_OAUTH_AUDIENCE',
+        'MCP_OAUTH_ALLOW_UNTYPED_TOKENS',
+      ]) {
+        if (env[name]) problems.push(`${name} requires MCP_OAUTH_ISSUER`);
+      }
+      flag('MCP_OAUTH_ALLOW_UNTYPED_TOKENS');
+      return undefined;
+    }
+    if (!isAllowedUrl(issuer)) {
+      problems.push('MCP_OAUTH_ISSUER must be an https URL (http allowed only for localhost)');
+    }
+    if (!resourceUrl) problems.push('MCP_PUBLIC_URL is required when MCP_OAUTH_ISSUER is set');
+    else {
+      if (!isAllowedUrl(resourceUrl)) {
+        problems.push('MCP_PUBLIC_URL must be an https URL (http allowed only for localhost)');
+      }
+      if (URL.canParse(resourceUrl) && !new URL(resourceUrl).pathname.endsWith('/mcp')) {
+        problems.push('MCP_PUBLIC_URL must end with /mcp');
+      }
+    }
+    const resource = resourceUrl ?? '';
+    return {
+      issuer,
+      resourceUrl: resource,
+      audience: env.MCP_OAUTH_AUDIENCE || resource,
+      ...(flag('MCP_OAUTH_ALLOW_UNTYPED_TOKENS') && { allowUntypedTokens: true as const }),
+    };
   };
 
   const origins = (name: string): string[] => {
@@ -112,8 +165,6 @@ export function loadConfig(env: Env): Config {
     }
     return list;
   };
-
-  const flag = (name: string): boolean => oneOf(name, ['false', 'true'], 'false') === 'true';
 
   const writeTools = (): ReadonlySet<string> => {
     const names = (env.INIO_WRITE_TOOLS ?? '')
@@ -157,11 +208,14 @@ export function loadConfig(env: Env): Config {
   const limit = maxPaymentAmount();
   if (limit !== undefined) config.maxPaymentAmount = limit;
   if (transport === 'http') {
+    const oauth = oauthConfig();
+    const token = authToken(oauth !== undefined);
     config.http = {
       port: integer('PORT', 3000, 1, 65_535),
       host: env.HOST || '127.0.0.1',
-      authToken: authToken(),
       allowedOrigins: origins('MCP_ALLOWED_ORIGINS'),
+      ...(token && { authToken: token }),
+      ...(oauth && { oauth }),
     };
   }
 
@@ -177,7 +231,7 @@ function isHttpOrigin(value: string): boolean {
   return (protocol === 'http:' || protocol === 'https:') && origin === value;
 }
 
-function isAllowedUrl(value: string): boolean {
+export function isAllowedUrl(value: string): boolean {
   if (!URL.canParse(value)) return false;
   const { protocol, hostname } = new URL(value);
   return protocol === 'https:' || (protocol === 'http:' && LOCAL_HOSTS.has(hostname));

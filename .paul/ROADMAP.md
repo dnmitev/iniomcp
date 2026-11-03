@@ -12,11 +12,29 @@ From an empty repo to a publicly installable MCP server: foundation and one work
 
 ## Current Milestone
 
-None. Next: /paul:discuss-milestone (v0.4 Hosted candidate below).
+**v0.4 Hosted Sign-in** (0.4.0)
+Status: 🚧 In Progress
+Phases: 1 of 2 complete
+Focus: Let users without a local setup (product owners, product managers; mostly internal) reach the hosted server from Claude on the web, Desktop connectors and mobile by signing in with OAuth, without breaking the static-token clients. One instance = one tenant; provider details for the owner's environments stay outside the repo.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 12 | OAuth resource server | 1/1 | ✅ Complete | 2026-11-03 |
+| 13 | Deploy, connect, release | 0/1 | Planning | - |
+
+### Phase 12: OAuth resource server ✅
+
+Focus: TDD loop. Protected Resource Metadata (RFC 9728) at `/.well-known/oauth-protected-resource` (and the `/mcp` path-suffixed variant); 401 with `WWW-Authenticate: Bearer resource_metadata=…`; JWT access tokens validated against the provider's JWKS (issuer, audience = resource URL, expiry, signature); static `MCP_AUTH_TOKEN` kept for header clients; signed-in user in tool-call and write logs; all opt-in. Research first: Claude OAuth client option (pre-registered, Client ID Metadata Document, DCR) and redirect URI, audience vs RFC 8707 `resource`, authorization server metadata discovery, refresh tokens.
+Plans: 12-01 (done; reviewer 2 rounds, mutation ≥ 92.6 per file, Keycloak integration test)
+
+### Phase 13: Deploy, connect, release
+
+Focus: Helm values for OAuth; Ingress and HTTPRoute also route the well-known path; generic OIDC provider guide (Keycloak example, placeholders only); Claude web/Desktop/mobile connector guide; private hand-over of the provider config (realm import plus Admin API job) for the owner's environments; owner signs in from claude.ai on the team instance; release.
+Plans: TBD (defined during /paul:plan)
 
 ## Next Milestone
 
-v0.4 Hosted (candidate): OAuth sign-in through an OIDC provider, per-user write roles and audit, per-tenant credentials, multi-tenant hosting. Design notes are kept outside the repo. Other candidates: INIO_REVEAL_LINKS, get_invoice opt-in, R6 pack-once publish and sandbox live gate. ChatGPT deferred until the hosted server has OAuth.
+Candidates: request contract from the monorepo (export script, contract and coverage tests, Redocly change alarm, `registerTool` wrapper); hosted polish (customer-type cache TTL, `get_invoice` size opt-in); release trust (image provenance, npm publish from one build); later per-user write roles, multi-tenant hosting, ChatGPT.
 
 ## Completed Milestones
 
@@ -63,4 +81,4 @@ Full detail: `.paul/milestones/v0.1-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-10-28*
-*Last updated: 2026-11-03 — v0.3 Integration Layer complete*
+*Last updated: 2026-11-03 — v0.4 Hosted Sign-in created*
